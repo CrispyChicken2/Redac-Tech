@@ -1,0 +1,35 @@
+# --- Données ---
+# Aucune donnée LGM ne doit jamais arriver dans ce dépôt (secteur défense).
+# Les jeux S1000D publics (Bike data set, BREX par défaut) se téléchargent
+# sur le site de l'ASD : on ne versionne pas les archives ni leur contenu.
+data/*
+!data/README.md
+*.zip
+*.7z
+*.rar
+
+# Sorties générées par les scripts (docx, pdf produits par le POC)
+output/
+outputs/
+*.docx
+*.pdf
+~$*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# --- Secrets (clés d'API, etc.) ---
+.env
+*.key
+
+# --- Éditeurs / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
