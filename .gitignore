@@ -33,3 +33,6 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# --- Travail en suspens, non versionné ---
+converter/

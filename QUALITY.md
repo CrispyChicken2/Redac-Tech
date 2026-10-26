@@ -6,6 +6,7 @@
 | **Q2** | You defined how you'll know each requirement is met | §2 Verification |
 | **Q3** | You actually ran those checks | §2 *Result* and *Evidence* columns + §3 Log |
 
+Planning des sprints et engagements hebdomadaires : voir [PLANNING.md](PLANNING.md).
 
 ---
 
