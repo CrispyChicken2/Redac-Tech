@@ -1,7 +1,7 @@
 # Données
 
 Seul ce fichier est versionné ; le reste de `data/` est ignoré par git (voir `.gitignore`).
-On n'utilise **que des données publiques** : LGM ne fournit aucune donnée (secteur défense).
+On n'utilise **que des données publiques** : le client ne fournit aucune donnée (données sensibles).
 
 ## Source
 

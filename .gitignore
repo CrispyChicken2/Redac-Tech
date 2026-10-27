@@ -1,5 +1,5 @@
 # --- Données ---
-# Aucune donnée LGM ne doit jamais arriver dans ce dépôt (secteur défense).
+# Aucune donnée client ne doit jamais arriver dans ce dépôt (données sensibles).
 # Les jeux S1000D publics (Bike data set, BREX par défaut) se téléchargent
 # sur le site de l'ASD : on ne versionne pas les archives ni leur contenu.
 data/*
