@@ -10,7 +10,7 @@ Planning des sprints et engagements hebdomadaires : [PLANNING.md](PLANNING.md). 
 
 **Produit visé** : l'outil prépare les reprises d'un manuel S1000D comme un rédacteur, selon **deux modes d'entrée** :
 - **Mode « demande »** : l'ancien manuel + le contexte de la modification (phrase, bulletin, liste de correspondances), par exemple « la pièce X2 est remplacée par X3 ».
-- **Mode « comparaison »** : l'ancien manuel + **une version à jour fournie à part** (deux fichiers distincts). L'outil détecte les différences et les reporte dans l'ancienne version, sans l'écraser : identifiants, applicabilité et ajouts propres à LGM sont conservés. Si l'ancienne version a aussi évolué de son côté, les modifications contradictoires apparaissent comme des conflits à arbitrer, comme dans git.
+- **Mode « comparaison »** : l'ancien manuel + **une version à jour fournie à part** (deux fichiers distincts). L'outil détecte les différences et les reporte dans l'ancienne version, sans l'écraser : identifiants, applicabilité et ajouts propres à l'entreprise client sont conservés. Si l'ancienne version a aussi évolué de son côté, les modifications contradictoires apparaissent comme des conflits à arbitrer, comme dans git.
 
 Dans les deux modes, le rédacteur contrôle chaque changement dans une revue avant / après « type git » (accepter, refuser, en attente + commentaire client), puis l'outil produit le nouveau manuel, conforme S1000D et tracé. Approche retenue : **hybride**. Le code fait la recherche, la comparaison et l'application des modifications ; le LLM sert seulement à comprendre une demande et à rédiger du texte nouveau.
 
@@ -20,7 +20,7 @@ Dans les deux modes, le rédacteur contrôle chaque changement dans une revue av
 
 ### Objectifs du projet (cibles, seuils provisoires)
 
-Ils viennent du workshop et des réunions avec LGM (définition de la qualité : **exhaustivité, intégrité, homogénéité**). Chacun devient une exigence REQ-x au sprint où le POC permet de le mesurer. Les seuils sont fixés **avant** de voir les résultats, puis soumis à Leny (évaluateur du MVP).
+Ils viennent du workshop et des réunions avec l'entreprise client (définition de la qualité : **exhaustivité, intégrité, homogénéité**). Chacun devient une exigence REQ-x au sprint où le POC permet de le mesurer. Les seuils sont fixés **avant** de voir les résultats, puis soumis au client (évaluateur du MVP).
 
 | ID | Objectif | Indicateur & seuil provisoire | Devient exigence au sprint | Exigence |
 |---|---|---|---|---|
@@ -28,13 +28,13 @@ Ils viennent du workshop et des réunions avec LGM (définition de la qualité :
 | OBJ-2 | **Intégrité** : rien d'autre ne change, le manuel reste conforme | 0 différence hors changements acceptés ; 100 % des DM valides XSD ; 100 % conformes au BREX par défaut | 3 (XSD), 4 (BREX) | REQ-6, REQ-11 |
 | OBJ-3 | **Véracité** : rien n'est inventé | 0 valeur (référence, quantité, couple, outil) absente du contexte de la modification ou de l'ancien manuel | 5 (premier texte rédigé par le LLM) | à créer |
 | OBJ-4 | **Traçabilité S1000D** | 100 % des DM modifiés : `inWork` incrémenté, `changeMark` / `changeType` sur les éléments modifiés, `reasonForUpdate` | 3 | REQ-10 |
-| OBJ-5 | **Le rédacteur garde la main** (revue type git) | Leny déroule un scénario seul : accepter / refuser / en attente + commentaire ; 0 changement appliqué sans décision | 4 | REQ-7 |
+| OBJ-5 | **Le rédacteur garde la main** (revue type git) | Le client déroule un scénario seul : accepter / refuser / en attente + commentaire ; 0 changement appliqué sans décision | 4 | REQ-7 |
 | OBJ-6 | **Compréhension de la demande** | ≥ 90 % des demandes en langage naturel traduites en opérations correctes, sur ≥ 20 demandes | 5 | à créer |
-| OBJ-7 | **Homogénéité du style** | ≥ 80 % des passages rédigés par l'outil jugés « dans le style du manuel » par Leny, notés à l'aveugle | 6 | à créer |
+| OBJ-7 | **Homogénéité du style** | ≥ 80 % des passages rédigés par l'outil jugés « dans le style du manuel » par le client, notés à l'aveugle | 6 | à créer |
 | OBJ-8 | **Gain de temps** | Temps avec l'outil (revue comprise) ≤ 50 % du temps d'une reprise manuelle sur le même scénario (temps de référence mesuré par un rédacteur) | 6 | à créer |
 | OBJ-9 | **Confidentialité** : fonctionne avec une IA locale | REQ-5 et REQ-6 passent avec un modèle local (Ollama), sans aucun appel réseau sortant | 3 (architecture), 5 (test réel) | REQ-8 |
 | OBJ-10 | **Performance** | Propagation de 20 modifications sur le manuel complet en < 10 s (sans LLM) ; une demande traitée en < 2 min avec le LLM local, sur un portable étudiant | 4 (sans LLM), 5 (avec LLM) | à créer |
-| OBJ-11 | **Généralisation** | OBJ-1, OBJ-2 et OBJ-4 tenus sur des scénarios écrits par LGM, non vus par l'équipe | 7 | à créer |
+| OBJ-11 | **Généralisation** | OBJ-1, OBJ-2 et OBJ-4 tenus sur des scénarios écrits par l'entreprise client, non vus par l'équipe | 7 | à créer |
 | OBJ-12 | **Maintenabilité** | Installation + exécution en ≤ 3 commandes ; schéma d'architecture dans le README | 3 (README), 4 (architecture) | REQ-9 |
 | OBJ-13 | **Utilité** | Note ≥ 3/5 donnée par Leny et par les rédacteurs | 7 | à créer |
 | OBJ-14 | *(V2, si le temps le permet)* **Contradictions entre documents** | ≥ 90 % des contradictions repérées sur un jeu où elles ont été injectées ; l'option choisie par le client est appliquée sans reprise manuelle | 7 | à créer |
