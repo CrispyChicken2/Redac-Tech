@@ -1,0 +1,22 @@
+# Copier en workspace.toml (ignoré par git) puis adapter les chemins.
+
+[[sources]]
+id = "bike41"
+path = "data/s1000d-4.1/bike"
+brex_dirs = ["data/s1000d-4.1/brex"]
+issue = "4.1"
+writable = true
+
+[[sources]]
+id = "bike42"
+path = "data/s1000d-4.2/bike"
+brex_dirs = ["data/s1000d-4.2/brex"]
+issue = "4.2"
+writable = true
+
+[[sources]]
+id = "fixtures"
+path = "tests/fixtures/s1000d"
+brex_dirs = ["tests/fixtures/s1000d"]
+issue = "4.1"
+writable = true
