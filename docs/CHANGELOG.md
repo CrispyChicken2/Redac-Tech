@@ -1,5 +1,27 @@
 # Journal des modifications
 
+## 006 — Contrôles XSD/BREX
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/s1000d/validate.py` : contrôle XSD par version d'Issue (schémas plats locaux, jamais téléchargés, compilés une fois par chemin), intégrité du `dmodule`, identifiants en double, liens `internalRef`, entités ICN. Convention : un résultat `info` `ok=True` quand rien n'est trouvé ; seuls les `ok=False` sont comptés.
+- `src/redactech/s1000d/brex.py` : règles BREX des flags 0, 1 et 2, avec `objectValue` (valeurs exactes, intervalles, expressions régulières) ; résolution de la chaîne de BREX via `brexDmRef` jusqu'au BREX par défaut ; index des BREX par nom de fichier ; remplacement d'un BREX dans l'index. Un XPath invalide ou un BREX inconnu donne un avertissement, jamais une exception.
+- `src/redactech/s1000d/diff.py` : comparaison C14N de deux documents et liste des éléments modifiés (appariement par `@id`, sinon par position sous l'ancêtre identifié ; ancêtres d'un changement non signalés).
+- `tests/fixtures/s1000d/` : fixtures rendues conformes aux schémas. Le fichier des pièces communes est scindé en trois DM (pièces, outils, fournitures) ; la structure UPF est corrigée.
+- `docs/ARCHITECTURE.md` : section « Contrôles » (convention des résultats, sémantique des flags BREX, résolution de la chaîne, comparaison C14N).
+
+### Tests écrits, non exécutés
+
+Les tests des contrôles, des règles BREX et de la comparaison ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- Pas d'adaptateur vers un validateur BREX externe (`s1kd-brexcheck` ou équivalent) : l'évaluateur interne est la seule référence.
+- La distinction « préexistant / introduit » et `blocked_by_rule` ne sont pas encore câblées (couche pipeline).
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 005 — io, identification, classifieur
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**

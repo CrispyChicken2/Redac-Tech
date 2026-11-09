@@ -26,9 +26,9 @@ Racine : `src/redactech/`. Chaque sous-paquet porte un rôle défini par la sect
 | `ui/` | interface Streamlit | squelette |
 | `llm/` | accès au LLM local (Ollama) ; tous les appels LLM passent ici (M3) | squelette |
 
-Implémentés depuis la tâche 005 : `s1000d/io.py` et `s1000d/ident.py` (voir la section « Lecture et identification S1000D » ci-dessous), `sources/classify.py`.
+Implémentés depuis les tâches 005 et 006 : `s1000d/io.py`, `s1000d/ident.py` (voir « Lecture et identification S1000D »), `sources/classify.py`, `s1000d/validate.py`, `s1000d/brex.py` et `s1000d/diff.py` (voir « Contrôles »).
 
-Prévus dans `s1000d/` (non encore créés) : `index.py`, `trace.py` et `versioning.py`, `validate.py` et `brex.py` (chaîne BREX, différence base de référence / introduit, `blocked_by_rule`), `diff.py`.
+Prévus dans `s1000d/` (non encore créés) : `index.py`, `trace.py` et `versioning.py`. La distinction base de référence / introduit et `blocked_by_rule` restent à câbler dans la couche pipeline.
 
 ## Lecture et identification S1000D
 
@@ -85,6 +85,48 @@ Modèles pydantic v2 partagés par tous les modules. Une ligne par modèle :
 - `Proposal` : proposition de changement XML avant/après, avec contrôles, critique, statut (`proposed`, `accepted`, `edited`, `rejected`, `pending_client`, `blocked_by_rule`) et historique de tentatives.
 - `Conflict` : conflit à arbitrer (trois voies ou inter-documents), avec options et choix.
 - `RunState` : état d'un run (identifiant, mode, politique de version, référence de base, étape courante, opérations, zones, propositions, conflits, journal des décisions).
+
+## Contrôles
+
+Modules : `s1000d/validate.py`, `s1000d/brex.py`, `s1000d/diff.py`.
+
+### Convention des résultats
+
+- Chaque fonction `check_*` renvoie une liste de `CheckResult`.
+- **Rien à signaler : un seul résultat `ok=True`, de gravité `info`.** Il sert à montrer que le contrôle a tourné (exemple : « 152 internal references resolve »).
+- **Un problème : un résultat `ok=False` par anomalie**, de gravité `error` ou `warning`. Seuls les `ok=False` sont comptés comme problèmes.
+- Un contrôle qui ne peut pas s'exécuter (schéma absent, règle BREX dont le XPath est invalide, BREX inconnu) renvoie un `ok=False` de gravité `warning`, jamais une exception.
+
+### Contrôles XSD et structurels (`validate.py`)
+
+- **XSD** (`check_xsd`) : le schéma est lu dans le dossier local `schemas/` de l'Issue détectée (`<données>/s1000d-<issue>/schemas`). Son nom vient de `xsi:noNamespaceSchemaLocation` de la racine. Le schéma est compilé une fois par chemin, avec le parseur durci, et jamais téléchargé. Une erreur XSD donne un `ok=False`, `error`, avec la ligne et le XPath.
+- **Intégrité** (`check_integrity`) : la racine doit être `dmodule`, et contenir `identAndStatusSection` et `content`.
+- **Identifiants** (`check_ids`) : chaque `@id` utilisé plusieurs fois donne un `ok=False` (une fois par identifiant, au deuxième emplacement).
+- **Liens** (`check_links`) : chaque `internalRef/@internalRefId` doit viser un identifiant du document. Un lien absent donne un `ok=False`.
+- **ICN** (`check_icn`) : chaque `graphic/@infoEntityIdent` doit être déclaré comme entité dans le DOCTYPE, ou avoir un fichier de même nom dans le dossier source. Sinon, `ok=False` de gravité `warning`.
+- **Ensemble** (`check_all`) : XSD, intégrité, identifiants, liens, ICN, dans cet ordre.
+
+### Règles BREX (`brex.py`)
+
+Une règle est lue dans `structureObjectRuleGroup/structureObjectRule` de chaque BREX. Le XPath de `objectPath` est évalué sur le DM. La sémantique dépend de `objectPath/@allowedObjectFlag` :
+
+| Flag | Sens | Violation quand |
+|---|---|---|
+| `0` interdit | l'objet ne doit pas apparaître | le XPath sélectionne un nœud (sans `objectValue`), ou une valeur sélectionnée correspond à un `objectValue` |
+| `1` obligatoire | l'objet doit apparaître | le XPath ne sélectionne rien ; les valeurs sélectionnées doivent aussi correspondre aux `objectValue` s'il y en a |
+| `2` autorisé | l'objet est permis | sans `objectValue` : jamais ; avec `objectValue` : une valeur sélectionnée hors des valeurs permises |
+
+- `objectValue/@valueForm` : `single` (valeur exacte), `range` (`a~b`, bornes incluses, numérique si les deux bornes sont des nombres, sinon ordre de chaînes), `pattern` (expression régulière appliquée à la valeur, correspondance complète). La valeur d'un nœud est son texte, espaces normalisés.
+- Une violation est un `CheckResult` `ok=False`, `error`, avec `rule` = {id, xpath, flag, message, brex} et le XPath du nœud fautif. Au plus 200 violations par règle.
+- **Chaîne de BREX** (`resolve_chain`) : on part du `dmStatus/brexDmRef` du DM, on charge le BREX correspondant (index par nom de fichier : DMC de code d'information `022`, la version la plus récente l'emporte), puis le BREX de ce BREX, et ainsi de suite jusqu'au BREX par défaut. La recherche s'arrête si un BREX se réfère à lui-même (fin de chaîne), si un BREX est inconnu (avertissement), s'il y a un cycle (avertissement) ou après 10 niveaux (avertissement).
+- **Aucune chaîne** : un avertissement. **Chaîne sans violation** : un résultat `ok=True` informatif (« N rules checked, no violation »).
+- L'évaluateur interne est la référence. Un adaptateur vers un validateur BREX externe n'est pas fourni.
+
+### Comparaison C14N (`diff.py`)
+
+- `c14n_equal` : égalité de la forme C14N 1.0 de deux documents (commentaires ignorés).
+- `changed_elements(before, after)` : liste des XPath des éléments qui diffèrent. Les éléments sont appariés par `@id` unique, sinon par leur position sous l'ancêtre le plus proche qui a un identifiant.
+- Sont signalés : les éléments dont le contenu propre diffère, ceux dont les enfants ont été réordonnés, le sommet des sous-arbres ajoutés (chemin dans `after`) et celui des sous-arbres supprimés (chemin dans `before`). Les ancêtres d'un changement ne sont pas signalés.
 
 ## Configuration (`config.toml`)
 
