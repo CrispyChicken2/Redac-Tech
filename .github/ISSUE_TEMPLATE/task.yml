@@ -1,0 +1,62 @@
+name: Task
+description: A ticket-sized unit of work (tests first, one branch, one PR)
+title: "[M0-T00] "
+labels: ["task"]
+body:
+  - type: input
+    id: part_of
+    attributes:
+      label: Part of
+      description: Spec issue number, milestone and dependencies.
+      placeholder: "Part of #1 · Milestone: M0 · Depends on: #2"
+    validations:
+      required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Branch and worktree
+      placeholder: "t12-short-slug · .worktrees/t12"
+  - type: textarea
+    id: read_first
+    attributes:
+      label: Read first
+      placeholder: "CLAUDE.md, SPEC section, QUALITY.md rows (REQ/OBJ ids)"
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+    validations:
+      required: true
+  - type: textarea
+    id: files_owned
+    attributes:
+      label: Files owned
+    validations:
+      required: true
+  - type: textarea
+    id: signatures
+    attributes:
+      label: Signatures to implement
+  - type: textarea
+    id: tests_first
+    attributes:
+      label: Tests to write FIRST
+      description: Test files and cases.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: "ruff clean, pytest -q green, <metric/threshold>"
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+  - type: textarea
+    id: done_when
+    attributes:
+      label: Done when
+      placeholder: 'PR opened with "Closes #<issue>"'

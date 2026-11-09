@@ -6,11 +6,12 @@ build-backend = "hatchling.build"
 name = "redactech"
 version = "0.1.0"
 description = "Local assistant that updates existing S1000D technical documentation"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "lxml",
     "pydantic>=2",
-    "typer",
+    "typer>=0.12",
     "pyyaml",
     "openpyxl",
     "httpx",
@@ -28,6 +29,7 @@ packages = ["src/redactech"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-p no:cacheprovider"
 markers = [
     "data41: needs the S1000D 4.1 Bike data in data/s1000d-4.1/bike",

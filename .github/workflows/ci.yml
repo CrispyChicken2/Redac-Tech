@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check .
+      - name: Tests
+        run: pytest -q -m "not data41 and not data42 and not ollama"
+      - name: Privacy scan
+        env:
+          REDACTECH_DENYLIST: ${{ secrets.REDACTECH_DENYLIST }}
+        run: |
+          if [ -n "$REDACTECH_DENYLIST" ]; then
+            python tools/privacy.py scan --tracked
+          else
+            echo "::notice::privacy denylist secret not set, scan skipped"
+          fi
+
+  windows:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check .
+      - name: Tests
+        run: pytest -q -m "not data41 and not data42 and not ollama"
