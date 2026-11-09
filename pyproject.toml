@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "redactech"
+version = "0.1.0"
+description = "Local assistant that updates existing S1000D technical documentation"
+requires-python = ">=3.11"
+dependencies = [
+    "lxml",
+    "pydantic>=2",
+    "typer",
+    "pyyaml",
+    "openpyxl",
+    "httpx",
+    "streamlit",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff", "pre-commit"]
+
+[project.scripts]
+redactech = "redactech.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/redactech"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+markers = [
+    "data41: needs the S1000D 4.1 Bike data in data/s1000d-4.1/bike",
+    "data42: needs the S1000D 4.2 Bike data in data/s1000d-4.2/bike",
+    "ollama: needs a local Ollama server (set REDACTECH_OLLAMA=1)",
+    "slow: slow test",
+    "ui: needs streamlit (UI tests)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

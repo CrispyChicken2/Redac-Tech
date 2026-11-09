@@ -1,0 +1,18 @@
+[llm]                              # used in M3 only
+provider = "none"                 # "ollama" in M3; "none" = fallback without AI
+model = "ministral-3:8b"           # Apache 2.0, local, French + English; one line to change
+temperature = 0
+max_retries = 2
+timeout_s = 120
+
+[trace]
+delete_mode = "mark"
+consolidate_on_new_issue = true
+default_version_policy = "ask"     # UI asks; CLI/tests pass a value
+marks_when_none = true             # open question
+upf_policy = "read_only"
+max_alternatives = 3
+max_rule_retries = 2
+
+[workspace]
+file = "workspace.toml"
