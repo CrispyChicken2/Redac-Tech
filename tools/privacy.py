@@ -69,11 +69,12 @@ def _decode(data: bytes) -> str:
 def git_common_dir(cwd: Path | str | None = None) -> Path | None:
     base = Path(cwd) if cwd else Path.cwd()
     res = subprocess.run(
-        ["git", "rev-parse", "--git-common-dir"], cwd=base, capture_output=True, text=True
+        ["git", "rev-parse", "--git-common-dir"], cwd=base, capture_output=True
     )
     if res.returncode != 0:
         return None
-    common = Path(res.stdout.strip())
+    # Decode as UTF-8 explicitly: the Windows locale codec would garble accented paths.
+    common = Path(_decode(res.stdout).strip())
     return (common if common.is_absolute() else base / common).resolve()
 
 
