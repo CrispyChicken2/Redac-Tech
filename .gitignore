@@ -1,0 +1,48 @@
+# Données : seul data/README.md est suivi (jeux S1000D publics reconstruits en local)
+data/*
+!data/README.md
+*.zip
+*.7z
+*.rar
+
+# Sorties générées
+output/
+outputs/
+*.docx
+*.pdf
+~$*
+*.mp4
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Secrets
+.env
+*.key
+
+# Éditeurs et système
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Travail local (jamais suivi)
+.agents/
+.worktrees/
+.cache/
+runs/
+workspace.toml
+/.handoff/
+/tasks/
+/PROMPT_*.md
+converter/
