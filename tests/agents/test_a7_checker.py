@@ -190,6 +190,37 @@ def test_veracity_accepts_values_from_nested_parameters_and_quotes():
     assert [r.name for r in a7.veracity_failures(wrong, op)] == ["veracity"]
 
 
+def veracity_proposal(before: str, after: str) -> Proposal:
+    return Proposal(
+        id="p",
+        operation_id="op-0001",
+        zone_id="z",
+        ref=SourceRef(source_id="s", doc_key="d"),
+        before_xml=before,
+        after_xml=after,
+        change_type="modify",
+    )
+
+
+def test_veracity_compares_whole_tokens_not_substrings():
+    op = operation("update_ref", {"quantity": "2"})
+    ok = veracity_proposal('<item qty="1"/>', '<item qty="2"/>')
+    assert a7.veracity_failures(ok, op) == []
+    for invented in ("22", "12", "2 pieces", "Check 2"):
+        bad = veracity_proposal('<item qty="1"/>', f'<item qty="{invented}"/>')
+        assert [r.name for r in a7.veracity_failures(bad, op)] == ["veracity"], invented
+
+
+def test_veracity_accepts_the_old_text_with_a_request_substitution():
+    op = operation("replace_text", {"old": "LRU1010", "new": "LRU2020"})
+    before = "<para>The LRU1010 housing is common.</para>"
+    ok = veracity_proposal(before, "<para>The LRU2020 housing is common.</para>")
+    assert a7.veracity_failures(ok, op) == []
+    bad = veracity_proposal(before, "<para>The LRU2020 housing is red.</para>")
+    (error,) = a7.veracity_failures(bad, op)
+    assert "red" in error.details
+
+
 def test_generated_ids_and_unchanged_values_are_not_new():
     op = operation("insert_step", {"para": "Check."})
     proposal = Proposal(
