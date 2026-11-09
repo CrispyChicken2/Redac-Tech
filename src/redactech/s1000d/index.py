@@ -123,6 +123,7 @@ class CorpusIndex:
     unreadable: dict[str, str] = field(default_factory=dict)  # doc key -> parse error
     chain_notes: dict[str, list[CheckResult]] = field(default_factory=dict)  # per doc key
     loaded: dict[str, Any] = field(default_factory=dict)  # XmlDoc kept by keep_docs=True
+    sources: dict[str, Any] = field(default_factory=dict)  # workspace Source objects by id
 
     def counts(self) -> dict[str, dict[str, int]]:
         """Number of documents per source and per role."""
@@ -269,6 +270,7 @@ def build_index(ws: wsmod.Workspace, keep_docs: bool = False) -> CorpusIndex:
     caller that needs them again does not parse them twice; the caller should clear it.
     """
     index = CorpusIndex()
+    index.sources = {src.id: src for src in ws.sources}
     docs = wsmod.scan(ws)
     by_path = {Path(d.path).resolve(): d.ref for d in docs}
     for src in ws.sources:

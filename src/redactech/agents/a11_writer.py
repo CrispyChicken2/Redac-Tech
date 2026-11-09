@@ -151,6 +151,29 @@ def _prepare_document(
     return xdoc, new_name, entry
 
 
+def apply_to_copy(
+    index: CorpusIndex, proposal: Proposal, operation: Operation, zone: Zone
+) -> Any:
+    """The data module of ``proposal`` with the change and its trace marks, in memory only.
+
+    This is what ``write`` would save (policy ``none``, marks on), used by the checker to test
+    a proposal before any decision. Raises ``WriteRefused`` if it cannot be applied.
+    """
+    key = ref_key(proposal.ref)
+    doc = index.docs.get(key)
+    if doc is None or doc.role != "dm" or not doc.writable:
+        raise WriteRefused(f"{key} is not a writable data module")
+    policy = VersionPolicy(mode="none", suggested="none")
+    try:
+        xdoc, _name, _entry = _prepare_document(
+            key, doc, [proposal], {operation.id: operation}, {zone.id: zone}, policy, None,
+            TraceConfig(),
+        )
+    except (OpError, trace.TraceError, versioning.VersioningError) as exc:
+        raise WriteRefused(str(exc)) from exc
+    return xdoc
+
+
 def write(
     run_dir: Path | str,
     index: CorpusIndex,

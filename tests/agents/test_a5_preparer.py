@@ -166,7 +166,12 @@ def test_free_text_with_two_mentions_offers_first_then_last(tmp_path: Path):
     assert alt1.after_xml == "<para>PN-2 and PN-1</para>"
     assert (alt1.attempt, alt1.replaces, alt1.id) == (2, first.id, f"{first.id}-a2")
     assert alt1.rejection_feedback == ["too much"] and alt1.status == "proposed"
-    assert alt1.zone_id == first.zone_id and alt1.operation_id == "op-0001"
+    assert alt1.zone_id == first.zone_id
+    assert alt1.operation_id == f"op-0001-a2-{first.zone_id}"  # a derived operation
+    report = a5.prepare_report(op, zones, index, a5.Rejection(first, "too much"))
+    (derived,) = report.operations
+    assert derived.id == alt1.operation_id and derived.params["occurrence"] == 1
+    assert derived.params["old"] == "PN-1" and op.params.get("occurrence") is None
     (alt2,) = a5.prepare(op, zones, index, a5.Rejection(alt1, "still not"))
     assert alt2.after_xml == "<para>PN-1 and PN-2</para>"
     assert (alt2.attempt, alt2.replaces) == (3, alt1.id)

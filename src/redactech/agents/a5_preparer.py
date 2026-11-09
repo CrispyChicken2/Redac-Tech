@@ -3,8 +3,8 @@
 Each content zone is applied on an in-memory COPY of its data module (nothing is written), and
 the changed element is serialised before and after. Illustration zones give a flag-only
 proposal (``before_xml == after_xml``) carrying an ``illustration`` warning "to check".
-Checks (XSD, BREX) and the ``blocked_by_rule`` logic belong to the checker; marks, versioning
-and writing belong to the writer.
+``prepare_checked`` adds the checker (A7) and the BREX retry / ``blocked_by_rule`` logic; marks,
+versioning and writing belong to the writer.
 
 When the writer rejects a proposal, ``prepare(..., rejection=...)`` offers a code-generated
 ALTERNATIVE when one exists, else nothing ("needs manual edit"):
@@ -24,6 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from redactech.agents import a7_checker
 from redactech.models import CheckResult, Operation, Proposal, SourceRef, Zone
 from redactech.s1000d import io as xio
 from redactech.s1000d import ops
@@ -46,6 +47,9 @@ class Rejection:
 class PrepareReport:
     proposals: list[Proposal] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)  # zones the operation could not be applied to
+    # Operations derived for alternatives (own id and parameters): an alternative proposal
+    # points at one of them, so the checker and the writer apply the variant, not the original.
+    operations: list[Operation] = field(default_factory=list)
 
 
 def _original(index: CorpusIndex, ref: SourceRef, cache: dict[str, Any]) -> Any:
@@ -145,7 +149,7 @@ def _alternative(
     zone: Zone,
     rejection: Rejection,
     cache: dict[str, Any],
-) -> Proposal | None:
+) -> tuple[Proposal, Operation] | None:
     rejected = rejection.proposal
     original_tree = _original(index, zone.ref, cache).tree
     try:
@@ -153,16 +157,17 @@ def _alternative(
     except OpError:
         return None
     seen = {(base.element_xpath, base.after_xml)}
-    found: list[OpResult] = []
+    found: list[tuple[OpResult, dict[str, Any]]] = []
     for override in _candidates(op, zone, original_tree):
+        merged = _merged(op.params, override)
         try:
-            result = _apply(index, op, zone, _merged(op.params, override), cache)
+            result = _apply(index, op, zone, merged, cache)
         except OpError:
             continue
         key = (result.element_xpath, result.after_xml)
         if key not in seen:
             seen.add(key)
-            found.append(result)
+            found.append((result, merged))
     position = rejected.attempt - 1
     if position >= len(found):
         return None
@@ -170,10 +175,13 @@ def _alternative(
     feedback = [*rejected.rejection_feedback]
     if rejection.feedback:
         feedback.append(rejection.feedback)
-    proposal = _proposal(op, zone, f"{rejected.id}-a{attempt}", found[position])
-    return proposal.model_copy(
+    result, params = found[position]
+    derived = op.model_copy(update={"id": f"{op.id}-a{attempt}-{zone.id}", "params": params})
+    proposal = _proposal(derived, zone, f"{rejected.id}-a{attempt}", result)
+    proposal = proposal.model_copy(
         update={"attempt": attempt, "replaces": rejected.id, "rejection_feedback": feedback}
     )
+    return proposal, derived
 
 
 def prepare_report(
@@ -197,7 +205,8 @@ def prepare_report(
             report.errors.append(f"{zone.id}: {exc}")
             return report
         if alternative is not None:
-            report.proposals.append(alternative)
+            report.proposals.append(alternative[0])
+            report.operations.append(alternative[1])
         return report
     for number, zone in enumerate(zones, 1):
         proposal_id = f"prop-{op.id}-{number}"
@@ -221,3 +230,131 @@ def prepare(
 ) -> list[Proposal]:
     """``prepare_report(...).proposals``: the proposals only (``[]`` = "needs manual edit")."""
     return prepare_report(op, zones, index, rejection, max_alternatives).proposals
+
+
+# --- checked preparation: BREX failures, retries and blocked_by_rule ----------
+
+
+DEFAULT_MAX_RULE_RETRIES = 2
+
+
+@dataclass
+class CheckedResult:
+    """Checked proposals, the operation (its ``questions`` may have grown) and the failures."""
+
+    proposals: list[Proposal] = field(default_factory=list)
+    operation: Operation | None = None
+    extra_operations: list[Operation] = field(default_factory=list)  # derived for alternatives
+    errors: list[str] = field(default_factory=list)
+
+    @property
+    def all_operations(self) -> list[Operation]:
+        """The operation and the derived ones: what the writer needs to apply the proposals."""
+        return [self.operation, *self.extra_operations] if self.operation else []
+
+
+def _introduced_brex(checks: list[CheckResult]) -> list[CheckResult]:
+    return [
+        c
+        for c in checks
+        if c.name == "brex" and not c.ok and c.severity == "error" and c.origin == "introduced"
+    ]
+
+
+def _rule_ids(checks: list[CheckResult]) -> set[str]:
+    return {str((c.rule or {}).get("id", "")) for c in _introduced_brex(checks)}
+
+
+def customer_question(op: Operation, rule: dict[str, Any]) -> str:
+    """The pre-filled question sent to the customer when a business rule blocks a request."""
+    quote = op.source[0].quote if op.source else op.rationale
+    message = str(rule.get("message") or rule.get("xpath") or "").rstrip(". ")
+    return (
+        f"The request '{quote}' conflicts with business rule {rule.get('id')}: {message}. "
+        "How should we proceed?"
+    )
+
+
+def prepare_checked(
+    op: Operation,
+    zones: list[Zone],
+    index: CorpusIndex,
+    baseline: list[CheckResult],
+    max_rule_retries: int = DEFAULT_MAX_RULE_RETRIES,
+) -> CheckedResult:
+    """Proposals with their checks; BREX failures caused by the change are retried, then blocked.
+
+    For each content zone the proposal is checked by A7. If it ``introduces`` a BREX error, the
+    code alternatives of ``prepare`` (other form or position) are tried, at most
+    ``max_rule_retries`` times, so at most ``1 + max_rule_retries`` attempts per zone (never a
+    loop). The first alternative without introduced BREX error replaces the proposal
+    (``replaces``, ``attempt``). If none is found and every attempt hits the same rule (the
+    failure is inherent to the request, also when no alternative exists), the proposal gets
+    the status ``blocked_by_rule`` (attempts counted in ``attempt``, rule kept in its checks)
+    and the operation receives a pre-filled customer question. If the attempts hit different
+    rules the original proposal is kept as ``proposed`` with its errors.
+    """
+    report = prepare_report(op, zones, index)
+    result = CheckedResult(operation=op, errors=list(report.errors))
+    by_zone = {z.id: z for z in zones}
+    cache: dict[str, Any] = {}
+    questions = list(op.questions)
+    for proposal in report.proposals:
+        zone = by_zone[proposal.zone_id]
+        if zone.kind != "content":
+            result.proposals.append(proposal)  # a flag-only proposal keeps its warning
+            continue
+        checks = a7_checker.check_proposal(proposal, index, baseline, operation=op, zone=zone)
+        current = proposal.model_copy(update={"checks": checks})
+        if not _introduced_brex(checks):
+            result.proposals.append(current)
+            continue
+        attempts = [current]
+        passing: tuple[Proposal, Operation] | None = None
+        for _ in range(max_rule_retries):
+            try:
+                alternative = _alternative(index, op, zone, Rejection(attempts[-1]), cache)
+            except OpError:
+                alternative = None
+            if alternative is None:
+                break
+            variant, derived = alternative
+            alt_checks = a7_checker.check_proposal(
+                variant, index, baseline, operation=derived, zone=zone
+            )
+            variant = variant.model_copy(update={"checks": alt_checks})
+            attempts.append(variant)
+            if not _introduced_brex(alt_checks):
+                passing = (variant, derived)
+                break
+        if passing is not None:
+            result.proposals.append(passing[0])
+            result.extra_operations.append(passing[1])
+            continue
+        common = set.intersection(*(_rule_ids(a.checks) for a in attempts))
+        if not common:
+            result.proposals.append(current)  # different rules each time: left to the writer
+            continue
+        rule = next(
+            dict(c.rule or {})
+            for c in _introduced_brex(current.checks)
+            if str((c.rule or {}).get("id", "")) in common
+        )
+        notes = [
+            f"attempt {n}: {', '.join(sorted(_rule_ids(a.checks)))}"
+            for n, a in enumerate(attempts[1:], 2)
+        ]
+        result.proposals.append(
+            current.model_copy(
+                update={
+                    "status": "blocked_by_rule",
+                    "attempt": len(attempts),
+                    "rejection_feedback": [*current.rejection_feedback, *notes],
+                }
+            )
+        )
+        question = customer_question(op, rule)
+        if question not in questions:
+            questions.append(question)
+    result.operation = op.model_copy(update={"questions": questions})
+    return result
