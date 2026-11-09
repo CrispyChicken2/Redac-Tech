@@ -6,7 +6,6 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 007 M1 Workspace + index + A1 + baseline pre_existing
 - [ ] 008 M1 Opérations (8 ops) + A4 localisateur + A5 préparateur de propositions
 - [ ] 009 M1 Traçabilité, marquage delete, versioning (3 politiques, suggestion, consolidation, renommage) + A11 writer
 - [ ] 010 M1 A7 checker introduced vs pre_existing + blocked_by_rule (≤ 3 essais) + alternatives après rejet
@@ -24,10 +23,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 006 M1 Contrôles : validate.py (XSD, intégrité, ids, liens, ICN) + brex.py (règles 0/1/2, objectValue, chaîne, échange de BREX) + diff C14N
+- [~] 007 M1 Workspace + index + A1 + baseline pre_existing
 
 ## Fait
 
+- [x] 006 M1 Contrôles XSD/intégrité/ids/liens/ICN + BREX (règles, chaîne, échange) + diff C14N (beb3107)
 - [x] 005 M1 io S1000D durci + identification + classifieur (7fbbc4b)
 - [x] 022 M0 CI : lint corrigé, étapes indépendantes, setup_data durci (b1c1dde)
 - [x] 004 M0 Données Bike extraites (152/155 fichiers) + fixtures synthétiques (8af4a36)
