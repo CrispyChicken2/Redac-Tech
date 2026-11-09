@@ -6,7 +6,6 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 012 M1 Scénarios lru1010 (synthétique + Bike si données), delete_mark, versioning, preexisting_brex + redactech eval
 - [ ] 013 M1 Scénarios batch20 (< 10 s), ops_steps, forbidden_request, brex_swap + docs/DEMO.md CLI
 - [ ] 014 M2 RunState persisté, journal des décisions, rapport HTML/JSON, export questions CSV/XLSX
 - [ ] 015 M2 Rendu : vue XML, vue Publiée (IETP) XSLT 1.0, côte à côte, masquer les suppressions
@@ -19,10 +18,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 011 M1 A0 orchestrateur (state.json, points d'arrêt, reprise, --auto-accept tests) + CLI typer complète
+- [~] 012 M1 Scénarios lru1010 (synthétique + Bike si données), delete_mark, versioning, preexisting_brex + redactech eval
 
 ## Fait
 
+- [x] 011 M1 Orchestrateur A0 (points d'arrêt, state.json, reprise) + CLI request/review/write/check (1c358e9)
 - [x] 010 M1 A7 checker introduced/pre_existing + blocked_by_rule ≤ 3 essais + alternatives (3a14461)
 - [x] 009 M1 Traçabilité, marquage delete, versioning 3 politiques + A11 writer (be8c88b)
 - [x] 008 M1 8 opérations + lecteur CSV/XLSX + A4 localisateur + A5 préparateur (9b30bfc, après revert/correctif)
