@@ -76,7 +76,10 @@ def run(args: Sequence[str]) -> int:
         privacy.report(hits)
         print("gh_safe: gh not called.", file=sys.stderr)
         return 1
-    return subprocess.run([*_gh_command(), *args], input=stdin_data, text=stdin_data is not None).returncode
+    result = subprocess.run(
+        [*_gh_command(), *args], input=stdin_data, text=stdin_data is not None
+    )
+    return result.returncode
 
 
 def main() -> int:

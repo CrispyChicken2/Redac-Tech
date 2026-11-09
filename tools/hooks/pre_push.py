@@ -55,7 +55,8 @@ def scan_push(lines: list[str], terms, allow) -> list[privacy.Match]:
             message = privacy._decode(privacy.run_git("log", "-1", "--format=%B", sha))
             hits.extend(privacy.scan_text(message, terms, allow, source=f"{label} message"))
             diff = privacy.run_git("show", "--format=", "--patch", "--root", "--no-color", sha)
-            hits.extend(privacy.scan_text(privacy._decode(diff), terms, allow, source=f"{label} diff"))
+            diff_text = privacy._decode(diff)
+            hits.extend(privacy.scan_text(diff_text, terms, allow, source=f"{label} diff"))
     return hits
 
 

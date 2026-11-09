@@ -155,7 +155,8 @@ def test_cli_text_file_hit_and_clean(tmp_path: Path):
     assert res.returncode == 1
     out = res.stdout + res.stderr
     assert "***" in out and "zorglubcorp" not in out.lower()
-    res = _run([sys.executable, TOOLS / "privacy.py", "scan", "--text-file", good], tmp_path, _env())
+    cmd = [sys.executable, TOOLS / "privacy.py", "scan", "--text-file", good]
+    res = _run(cmd, tmp_path, _env())
     assert res.returncode == 0
 
 
@@ -238,10 +239,15 @@ def _commit(repo: Path, message: str) -> str:
     return _git(repo, "rev-parse", "HEAD")
 
 
+def _push(repo: Path, stdin: str):
+    hook = TOOLS / "hooks" / "pre_push.py"
+    return _run([sys.executable, hook, "origin", "none"], repo, _env(), stdin)
+
+
 def test_pre_push_rejects_commit_message_without_remote(repo: Path):
     sha = _commit(repo, "Work for Zorglubcorp")
     stdin = f"refs/heads/main {sha} refs/heads/main {ZERO_SHA}\n"
-    res = _run([sys.executable, TOOLS / "hooks" / "pre_push.py", "origin", "none"], repo, _env(), stdin)
+    res = _push(repo, stdin)
     assert res.returncode == 1
     assert "zorglubcorp" not in (res.stdout + res.stderr).lower()
 
@@ -252,14 +258,14 @@ def test_pre_push_rejects_diff_content(repo: Path):
     _git(repo, "commit", "-q", "--no-verify", "-m", "innocent")
     sha = _git(repo, "rev-parse", "HEAD")
     stdin = f"refs/heads/main {sha} refs/heads/main {ZERO_SHA}\n"
-    res = _run([sys.executable, TOOLS / "hooks" / "pre_push.py", "origin", "none"], repo, _env(), stdin)
+    res = _push(repo, stdin)
     assert res.returncode == 1
 
 
 def test_pre_push_rejects_branch_name(repo: Path):
     sha = _commit(repo, "innocent")
     stdin = f"refs/heads/feat-zorglubcorp {sha} refs/heads/feat-zorglubcorp {ZERO_SHA}\n"
-    res = _run([sys.executable, TOOLS / "hooks" / "pre_push.py", "origin", "none"], repo, _env(), stdin)
+    res = _push(repo, stdin)
     assert res.returncode == 1
     assert "zorglubcorp" not in (res.stdout + res.stderr).lower()
 
@@ -269,7 +275,7 @@ def test_pre_push_rejects_annotated_tag_message(repo: Path):
     _git(repo, "tag", "-a", "v1", "-m", "release for Zorglubcorp")
     tag_sha = _git(repo, "rev-parse", "v1")
     stdin = f"refs/tags/v1 {tag_sha} refs/tags/v1 {ZERO_SHA}\n"
-    res = _run([sys.executable, TOOLS / "hooks" / "pre_push.py", "origin", "none"], repo, _env(), stdin)
+    res = _push(repo, stdin)
     assert res.returncode == 1
     assert "zorglubcorp" not in (res.stdout + res.stderr).lower()
 
@@ -280,7 +286,7 @@ def test_pre_push_accepts_clean_and_deletions(repo: Path):
         f"refs/heads/main {sha} refs/heads/main {ZERO_SHA}\n"
         f"(delete) {ZERO_SHA} refs/heads/old {sha}\n"
     )
-    res = _run([sys.executable, TOOLS / "hooks" / "pre_push.py", "origin", "none"], repo, _env(), stdin)
+    res = _push(repo, stdin)
     assert res.returncode == 0, res.stderr
 
 

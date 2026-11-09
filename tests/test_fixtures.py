@@ -6,8 +6,6 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import pytest
-
 NAME = re.compile(
     r"^(?:DMC|UPF)-[A-Z0-9]{2,14}-[A-Z0-9]{3}-[A-Z0-9]{3}-[A-Z0-9]{2}-[A-Z0-9]{2}-[A-Z0-9]{4}"
     r"-[A-Z0-9]{4}-[A-Z0-9]_\d{3}-\d{2}_[A-Z]{2}-[A-Z]{2}\.XML$"
@@ -164,7 +162,18 @@ def test_change_marks_fixture(fixtures_dir: Path):
     assert refs <= rfu_ids
 
 
-@pytest.mark.parametrize("term", ["LRU1010", "X2", "FAKE-PN-001"])
-def test_only_fictitious_part_numbers_used(fixtures_dir: Path, term: str):
-    text = "".join(p.read_text(encoding="utf-8") for p in all_xml(fixtures_dir))
-    assert term in text
+ALLOWED_PART_NUMBERS = {"LRU1010", "LRU2020", "X2", "X3", "FAKE-PN-001"}
+
+
+def test_only_fictitious_part_numbers_used(fixtures_dir: Path):
+    found: set[str] = set()
+    for path in all_xml(fixtures_dir):
+        for element in parse(path).iter():
+            if element.tag == "partNumber" and element.text:
+                found.add(element.text.strip())
+            value = element.get("partNumberValue")
+            if value:
+                found.add(value)
+    assert found, "no part number found in the fixtures"
+    assert found <= ALLOWED_PART_NUMBERS, sorted(found - ALLOWED_PART_NUMBERS)
+    assert {"LRU1010", "X2", "FAKE-PN-001"} <= found
