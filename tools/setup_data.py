@@ -27,7 +27,6 @@ import re
 import sys
 import zipfile
 from collections import Counter
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,7 +45,7 @@ class UnsafeArchiveError(ValueError):
 @dataclass
 class Item:
     dest: Path
-    read: Callable[[], bytes]
+    data: bytes
     src: str
 
 
@@ -55,11 +54,14 @@ def _parts(name: str) -> list[str]:
 
 
 def check_member(name: str) -> None:
-    """Refuse absolute paths, drive letters and parent references."""
+    """Refuse absolute paths, ``:`` in any part (drive letters, streams) and ``..``."""
     normalized = name.replace("\\", "/")
-    if normalized.startswith("/") or re.match(r"^[A-Za-z]:", normalized):
+    if normalized.startswith("/"):
         raise UnsafeArchiveError(f"absolute path in archive: {name!r}")
-    if ".." in _parts(normalized):
+    parts = _parts(normalized)
+    if any(":" in part for part in parts):
+        raise UnsafeArchiveError(f"colon in archive path: {name!r}")
+    if ".." in parts:
         raise UnsafeArchiveError(f"parent reference in archive: {name!r}")
 
 
@@ -81,53 +83,56 @@ class _Plan:
         self.dirs = {kind: version_dir / kind for kind in ("bike", "brex", "schemas")}
         self.items: dict[Path, Item] = {}
 
-    def add(self, kind: str, member: str, read: Callable[[], bytes], src: str) -> None:
+    def add(self, kind: str, member: str, data: bytes, src: str) -> None:
         check_member(member)
-        dest = self.dirs[kind] / _base(member)
+        root = self.dirs[kind]
+        dest = root / _base(member)
+        if root.resolve() not in dest.resolve().parents:
+            raise UnsafeArchiveError(f"destination escapes {root}: {member!r}")
         if dest in self.items:
-            raise ValueError(f"two archive members map to {dest.name}: {src}")
-        self.items[dest] = Item(dest, read, src)
+            raise UnsafeArchiveError(
+                f"duplicate base name {dest.name!r} in {kind}: {self.items[dest].src} and {src}"
+            )
+        self.items[dest] = Item(dest, data, src)
 
 
-def _add_bike_file(plan: _Plan, member: str, read: Callable[[], bytes], src: str) -> None:
-    plan.add("bike", member, read, src)
+def _add_bike_file(plan: _Plan, member: str, data: bytes, src: str) -> None:
+    plan.add("bike", member, data, src)
     if BREX_NAME.search(_base(member)):
-        plan.add("brex", member, read, src)
-
-
-def _reader(zf: zipfile.ZipFile, member: str) -> Callable[[], bytes]:
-    return lambda: zf.read(member)
+        plan.add("brex", member, data, src)
 
 
 def build_plan(archive: Path, version: str, data_dir: Path) -> _Plan:
+    """Select the members to extract (bytes are read eagerly, zip files are closed on return)."""
     plan = _Plan(data_dir / f"s1000d-{version}")
-    outer = zipfile.ZipFile(archive)
-    for name in outer.namelist():
-        if not _is_file(name):
-            continue
-        low = [p.lower() for p in _parts(name)]
-        in_patches = any(p.startswith("patch") or p == "data dictionary" for p in low)
-        folder = _folder(name)
-        src = f"{archive.name}:{name}"
-        if folder == "xml_schema_flat" and name.lower().endswith(".xsd") and not in_patches:
-            plan.add("schemas", name, _reader(outer, name), src)
-        elif folder == "bike data set" and name.lower().endswith(".zip"):
-            check_member(name)
-            inner = zipfile.ZipFile(io.BytesIO(outer.read(name)))
-            for member in inner.namelist():
-                if _is_file(member):
-                    _add_bike_file(plan, member, _reader(inner, member), f"{src}!{member}")
-        elif folder.startswith("bike data set for issue") and not in_patches:
-            _add_bike_file(plan, name, _reader(outer, name), src)
-        elif folder == "default brex data module" and not in_patches:
-            if name.lower().endswith(".zip"):
+    with zipfile.ZipFile(archive) as outer:
+        for name in outer.namelist():
+            if not _is_file(name):
+                continue
+            low = [p.lower() for p in _parts(name)]
+            in_patches = any(p.startswith("patch") or p == "data dictionary" for p in low)
+            folder = _folder(name)
+            src = f"{archive.name}:{name}"
+            lower_name = name.lower()
+            if folder == "xml_schema_flat" and lower_name.endswith(".xsd") and not in_patches:
+                plan.add("schemas", name, outer.read(name), src)
+            elif folder == "bike data set" and lower_name.endswith(".zip"):
                 check_member(name)
-                inner = zipfile.ZipFile(io.BytesIO(outer.read(name)))
-                for member in inner.namelist():
-                    if _is_file(member) and member.lower().endswith(".xml"):
-                        plan.add("brex", member, _reader(inner, member), f"{src}!{member}")
-            elif name.lower().endswith(".xml"):
-                plan.add("brex", name, _reader(outer, name), src)
+                with zipfile.ZipFile(io.BytesIO(outer.read(name))) as inner:
+                    for member in inner.namelist():
+                        if _is_file(member):
+                            _add_bike_file(plan, member, inner.read(member), f"{src}!{member}")
+            elif folder.startswith("bike data set for issue") and not in_patches:
+                _add_bike_file(plan, name, outer.read(name), src)
+            elif folder == "default brex data module" and not in_patches:
+                if lower_name.endswith(".zip"):
+                    check_member(name)
+                    with zipfile.ZipFile(io.BytesIO(outer.read(name))) as inner:
+                        for member in inner.namelist():
+                            if _is_file(member) and member.lower().endswith(".xml"):
+                                plan.add("brex", member, inner.read(member), f"{src}!{member}")
+                elif lower_name.endswith(".xml"):
+                    plan.add("brex", name, outer.read(name), src)
     return plan
 
 
@@ -144,7 +149,7 @@ def run(archives_dir: Path, data_dir: Path, dry_run: bool = False) -> dict[str, 
             summary.setdefault(kind_dir.relative_to(data_dir).as_posix(), Counter())
         for dest, item in plan.items.items():
             counts = summary[dest.parent.relative_to(data_dir).as_posix()]
-            data = item.read()
+            data = item.data
             if not dest.exists():
                 counts["new"] += 1
             elif dest.read_bytes() == data:
@@ -169,8 +174,12 @@ def format_summary(summary: dict[str, Counter], dry_run: bool) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Rebuild data/ from the two public S1000D archives.")
-    parser.add_argument("--archives-dir", type=Path, help="folder with the two zips (main checkout)")
+    parser = argparse.ArgumentParser(
+        description="Rebuild data/ from the two public S1000D archives."
+    )
+    parser.add_argument(
+        "--archives-dir", type=Path, help="folder with the two zips (main checkout)"
+    )
     parser.add_argument("--data-dir", type=Path, help="output folder (<main checkout>/data)")
     parser.add_argument("--dry-run", action="store_true", help="list what would be extracted")
     args = parser.parse_args(argv)
@@ -183,7 +192,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     present = [f for f in ARCHIVES.values() if (archives_dir / f).is_file()]
     if not present:
-        print(f"setup_data: no archive found in {archives_dir} (expected {list(ARCHIVES.values())})")
+        expected = list(ARCHIVES.values())
+        print(f"setup_data: no archive found in {archives_dir} (expected {expected})")
         return 1
     try:
         summary = run(archives_dir, data_dir, args.dry_run)

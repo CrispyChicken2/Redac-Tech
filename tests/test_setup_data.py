@@ -44,7 +44,9 @@ def make_archives(root: Path, extra_bike_41: dict[str, bytes] | None = None) -> 
         root / "S1000D Issue 4.1.zip",
         {
             f"{base41}/Bike data set/S1000D_4-1_Bike_Samples.zip": _zip_bytes(bike_inner),
-            f"{base41}/Default BREX data module/S1000D_4.1_Default_BREX.zip": _zip_bytes(brex_inner),
+            f"{base41}/Default BREX data module/S1000D_4.1_Default_BREX.zip": _zip_bytes(
+                brex_inner
+            ),
             f"{base41}/xml_schema_flat/proced.xsd": b"<xsd1/>",
             f"{base41}/xml_schema_flat/comrep.xsd": b"<xsd2/>",
             f"{base41}/Data Dictionary/Files/xml_schema_flat/decoy.xsd": b"decoy",
@@ -115,6 +117,35 @@ def test_zip_slip_refused_and_nothing_written(tmp_path: Path):
 def test_check_member_rejects_unsafe_names(name: str):
     with pytest.raises(setup_data.UnsafeArchiveError):
         setup_data.check_member(name)
+
+
+@pytest.mark.parametrize("name", ["a/b:stream.txt", "dir:x/file.txt", "a/C:/x.txt"])
+def test_check_member_rejects_colon_in_any_part(name: str):
+    with pytest.raises(setup_data.UnsafeArchiveError):
+        setup_data.check_member(name)
+
+
+def test_duplicate_base_names_are_refused(tmp_path: Path, capsys):
+    dup = {
+        "S1000D_4-1_Bike_Samples/a/DMC-X-040A-A_001-00_EN-US.XML": b"<one/>",
+        "S1000D_4-1_Bike_Samples/b/DMC-X-040A-A_001-00_EN-US.XML": b"<two/>",
+    }
+    arch = make_archives(tmp_path / "arch", dup)
+    data = tmp_path / "data"
+    with pytest.raises(setup_data.UnsafeArchiveError):
+        setup_data.run(arch, data)
+    assert not data.exists()
+    code = setup_data.main(["--archives-dir", str(arch), "--data-dir", str(data)])
+    assert code == 2
+    assert "refused" in capsys.readouterr().out
+
+
+def test_plan_destinations_stay_inside_the_target(tmp_path: Path):
+    arch = make_archives(tmp_path / "arch")
+    plan = setup_data.build_plan(arch / "S1000D Issue 4.1.zip", "4.1", tmp_path / "data")
+    root = (tmp_path / "data").resolve()
+    assert plan.items
+    assert all(root in dest.resolve().parents for dest in plan.items)
 
 
 def test_check_member_accepts_normal_names():

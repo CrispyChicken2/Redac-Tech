@@ -143,7 +143,9 @@ def _compile(term: str) -> re.Pattern[str]:
     raise AssertionError("unreachable")  # re.escape always compiles
 
 
-def _spans(line: str, patterns: Sequence[re.Pattern[str]], allow: Sequence[str]) -> list[tuple[int, int]]:
+def _spans(
+    line: str, patterns: Sequence[re.Pattern[str]], allow: Sequence[str]
+) -> list[tuple[int, int]]:
     allowed: list[tuple[int, int]] = []
     for a in allow:
         start = line.find(a)
