@@ -1,5 +1,29 @@
 # Journal des modifications
 
+## 008 — Opérations et propositions
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/s1000d/ops/` : 8 opérations, fonctions pures sur une copie de l'arbre : `replace_part`, `replace_text`, `insert_step`, `delete_step`, `move_step`, `update_ref`, `add_requirement`, `remove_requirement`. Les suppressions désignent l'élément sans rien enlever (marquage à l'écriture).
+- `src/redactech/agents/a2_mapping.py` : lecture des tables de correspondances CSV (`;` ou `,`, UTF-8) et XLSX (colonnes `old`, `new`, `kind`, `reason`), et des demandes structurées. Chaque opération garde la citation source de sa ligne ; une ligne incomplète fait refuser la table entière.
+- `src/redactech/agents/a4_locator.py` : localisation exhaustive des occurrences d'un numéro de pièce (`certain` pour les structurées, `probable` pour le texte libre), documents en lecture seule ignorés et listés avec leur raison, illustrations liées signalées `to_check`.
+- `src/redactech/agents/a5_preparer.py` : propositions avant / après sur copie en mémoire, avertissement sur les illustrations, alternatives calculées après rejet (première ou dernière mention, position voisine), plafonnées par `max_alternatives`.
+- Tests : `tests/s1000d/test_ops.py`, `tests/agents/test_a2_mapping.py`, `tests/agents/test_a4_locator.py`, `tests/agents/test_a5_preparer.py`.
+- `docs/ARCHITECTURE.md` : section « Demande, localisation et propositions » (opérations et paramètres, format de la table, niveaux de certitude, illustrations, alternatives).
+
+### Tests écrits, non exécutés
+
+Les tests ci-dessus ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- 5 genres d'opération de l'enum du modèle ne sont pas implémentés : `update_applic`, `update_value`, `write_steps`, `fix_violation`, `translate_dm`. Ils lèvent `OpError`.
+- Les tables de correspondances n'acceptent que `replace_part` et `replace_text`.
+- Le paramètre `max_alternatives` doit être passé par l'appelant depuis `config.toml` ; il n'est pas lu automatiquement.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 007 — Workspace, index, baseline
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**

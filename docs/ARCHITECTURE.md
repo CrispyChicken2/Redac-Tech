@@ -216,6 +216,86 @@ writable = true
 
 Ajouter `schemas_dir = "data/s1000d-4.1/schemas"` à une source la rattache explicitement à son dossier de schémas.
 
+## Demande, localisation et propositions
+
+Modules : `s1000d/ops/` (opérations), `agents/a2_mapping.py` (lecture des demandes), `agents/a4_locator.py` (localisation), `agents/a5_preparer.py` (propositions).
+
+### Les 8 opérations (`s1000d/ops/`)
+
+Chaque opération est une fonction pure `op(tree, zone, params) -> OpResult`. Elle travaille sur une **copie** de l'arbre, ne touche à aucun fichier, et n'écrit que les valeurs données dans `params` (plus des identifiants générés). Une suppression n'enlève rien : elle désigne l'élément (`change_type="delete"`) ; le marquage est fait à l'écriture, et seule une nouvelle issue consolide.
+
+| Opération | Paramètres | Effet | `change_type` |
+|---|---|---|---|
+| `replace_part` | `old`, `new`, `occurrence` (facultatif : 1 = première, -1 = dernière) | remplace le numéro de pièce à la zone : `partNumber` (texte), `partRef` / `partIdent` (attribut `partNumberValue`), ou texte libre (mot entier) | `modify` |
+| `replace_text` | `old`, `new`, `scope` (`descendants` par défaut, ou `element`), `whole_word` (faux par défaut), `occurrence` | remplace un texte dans les nœuds texte de la zone | `modify` |
+| `insert_step` | `para` ; `after_id` ou `before_id` (exactement un) | ajoute un `proceduralStep` avec un paragraphe, id `stp-NNNN` généré | `add` |
+| `delete_step` | `step_id` (ou id de la zone) | désigne l'étape ; l'arbre n'est pas modifié | `delete` |
+| `move_step` | `step_id` ; `after_id` ou `before_id` | déplace l'étape ; refusé si l'étape est placée à côté d'elle-même ou dans elle-même | `modify` |
+| `update_ref` | pour un `dmRef` : `dm_code` (attributs du `dmCode` à changer), `issue_info` facultatif (`issueNumber`, `inWork`) ; pour un `internalRef` : `internal_ref_id` (doit exister), `target_type` facultatif | change la cible ; un `xlink:href` contenant l'ancien code est mis à jour | `modify` |
+| `add_requirement` | `requirement` (`spare`, `supply`, `tool` ou `supportEquipment`), `part_number`, `manufacturer_code`, `quantity` (obligatoires), `name` facultatif | ajoute un descripteur dans `preliminaryRqmts` ; un placeholder `noSpares`-style est remplacé par le groupe | `add` |
+| `remove_requirement` | `requirement` ; `id` ou `part_number` | désigne l'exigence ; exactement une correspondance requise ; l'arbre n'est pas modifié | `delete` |
+
+Règles communes :
+
+- Un paramètre manquant lève `OpError` en le nommant ; rien n'est deviné.
+- Une cible introuvable, ou une zone sans cible, lève `OpError`.
+- `replace_*` sans correspondance lève `OpError` (« not found at the zone »).
+- Les autres genres de l'enum du modèle `Operation` (`update_applic`, `update_value`, `write_steps`, `fix_violation`, `translate_dm`) ne sont **pas implémentés** : `apply` lève `OpError`.
+
+### Fichier de correspondances (`agents/a2_mapping.py`)
+
+Une table de correspondances, au format CSV ou XLSX, est lue par `read_mapping` :
+
+- **Colonnes** (en-tête insensible à la casse) : `old` et `new` obligatoires ; `kind` facultatif (`replace_part` par défaut, seuls `replace_part` et `replace_text` sont admis dans une table) ; `reason` facultatif (justification ; à défaut, « old replaced by new »).
+- **CSV** : séparateur `;` ou `,`, détecté d'après le nombre de `;` et de `,` dans la ligne d'en-tête (`;` l'emporte si elle en contient davantage). Encodage UTF-8, la marque d'ordre d'octets est tolérée. Une cellule entre guillemets peut couvrir plusieurs lignes.
+- **XLSX** (`.xlsx`, `.xlsm`) : première feuille, première ligne = en-tête.
+- Les lignes vides sont ignorées. Chaque ligne garde sa forme brute (`_raw`), qui sert de **citation source** : chaque valeur écrite par la suite se retrouve donc dans la demande.
+- **Refus** : une ligne sans `old` ou sans `new`, ou dont le `kind` n'est pas admis, fait lever `MappingError` avec la liste de tous les problèmes. Aucune opération n'est produite dans ce cas.
+- `from_form(form)` fait de même pour une demande structurée (dictionnaire `kind`, `params`, `target`, `reason`) ; sa citation source est le formulaire lui-même.
+
+### Localisation (`agents/a4_locator.py`)
+
+`locate(op, index)` transforme une opération en **zones** (`Zone`) :
+
+- **`replace_part`** : chaque occurrence du numéro dans l'index devient une zone. Les occurrences **structurées** (`partNumber`, `partRef`, `partSpec`, `partIdent`) sont `certain` ; les mentions dans le **texte libre** sont `probable`.
+- **Documents en lecture seule** (UPF, BREX, sources `writable=false`) : jamais de zone. Elles sont listées dans `skipped_readonly` avec la raison.
+- **Illustrations** : si l'élément modifié est lié à une figure du même document (lien `irtt01` dans le même conteneur, ou figure du catalogue pour un article illustré), une zone de genre `illustration` est ajoutée, de certitude `to_check`. L'outil ne modifie jamais les images.
+- **Autres opérations** : une seule zone, certaine, désignant la cible de l'opération ; un document en lecture seule est ignoré.
+
+Niveaux de certitude d'une zone (`Zone.certainty`) :
+
+| Niveau | Sens |
+|---|---|
+| `certain` | occurrence structurée, ou cible explicite de l'opération |
+| `probable` | mention trouvée dans le texte libre (vérification recommandée) |
+| `to_check` | illustration liée à une modification : l'image doit être vérifiée à la main |
+
+`Zone.found_by` vaut `code` pour ces zones (le LLM n'intervient pas à ce stade).
+
+### Propositions (`agents/a5_preparer.py`)
+
+`prepare(op, zones, index)` applique l'opération à chaque zone sur une copie en mémoire (rien n'est écrit) et produit une `Proposal` avec `before_xml` et `after_xml` :
+
+- **Zone de contenu** : la proposition contient l'élément modifié, avant et après, et `change_type` renvoyé par l'opération.
+- **Zone d'illustration** : proposition sans changement (`before_xml == after_xml`) portant un avertissement `illustration` de gravité `warning` (« to check »).
+- Une zone que l'opération ne sait pas appliquer est rapportée dans `errors` (« needs manual edit » côté écriture), sans bloquer les autres zones.
+
+**Alternatives après rejet** : `prepare(..., rejection=...)` propose, par calcul et non par LLM, une autre formulation :
+
+- `replace_part` / `replace_text` : seulement la première mention, puis seulement la dernière (`occurrence` 1, puis -1) ;
+- `insert_step` / `move_step` : la position voisine (après l'étape suivante, avant l'étape précédente) puis le côté opposé de l'étape de référence.
+
+Les candidats sont essayés sur une copie et gardés seulement s'ils diffèrent de la proposition rejetée et entre eux. Chaque alternative porte `attempt` (+1), `replaces` (id de la proposition rejetée) et l'historique `rejection_feedback`. Le nombre d'alternatives est plafonné par `max_alternatives` (par défaut 3 ; l'appelant doit passer `trace.max_alternatives` de `config.toml`). Au-delà, ou s'il n'existe pas d'alternative, la liste est vide : il faut une édition manuelle.
+
+### Format de la demande en bref
+
+```csv
+old;new;kind;reason
+LRU1010;LRU2020;replace_part;Remplacement de la pièce
+```
+
+Le même contenu en CSV séparé par des virgules (`old,new,kind,reason`) est accepté, ainsi qu'un XLSX à la même structure.
+
 ## Configuration (`config.toml`)
 
 Fichier à la racine du dépôt, suivi par git. Chargé par `config.py` ; si le fichier est absent, les valeurs par défaut s'appliquent.
