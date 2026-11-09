@@ -26,7 +26,48 @@ Racine : `src/redactech/`. Chaque sous-paquet porte un rôle défini par la sect
 | `ui/` | interface Streamlit | squelette |
 | `llm/` | accès au LLM local (Ollama) ; tous les appels LLM passent ici (M3) | squelette |
 
-Prévu dans `s1000d/` (non encore créé) : `io.py` (lecture et écriture lxml durcies, DOCTYPE, entités, commentaires et fins de ligne préservés), `ident.py` (DMC, issueInfo, langue, détection de l'issue, rôle des fichiers), `index.py`, `trace.py` et `versioning.py`, `validate.py` et `brex.py` (chaîne BREX, différence base de référence / introduit, `blocked_by_rule`), `diff.py` (C14N).
+Implémentés depuis la tâche 005 : `s1000d/io.py` et `s1000d/ident.py` (voir la section « Lecture et identification S1000D » ci-dessous), `sources/classify.py`.
+
+Prévus dans `s1000d/` (non encore créés) : `index.py`, `trace.py` et `versioning.py`, `validate.py` et `brex.py` (chaîne BREX, différence base de référence / introduit, `blocked_by_rule`), `diff.py`.
+
+## Lecture et identification S1000D
+
+Modules : `s1000d/io.py`, `s1000d/ident.py`, `sources/classify.py`.
+
+### Lecture sûre (`s1000d/io.py`)
+
+- **Pas d'expansion d'entités, pas de réseau, pas de DTD externe.** Le parseur lxml est configuré avec `resolve_entities=False`, `no_network=True`, `load_dtd=False`, `huge_tree=False`. Une entité externe (XXE) ou une expansion en cascade reste un nœud de référence d'entité, jamais développé. Les fixtures `tests/fixtures/s1000d/security/` le vérifient.
+- **Rien n'est supprimé à la lecture** : commentaires, instructions de traitement et blancs sont conservés (`remove_comments`, `remove_pis`, `remove_blank_text` à faux).
+- **Aller-retour octet pour octet.** `load` garde le texte exact de la déclaration XML, du DOCTYPE (sous-ensemble interne compris), du préambule avant la racine, le style de fin de ligne (CRLF ou LF) et le BOM. Tant que l'arbre n'est pas modifié, `dumps` renvoie les octets d'origine à l'identique.
+- **Après modification**, `render` reconstruit le document : préambule d'origine réémis tel quel (ou régénéré si un commentaire ou une instruction avant la racine a été modifié), racine sérialisée par lxml, style de fin de ligne et BOM restaurés. Limite : la restauration des fins de ligne ne couvre que les encodages compatibles ASCII.
+- **Écriture atomique** (`save`) : fichier temporaire dans le même dossier, puis remplacement.
+- **Regex uniquement sur le préambule brut** (encodage déclaré, déclaration) ; jamais sur le contenu XML. Les accès aux éléments passent par XPath ou ElementPath.
+- **C14N** (`canonical`) : C14N 1.0 sans commentaires, avec repli sur la sérialisation simple si libxml2 refuse la canonicalisation.
+
+### Identification (`s1000d/ident.py`)
+
+- **DMC** : `DmCode` lit les attributs de `identAndStatusSection/dmAddress/dmIdent/dmCode` (un attribut absent devient une chaîne vide). `dmc_string` produit `MIC-SDC-SYSTEM-SOUSSYS+SOUSSUBSYS-ASSY-DISASSY+VAR-INFO+VAR-LOC`, avec `-LEARNCODE+LEARNEVENTCODE` pour les modules d'apprentissage.
+- **issueInfo** et **langue** : `issue_info` renvoie `(issueNumber, inWork)`, `language` renvoie `(languageIsoCode, countryIsoCode)`. Absent : `None`.
+- **Règle de détection de l'Issue** (`detect_issue`) : on lit `xsi:noNamespaceSchemaLocation` (à défaut `xsi:schemaLocation`) de la racine. Le segment d'URL qui commence par `S1000D_` donne l'Issue (`S1000D_4-2` → `4.2`). Seules les valeurs `4.1` et `4.2` sont reconnues ; sinon, `None`.
+- **Module BREX** (`is_brex`) : code d'information `022`.
+- **Noms de fichiers** (`parse_filename`, `build_filename`) : motif `PREFIXE-CODE[_III-WW[_ll-CC]].EXT`, où `III` est le numéro d'issue sur 3 chiffres, `WW` le numéro de travail (in-work) sur 2 chiffres, `ll-CC` la langue et le pays. Le préfixe est normalisé en majuscules. Un nom qui ne correspond pas renvoie `None`. `build_filename(parse_filename(n)) == n` pour les préfixes en majuscules.
+- **Nom d'un DM à partir de son contenu** (`filename_for`) : `DMC-<code>_<issue>-<inWork>_<langue>-<pays>.<ext>`. La casse de la langue et de l'extension suit le nom courant du fichier s'il existe, sinon `EN-US` et `XML`.
+
+### Classifieur de sources (`sources/classify.py`)
+
+`classify(path, source_id)` renvoie un `SourceDoc`. Il ne lève jamais d'exception : tout cas inattendu donne le rôle `other`.
+
+| Rôle | Critère | Modifiable |
+|---|---|---|
+| `icn` | extension graphique (`.cgm`, `.jpg`, `.png`, `.svg`, etc.) ou nom `ICN-` | non |
+| `dm` | XML dont la racine est `dmodule`, hors BREX | oui |
+| `brex` | `dmodule` avec code d'information `022` | non |
+| `pm` | racine `pm`, ou nom `PMC-` si le XML ne se lit pas | oui |
+| `ddn` | racine `ddn`, ou nom `DDN-` si le XML ne se lit pas | oui |
+| `upf` | racine `dataUpdateFile` ou `updateFile`, ou nom `UPF-` | non |
+| `other` | tout le reste, XML illisible compris | oui |
+
+Le rôle `upf` et les rôles `brex` et `icn` sont en lecture seule. `doc_key` est le nom du fichier sans extension ; `issue` vient de `detect_issue` ; `language` vient du DM ou, à défaut, du nom du fichier.
 
 ## Contrats de données (`models.py`)
 

@@ -1,5 +1,25 @@
 # Journal des modifications
 
+## 005 — io, identification, classifieur
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/s1000d/io.py` : lecture XML durcie avec lxml (pas d'expansion d'entités, pas de réseau, pas de DTD externe), aller-retour octet pour octet tant que l'arbre n'est pas modifié, préambule conservé (déclaration, DOCTYPE, commentaires et instructions avant la racine, fins de ligne, BOM), réécriture contrôlée après modification, écriture atomique, C14N sans commentaires.
+- `src/redactech/s1000d/ident.py` : DMC (`DmCode`, `dmc_string`), `issueInfo`, langue, détection de l'Issue (`4.1` / `4.2`) à partir de l'URL de schéma de la racine, module BREX (code `022`), analyse et construction des noms de fichiers S1000D, nom d'un DM à partir de son contenu.
+- `src/redactech/sources/classify.py` : classifieur de sources aux rôles `dm`, `brex`, `pm`, `ddn`, `upf`, `icn` et `other`. Les rôles `brex`, `upf` et `icn` sont en lecture seule. Ne lève jamais d'exception.
+- `tests/s1000d/test_io.py`, `tests/s1000d/test_ident.py`, `tests/sources/test_classify.py` : tests des aller-retours, des fixtures de sécurité (entité externe et expansion en cascade jamais développées), de la détection de l'Issue, des noms de fichiers et des rôles.
+
+### Tests écrits, non exécutés
+
+Les tests ci-dessus ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- Les tests sur les données Bike réelles (`test_real_bike_41_round_trip`, `test_real_bike_42_round_trip`) dépendent de `data/` et sont sautés si les données manquent.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 022 — CI verte
 
 **Statut :** fusionnée. **Tests exécutés uniquement par la CI GitHub** (aucun test sur ce poste). Le statut de la CI sur GitHub n'est pas vérifié depuis ce poste : pas de remote configuré.
