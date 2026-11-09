@@ -194,6 +194,43 @@ def test_free_text_is_counted_once_per_paragraph_without_nesting(tmp_path: Path)
     assert pn3.kind == "partNumber"  # structured only, not counted twice as free text
 
 
+def test_part_numbers_in_any_element_text_are_found(tmp_path: Path):
+    write_dm(
+        tmp_path,
+        "<itemDescr>See PN-77 here</itemDescr><shortName>PN-78</shortName>"
+        "<listItemTerm>PN-79</listItemTerm><definition>use PN-80.</definition>"
+        "<caption>PN-81</caption><refs>x</refs>",
+    )
+    index = ix.build_index(workspace_for(tmp_path))
+    for number in ("PN-77", "PN-78", "PN-79", "PN-80", "PN-81"):
+        found = ix.find_part(index, number)
+        assert [o.kind for o in found] == ["para"], number
+
+
+def test_titles_are_searched_but_status_boilerplate_is_not(tmp_path: Path):
+    xml = (
+        "<dmodule><identAndStatusSection><dmAddress><dmIdent><dmCode/></dmIdent>"
+        "<dmAddressItems><dmTitle><techName>PN-91 unit</techName></dmTitle></dmAddressItems>"
+        "</dmAddress><dmStatus><responsiblePartnerCompany><enterpriseName>PN-90"
+        "</enterpriseName></responsiblePartnerCompany></dmStatus></identAndStatusSection>"
+        "<content><para>PN-92</para></content></dmodule>"
+    )
+    name = "DMC-SYNTH-AAA-D00-00-00-00AA-040A-A_001-00_EN-US.XML"
+    (tmp_path / name).write_text(xml, encoding="utf-8")
+    index = ix.build_index(workspace_for(tmp_path))
+    assert len(ix.find_part(index, "PN-91")) == 1  # data module title
+    assert len(ix.find_part(index, "PN-92")) == 1
+    assert ix.find_part(index, "PN-90") == []  # company name in the status section
+
+
+def test_keep_docs_keeps_the_parsed_data_modules_only_on_request():
+    ws = workspace_for(FIXTURES)
+    assert ix.build_index(ws).loaded == {}
+    kept = ix.build_index(ws, keep_docs=True)
+    assert len(kept.loaded) == 9 and all(k.startswith("fixtures:") for k in kept.loaded)
+    assert set(kept.chain_notes) == {k for k, d in kept.docs.items() if d.role in ("dm", "brex")}
+
+
 # --- internal refs, dm refs, figures ------------------------------------------
 
 

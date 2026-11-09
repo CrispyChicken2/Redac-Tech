@@ -126,18 +126,22 @@ def index(workspace: WorkspaceOpt = None) -> None:
 def baseline(workspace: WorkspaceOpt = None) -> None:
     """Run the baseline checks and print the pre-existing problems per data module."""
     from redactech.agents import a1_indexer
+    from redactech.s1000d.index import ref_key
 
     ws, _ = _load(workspace)
     idx, results = a1_indexer.run(ws)
     found = a1_indexer.problems(results)
     errors = warnings = 0
     for key in sorted(k for k, d in idx.docs.items() if d.role == "dm"):
-        doc_key = idx.docs[key].ref.doc_key
-        mine = [r for r in found if r.ref is not None and r.ref.doc_key == doc_key]
+        mine = [r for r in found if r.ref is not None and ref_key(r.ref) == key]
         e = sum(1 for r in mine if r.severity == "error")
         w = len(mine) - e
         errors, warnings = errors + e, warnings + w
-        typer.echo(f"{doc_key}: {e} error(s), {w} warning(s) pre-existing")
+        typer.echo(f"{key}: {e} error(s), {w} warning(s) pre-existing")
+    no_schemas = [s.id for s in ws.sources if s.schemas_dir is None]
+    if no_schemas:
+        names = ", ".join(no_schemas)
+        typer.echo(f"note: no schemas folder for source(s) {names}: XSD not checked")
     n_dm = sum(1 for d in idx.docs.values() if d.role == "dm")
     typer.echo(
         f"baseline: {n_dm} data modules, {errors} error(s), {warnings} warning(s) pre-existing"
