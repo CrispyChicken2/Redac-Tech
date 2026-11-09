@@ -33,10 +33,6 @@ def test_workspace_help_lists_subcommands():
 @pytest.mark.parametrize(
     "args",
     [
-        ["request", "--mapping", "lots.xlsx", "--version-policy", "in_work", "--out", "runs/"],
-        ["review", "runs/x"],
-        ["write", "runs/x"],
-        ["check", "runs/x/out"],
         ["render", "doc.xml", "--view", "xml", "--show-deleted"],
         ["eval", "tests/scenarios/"],
     ],
@@ -135,3 +131,134 @@ def test_default_workspace_file_comes_from_the_config(tmp_path: Path, monkeypatc
     monkeypatch.chdir(tmp_path)
     created = run("workspace", "init")
     assert created.exit_code == 0 and (tmp_path / "workspace.toml").is_file()
+
+
+# --- request / review / write / check -----------------------------------------
+
+
+CODE = "AAA-D00-00-00-00AA"
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "s1000d"
+LRU_FILES = (
+    f"DMC-RTPROTO-{CODE}-040A-A_001-00_EN-US.XML",
+    f"DMC-RTPROTO-{CODE}-0A3A-D_001-00_EN-US.XML",
+    f"DMC-RTPROTO-{CODE}-941A-D_001-00_EN-US.XML",
+    f"UPF-RTPROTO-{CODE}-0A3A-D_001-00_EN-US.XML",
+    f"DMC-RTPROTO-{CODE}-022A-D_001-00_EN-US.XML",
+    f"DMC-RTDEFLT-{CODE}-022A-D_001-00_EN-US.XML",
+)
+
+
+@pytest.fixture
+def project(tmp_path: Path) -> dict:
+    """A workspace over copies of the fixtures and a CSV mapping LRU1010 -> LRU2020."""
+    src = tmp_path / "src"
+    src.mkdir()
+    for name in LRU_FILES:
+        (src / name).write_bytes((FIXTURES / name).read_bytes())
+    ws = tmp_path / "ws.toml"
+    assert run("workspace", "init", "-w", str(ws)).exit_code == 0
+    ws.write_text("", encoding="utf-8")
+    folder = str(src)
+    added = run("workspace", "add", folder, "--id", "fixtures", "--brex-dir", folder, "-w", str(ws))
+    assert added.exit_code == 0, added.output
+    mapping = tmp_path / "lots.csv"
+    mapping.write_text("old;new;reason\nLRU1010;LRU2020;replaced\n", encoding="utf-8")
+    return {"ws": str(ws), "mapping": str(mapping), "runs": str(tmp_path / "runs"), "src": src}
+
+
+def request_args(project: dict, *extra: str) -> list[str]:
+    return ["request", "--mapping", project["mapping"], "--out", project["runs"],
+            "-w", project["ws"], *extra]
+
+
+def the_run_dir(project: dict) -> Path:
+    (folder,) = Path(project["runs"]).iterdir()
+    return folder
+
+
+def proposal_ids(output: str) -> list[str]:
+    return [line.split("\t")[0] for line in output.splitlines() if "\t" in line]
+
+
+def test_request_runs_to_the_proposals_and_prints_table_and_policy(project: dict):
+    result = run(*request_args(project, "--version-policy", "in_work"))
+    assert result.exit_code == 0, result.output
+    assert "proposed" in result.output and "content/certain" in result.output
+    assert "content/probable" in result.output
+    assert "suggested version policy:" in result.output and "op-0001" in result.output
+    assert "chosen version policy: in_work" in result.output
+    assert len(proposal_ids(result.output)) >= 3
+    assert (the_run_dir(project) / "state.json").is_file()
+    assert not (the_run_dir(project) / "out").exists()  # nothing written without a decision
+
+
+def test_request_without_mapping_or_with_a_bad_policy_fails(project: dict):
+    no_mapping = run("request", "--out", project["runs"], "-w", project["ws"])
+    assert no_mapping.exit_code == 1 and "--mapping" in no_mapping.output
+    bad = run(*request_args(project, "--version-policy", "sometimes"))
+    assert bad.exit_code == 1 and "unknown version policy" in bad.output
+    assert not Path(project["runs"]).exists()
+
+
+def test_auto_accept_is_a_hidden_option(project: dict):
+    assert "auto-accept" not in run("request", "--help").output
+
+
+def test_review_lists_and_records_decisions_then_write_produces_the_documents(project: dict):
+    first = run(*request_args(project))
+    assert first.exit_code == 0
+    folder = str(the_run_dir(project))
+    listing = run("review", folder)
+    assert listing.exit_code == 0 and "still to decide" in listing.output
+    refused = run("write", folder, "--version-policy", "in_work")
+    assert refused.exit_code == 1 and "undecided" in refused.output
+    assert not (the_run_dir(project) / "out").exists()
+    accepted = run("review", folder, "--accept-all")
+    assert accepted.exit_code == 0 and "accepted: " in accepted.output
+    (free,) = [
+        line.split("\t")[0] for line in accepted.output.splitlines()
+        if "content/probable" in line and "\tproposed\t" in line
+    ]
+    rejected = run("review", folder, "--reject", free, "--reason", "leave the text")
+    assert rejected.exit_code == 0 and "no alternative" in rejected.output
+    no_policy = run("write", folder)
+    assert no_policy.exit_code == 1 and "--version-policy" in no_policy.output
+    written = run("write", folder, "--version-policy", "in_work")
+    assert written.exit_code == 0, written.output
+    assert "2 file(s) written" in written.output
+    out = the_run_dir(project) / "out"
+    assert len(list(out.glob("*.XML"))) == 2
+    assert all("LRU2020" in f.read_text(encoding="utf-8") for f in out.glob("*.XML"))
+
+
+def test_pending_decision_and_unknown_proposal(project: dict):
+    run(*request_args(project))
+    folder = str(the_run_dir(project))
+    ok = run("review", folder, "--pending", "nope")
+    assert ok.exit_code == 1 and "unknown proposal" in ok.output
+    missing = run("review", str(the_run_dir(project) / "absent"))
+    assert missing.exit_code == 1 and "not a run folder" in missing.output
+
+
+def test_end_to_end_with_auto_accept_and_check(project: dict):
+    result = run(*request_args(project, "--version-policy", "in_work", "--auto-accept"))
+    assert result.exit_code == 0, result.output
+    assert "auto-accepted: " in result.output
+    assert "1 proposal(s) to decide" in result.output  # the free text is never automatic
+    folder = str(the_run_dir(project))
+    (free,) = [
+        line.split("\t")[0] for line in result.output.splitlines()
+        if "\tproposed\t" in line and "content/probable" in line
+    ]
+    assert run("review", folder, "--accept", free).exit_code == 0
+    written = run("write", folder)  # the policy was given to `request`
+    assert written.exit_code == 0 and "3 file(s) written" in written.output
+    checked = run("check", str(the_run_dir(project) / "out"))
+    assert checked.exit_code == 0, checked.output
+    assert "checked 3 file(s), 0 introduced error(s)" in checked.output
+
+
+def test_check_needs_a_run_folder(tmp_path: Path):
+    (tmp_path / "out").mkdir()
+    result = run("check", str(tmp_path / "out"))
+    assert result.exit_code == 1 and "not a run folder" in result.output

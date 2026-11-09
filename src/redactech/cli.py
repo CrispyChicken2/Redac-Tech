@@ -1,7 +1,7 @@
 """Command line interface (SPEC section 13).
 
-Implemented: ``workspace init|add|list``, ``index`` and ``baseline``. The other commands are
-still stubs (message ``not implemented yet``, exit code 2).
+Implemented: ``workspace``, ``index``, ``baseline``, ``request``, ``review``, ``write`` and
+``check``. ``render`` and ``eval`` are still stubs (``not implemented yet``, exit code 2).
 """
 
 from __future__ import annotations
@@ -148,6 +148,58 @@ def baseline(workspace: WorkspaceOpt = None) -> None:
     )
 
 
+MODES = ("none", "in_work", "new_issue")
+
+
+def _policy(value: str | None) -> str | None:
+    if value is not None and value not in MODES:
+        _fail(f"unknown version policy {value!r} (expected one of: {', '.join(MODES)})")
+    return value
+
+
+def _open_run(run_dir: Path):
+    from redactech.pipeline import orchestrator
+
+    if not (run_dir / orchestrator.STATE_FILE).is_file():
+        _fail(f"{run_dir} is not a run folder (no {orchestrator.STATE_FILE})")
+    return orchestrator.load(run_dir)
+
+
+def _echo_proposals(run) -> None:
+    from redactech.s1000d.index import ref_key
+
+    zones = {z.id: z for z in run.state.zones}
+    if not run.state.proposals:
+        typer.echo("no proposal")
+    for p in run.state.proposals:
+        zone = zones.get(p.zone_id)
+        certainty = zone.certainty if zone else "?"
+        kind = zone.kind if zone else "?"
+        problems = [c for c in p.checks if not c.ok and c.origin == "introduced"]
+        flag = f" attempt={p.attempt}" if p.attempt > 1 else ""
+        typer.echo(
+            f"{p.id}\t{p.status}\t{kind}/{certainty}\t{ref_key(p.ref)}\t"
+            f"{len(problems)} introduced problem(s){flag}"
+        )
+    for op in run.state.operations:
+        for question in op.questions:
+            typer.echo(f"question ({op.id}): {question}")
+
+
+def _echo_policy(run) -> None:
+    suggestion = run.suggestion()
+    typer.echo(f"suggested version policy: {suggestion.suggested}")
+    for reason in suggestion.reasons:
+        typer.echo(f"  - {reason}")
+    chosen = run.state.version_policy
+    typer.echo(f"chosen version policy: {chosen.mode if chosen else 'not chosen yet'}")
+
+
+def _pending(run) -> list[str]:
+    flags = {z.id for z in run.state.zones if z.kind != "content"}
+    return [p.id for p in run.state.proposals if p.status == "proposed" and p.zone_id not in flags]
+
+
 @app.command()
 def request(
     mapping: Annotated[Path | None, typer.Option("--mapping", help="Mapping CSV/XLSX.")] = None,
@@ -155,27 +207,152 @@ def request(
         str | None, typer.Option("--version-policy", help="none | in_work | new_issue")
     ] = None,
     out: Annotated[Path | None, typer.Option("--out", help="Runs folder.")] = None,
+    workspace: WorkspaceOpt = None,
+    auto_accept: Annotated[bool, typer.Option("--auto-accept", hidden=True)] = False,
 ) -> None:
-    """Create a run from a change request."""
-    _stub()
+    """Create a run from a change request and stop at the proposals checkpoint."""
+    from redactech.agents.a2_mapping import MappingError
+    from redactech.pipeline import orchestrator
+
+    if mapping is None:
+        _fail("give --mapping FILE (CSV or XLSX)")
+    if not mapping.is_file():
+        _fail(f"no mapping file {mapping}")
+    _policy(version_policy)
+    file = _workspace_file(workspace)
+    if not file.is_file():
+        _fail(f"no workspace file {file}; run 'redactech workspace init' first")
+    req = orchestrator.RunRequest(
+        mapping=str(mapping), version_policy=version_policy, auto_accept=auto_accept
+    )
+    try:
+        run = orchestrator.start(req, file, out or Path("runs"))
+        run.run_to_review()
+    except (MappingError, orchestrator.PipelineError, ValueError, OSError) as exc:
+        _fail(f"cannot create the run: {exc}")
+    typer.echo(f"run: {run.run_dir}")
+    if auto_accept:
+        accepted = run.auto_accept()
+        typer.echo(f"auto-accepted: {', '.join(accepted) or 'none'}")
+    _echo_proposals(run)
+    _echo_policy(run)
+    left = _pending(run)
+    if auto_accept and run.state.version_policy is not None and not left:
+        try:
+            result = run.write()
+        except orchestrator.PipelineError as exc:
+            _fail(f"cannot write: {exc}")
+        typer.echo(f"written: {', '.join(p.name for p in result.written) or 'nothing'}")
+    elif left:
+        typer.echo(f"{len(left)} proposal(s) to decide: redactech review {run.run_dir}")
 
 
 @app.command()
-def review(run_dir: Annotated[Path, typer.Argument(help="runs/<id>")]) -> None:
-    """Review the proposals of a run."""
-    _stub()
+def review(
+    run_dir: Annotated[Path, typer.Argument(help="runs/<id>")],
+    accept: Annotated[list[str] | None, typer.Option("--accept", help="Proposal id.")] = None,
+    reject: Annotated[list[str] | None, typer.Option("--reject", help="Proposal id.")] = None,
+    reason: Annotated[str | None, typer.Option("--reason", help="Why (with --reject).")] = None,
+    pending: Annotated[
+        list[str] | None, typer.Option("--pending", help="Ask the customer: proposal id.")
+    ] = None,
+    comment: Annotated[str | None, typer.Option("--comment", help="With --pending.")] = None,
+    accept_all: Annotated[
+        bool, typer.Option("--accept-all", help="Accept the certain and clean proposals.")
+    ] = False,
+) -> None:
+    """List the proposals of a run, or record decisions."""
+    from redactech.pipeline import orchestrator
+
+    run = _open_run(run_dir)
+    try:
+        for proposal_id in accept or []:
+            run.decide(proposal_id, "accepted")
+            typer.echo(f"accepted {proposal_id}")
+        for proposal_id in reject or []:
+            alternative = run.reject(proposal_id, reason)
+            if alternative is not None:
+                typer.echo(f"rejected {proposal_id}; alternative {alternative.id}")
+            else:
+                typer.echo(f"rejected {proposal_id}; no alternative: needs manual edit")
+        for proposal_id in pending or []:
+            run.decide(proposal_id, "pending_client", comment)
+            typer.echo(f"pending_client {proposal_id}")
+        if accept_all:
+            done = run.accept_all()
+            typer.echo(f"accepted: {', '.join(done) or 'none'}")
+    except orchestrator.PipelineError as exc:
+        _fail(str(exc))
+    _echo_proposals(run)
+    left = _pending(run)
+    if left:
+        typer.echo(f"{len(left)} proposal(s) still to decide")
 
 
 @app.command()
-def write(run_dir: Annotated[Path, typer.Argument(help="runs/<id>")]) -> None:
-    """Write the accepted changes."""
-    _stub()
+def write(
+    run_dir: Annotated[Path, typer.Argument(help="runs/<id>")],
+    version_policy: Annotated[
+        str | None, typer.Option("--version-policy", help="none | in_work | new_issue")
+    ] = None,
+) -> None:
+    """Write the accepted changes into <run>/out."""
+    from redactech.pipeline import orchestrator
+
+    run = _open_run(run_dir)
+    _policy(version_policy)
+    try:
+        chosen = run.state.version_policy
+        if version_policy is not None:
+            chosen = run.suggestion().model_copy(update={"mode": version_policy})
+        if chosen is None:
+            _fail("no versioning policy chosen: give --version-policy none|in_work|new_issue")
+        # the policy is saved only if the write succeeds: a refused command changes nothing
+        result = run.write(policy=chosen)
+    except orchestrator.PipelineError as exc:
+        _fail(str(exc))
+    for path in result.written:
+        typer.echo(f"written {path}")
+    for entry in result.skipped:
+        typer.echo(f"skipped {entry['proposal']}: {entry['reason']}")
+    typer.echo(f"{len(result.written)} file(s) written to {run.run_dir / 'out'}")
 
 
 @app.command()
 def check(out_dir: Annotated[Path, typer.Argument(help="runs/<id>/out")]) -> None:
-    """Check the produced documents."""
-    _stub()
+    """Check the produced documents (introduced vs pre-existing problems)."""
+    from redactech.agents import a7_checker
+    from redactech.models import SourceRef
+    from redactech.s1000d import io as xio
+
+    run = _open_run(out_dir.resolve().parent)
+    if not out_dir.is_dir():
+        _fail(f"no output folder {out_dir}")
+    originals: dict[str, str] = {}
+    for event in run.state.decisions_log:
+        if event.get("event") == "written":
+            for entry in event.get("log", []):
+                originals[entry["new_name"]] = entry["doc"]
+    introduced = 0
+    files = sorted(f for f in out_dir.iterdir() if f.suffix.lower() == ".xml")
+    for file in files:
+        key = originals.get(file.name)
+        source = run.index.docs.get(key) if key else None
+        if source is None:
+            typer.echo(f"{file.name}: not produced by this run, not checked", err=True)
+            continue
+        ref = SourceRef(source_id=source.ref.source_id, doc_key=file.stem)
+        failures = a7_checker.check_doc(
+            xio.load(file), run.index, run.state.baseline, original=source.ref, ref=ref
+        )
+        new = [f for f in failures if f.origin == "introduced"]
+        introduced += sum(1 for f in new if f.severity == "error")
+        typer.echo(f"{file.name}: {len(new)} introduced, {len(failures) - len(new)} pre-existing")
+        for failure in new:
+            typer.echo(f"  {failure.severity} {failure.name}: {failure.details}")
+    typer.echo(f"checked {len(files)} file(s), {introduced} introduced error(s)")
+    if introduced:
+        raise typer.Exit(code=1)
 
 
 @app.command()

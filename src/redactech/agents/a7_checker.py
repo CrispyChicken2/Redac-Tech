@@ -33,7 +33,6 @@ from redactech.s1000d import brex, validate
 from redactech.s1000d import io as xio
 from redactech.s1000d.index import CorpusIndex, ref_key
 
-
 # --- classification -----------------------------------------------------------
 
 
@@ -115,6 +114,9 @@ def check_doc(
 # --- veracity -----------------------------------------------------------------
 
 
+PUNCTUATION = ".,;:!?()[]\"'"
+
+
 def _strings(value: Any) -> Iterable[str]:
     if isinstance(value, dict):
         for item in value.values():
@@ -145,13 +147,35 @@ def _values(xml: str) -> set[str]:
     return found
 
 
+def _tokens(value: str) -> set[str]:
+    return {tok for tok in (w.strip(PUNCTUATION) for w in value.split()) if tok}
+
+
+def _supported(value: str, allowed: set[str], old_tokens: set[str]) -> bool:
+    """A new value is the whole of a request value, or the old text with request substitutions.
+
+    Whole tokens only, from the old text and the request values: "2" supports "2", not "22".
+    """
+    if value in allowed:
+        return True
+    known = old_tokens.union(*(_tokens(a) for a in allowed))
+    return all(tok in known for tok in _tokens(value))
+
+
 def veracity_failures(proposal: Proposal, operation: Operation) -> list[CheckResult]:
-    """One ``introduced`` error per new value that the request does not contain (OBJ-3)."""
+    """One ``introduced`` error per new value that the request does not contain (OBJ-3).
+
+    A new value must equal a request value (operation parameters, nested ones included, and
+    the quotes of its source) or be made of old tokens and request values (an old text in which
+    a request value was substituted). Substrings do not count.
+    """
     if proposal.status == "edited":
         return []  # the values were typed by the writer
     allowed = {s for s in _strings(operation.params) if s}
     allowed.update(span.quote for span in operation.source if span.quote)
-    new = _values(proposal.after_xml) - _values(proposal.before_xml)
+    before = _values(proposal.before_xml)
+    old_tokens = set().union(*(_tokens(v) for v in before)) if before else set()
+    new = _values(proposal.after_xml) - before
     return [
         CheckResult(
             name="veracity",
@@ -162,7 +186,7 @@ def veracity_failures(proposal: Proposal, operation: Operation) -> list[CheckRes
             ref=proposal.ref,
         )
         for value in sorted(new)
-        if not any(a in value for a in allowed)
+        if not _supported(value, allowed, old_tokens)
     ]
 
 
