@@ -79,7 +79,7 @@ def load_rules(brex_doc: Any) -> list[BrexRule]:
     found_rules = root.iterfind(".//structureObjectRuleGroup/structureObjectRule")
     for number, rule in enumerate(found_rules, 1):
         path_el = rule.find("objectPath")
-        expr = _text(path_el) if path_el is not None else ""
+        expr = "".join(path_el.itertext()).strip() if path_el is not None else ""
         if not expr:
             continue
         try:
@@ -266,6 +266,15 @@ def _warning(rule: BrexRule, text: str, ref: SourceRef) -> CheckResult:
     )
 
 
+def _capped(found: list[CheckResult], rule: BrexRule, ref: SourceRef) -> list[CheckResult]:
+    """Keep the first MAX_VIOLATIONS_PER_RULE violations and say how many were left out."""
+    if len(found) <= MAX_VIOLATIONS_PER_RULE:
+        return found
+    extra = len(found) - MAX_VIOLATIONS_PER_RULE
+    note = _warning(rule, f"{extra} more violations not listed", ref)
+    return [*found[:MAX_VIOLATIONS_PER_RULE], note]
+
+
 def _check_rule(doc: Any, rule: BrexRule, ref: SourceRef) -> list[CheckResult]:
     tree = xio.tree_of(doc)
     try:
@@ -281,7 +290,7 @@ def _check_rule(doc: Any, rule: BrexRule, ref: SourceRef) -> list[CheckResult]:
     if rule.flag == 0 and not rule.values:
         text = f"{why} (forbidden object found)"
         found = [_violation(rule, text, ref, _node_path(n)) for n in selected]
-        return found[:MAX_VIOLATIONS_PER_RULE]
+        return _capped(found, rule, ref)
     for node in selected:
         value = _node_value(node)
         try:
@@ -294,9 +303,7 @@ def _check_rule(doc: Any, rule: BrexRule, ref: SourceRef) -> list[CheckResult]:
         elif rule.flag in (1, 2) and rule.values and not any(matches):
             text = f"{why} (value {value!r} not allowed)"
             found.append(_violation(rule, text, ref, _node_path(node)))
-        if len(found) >= MAX_VIOLATIONS_PER_RULE:
-            break
-    return found
+    return _capped(found, rule, ref)
 
 
 def check_brex(doc: Any, chain: list[Any], ref: SourceRef | None = None) -> list[CheckResult]:

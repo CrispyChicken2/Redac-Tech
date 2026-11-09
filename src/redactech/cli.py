@@ -1,4 +1,8 @@
-"""Command line interface (SPEC section 13). Every command is a stub for now."""
+"""Command line interface (SPEC section 13).
+
+Implemented: ``workspace init|add|list``, ``index`` and ``baseline``. The other commands are
+still stubs (message ``not implemented yet``, exit code 2).
+"""
 
 from __future__ import annotations
 
@@ -17,37 +21,127 @@ def _stub() -> None:
     raise typer.Exit(code=2)
 
 
+WorkspaceOpt = Annotated[
+    Path | None,
+    typer.Option("--workspace", "-w", help="Workspace file (default: config.toml [workspace])."),
+]
+
+
+def _workspace_file(option: Path | None) -> Path:
+    from redactech.config import load_config
+
+    return option if option is not None else Path(load_config().workspace.file)
+
+
+def _fail(message: str) -> None:
+    typer.echo(message, err=True)
+    raise typer.Exit(code=1)
+
+
+def _load(option: Path | None):
+    from redactech.sources import workspace
+
+    file = _workspace_file(option)
+    if not file.is_file():
+        _fail(f"no workspace file {file}; run 'redactech workspace init' first")
+    try:
+        return workspace.load_workspace(file), file
+    except (ValueError, OSError) as exc:
+        _fail(f"invalid workspace {file}: {exc}")
+
+
 @workspace_app.command("init")
-def workspace_init() -> None:
+def workspace_init(
+    workspace: WorkspaceOpt = None,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite an existing file.")] = False,
+) -> None:
     """Create a workspace.toml from the example."""
-    _stub()
+    from redactech.sources import workspace as ws_mod
+
+    file = _workspace_file(workspace)
+    try:
+        ws_mod.init_workspace(file, force=force)
+    except FileExistsError:
+        _fail(f"{file} already exists (use --force to overwrite)")
+    typer.echo(f"created {file}")
 
 
 @workspace_app.command("add")
 def workspace_add(
     path: Annotated[Path, typer.Argument(help="Source folder to add.")],
     source_id: Annotated[str | None, typer.Option("--id", help="Source identifier.")] = None,
+    brex_dir: Annotated[
+        list[Path] | None, typer.Option("--brex-dir", help="BREX folder (repeatable).")
+    ] = None,
+    workspace: WorkspaceOpt = None,
 ) -> None:
     """Add a source to the workspace."""
-    _stub()
+    from redactech.sources import workspace as ws_mod
+
+    ws, file = _load(workspace)
+    try:
+        source = ws_mod.add_source(ws, path, id=source_id, brex_dirs=brex_dir or [])
+    except (ValueError, OSError) as exc:
+        _fail(f"cannot add source: {exc}")
+    ws_mod.save_workspace(ws, file)
+    typer.echo(f"added {source.id}: {source.path}")
 
 
 @workspace_app.command("list")
-def workspace_list() -> None:
+def workspace_list(workspace: WorkspaceOpt = None) -> None:
     """List the sources of the workspace."""
-    _stub()
+    ws, _ = _load(workspace)
+    if not ws.sources:
+        typer.echo("no sources")
+    for src in ws.sources:
+        flags = "writable" if src.writable else "read-only"
+        typer.echo(f"{src.id}\t{src.issue or '-'}\t{flags}\t{src.path}")
+        for folder in src.brex_dirs:
+            typer.echo(f"\tbrex: {folder}")
 
 
 @app.command()
-def index() -> None:
-    """Index the workspace."""
-    _stub()
+def index(workspace: WorkspaceOpt = None) -> None:
+    """Index the workspace: number of files per source and per role."""
+    from redactech.s1000d import index as index_mod
+
+    ws, _ = _load(workspace)
+    idx = index_mod.build_index(ws)
+    counts = idx.counts()
+    total = 0
+    for src in ws.sources:
+        per_role = counts.get(src.id, {})
+        n = sum(per_role.values())
+        total += n
+        roles = ", ".join(f"{role}={per_role[role]}" for role in sorted(per_role))
+        typer.echo(f"{src.id}: {n} files ({roles})")
+    typer.echo(
+        f"total: {total} files, {len(idx.parts)} part numbers, {len(idx.figures)} figures"
+    )
+    for key in sorted(idx.unreadable):
+        typer.echo(f"unreadable: {key}: {idx.unreadable[key]}", err=True)
 
 
 @app.command()
-def baseline() -> None:
-    """Run the baseline checks (pre-existing issues)."""
-    _stub()
+def baseline(workspace: WorkspaceOpt = None) -> None:
+    """Run the baseline checks and print the pre-existing problems per data module."""
+    from redactech.agents import a1_indexer
+
+    ws, _ = _load(workspace)
+    idx, results = a1_indexer.run(ws)
+    found = a1_indexer.problems(results)
+    errors = warnings = 0
+    for key in sorted(k for k, d in idx.docs.items() if d.role == "dm"):
+        doc_key = idx.docs[key].ref.doc_key
+        mine = [r for r in found if r.ref is not None and r.ref.doc_key == doc_key]
+        e = sum(1 for r in mine if r.severity == "error")
+        w = len(mine) - e
+        errors, warnings = errors + e, warnings + w
+        typer.echo(f"{doc_key}: {e} error(s), {w} warning(s) pre-existing")
+    n_dm = sum(1 for d in idx.docs.values() if d.role == "dm")
+    typer.echo(
+        f"baseline: {n_dm} data modules, {errors} error(s), {warnings} warning(s) pre-existing"
+    )
 
 
 @app.command()
