@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule [
+<!NOTATION png PUBLIC "-//W3C//NOTATION Portable Network Graphics//EN">
+<!ENTITY ICN-RTPROTO-A-000001-A-00001-A-001-01 SYSTEM "ICN-RTPROTO-A-000001-A-00001-A-001-01.png" NDATA png>
+]>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_4-1/xml_schema_flat/descript.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="041" infoCodeVariant="A" itemLocationCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="US"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2024" month="01" day="15"/>
+        <dmTitle>
+          <techName>Prototype unit</techName>
+          <infoName>Description with figure</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="new">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </originator>
+      <applic><displayText><simplePara>All</simplePara></displayText></applic>
+      <brexDmRef><dmRef xlink:type="simple" xlink:actuate="onRequest" xlink:show="replace"><dmRefIdent><dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/><issueInfo issueNumber="001" inWork="00"/></dmRefIdent></dmRef></brexDmRef>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <description>
+      <levelledPara>
+        <title>Figure</title>
+        <!-- editor comment kept by round trips -->
+        <para>See the figure.<?Pub Caret?></para>
+        <figure id="fig-0001">
+          <title>Prototype unit</title>
+          <graphic id="gra-0001" infoEntityIdent="ICN-RTPROTO-A-000001-A-00001-A-001-01"/>
+        </figure>
+      </levelledPara>
+    </description>
+  </content>
+</dmodule>

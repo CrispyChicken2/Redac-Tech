@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<!DOCTYPE dmodule [
+  <!ENTITY xxe SYSTEM "file:///redactech_xxe_canary.txt">
+]>
+<dmodule><para>&xxe;</para></dmodule>
