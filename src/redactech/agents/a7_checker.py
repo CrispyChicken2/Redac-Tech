@@ -154,11 +154,12 @@ def _tokens(value: str) -> set[str]:
 def _supported(value: str, allowed: set[str], old_tokens: set[str]) -> bool:
     """A new value is the whole of a request value, or the old text with request substitutions.
 
-    Whole tokens only: a request value "2" supports the value "2" but not "22" or "Check 2".
+    Whole tokens only, from the old text and the request values: "2" supports "2", not "22".
     """
     if value in allowed:
         return True
-    return all(tok in allowed or tok in old_tokens for tok in _tokens(value))
+    known = old_tokens.union(*(_tokens(a) for a in allowed))
+    return all(tok in known for tok in _tokens(value))
 
 
 def veracity_failures(proposal: Proposal, operation: Operation) -> list[CheckResult]:

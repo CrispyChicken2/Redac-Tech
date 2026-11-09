@@ -221,6 +221,15 @@ def test_veracity_accepts_the_old_text_with_a_request_substitution():
     assert "red" in error.details
 
 
+def test_veracity_accepts_a_multi_word_substitution():
+    op = operation("replace_text", {"old": "by hand", "new": "with the wrench"})
+    before = "<para>Tighten the fasteners by hand.</para>"
+    ok = veracity_proposal(before, "<para>Tighten the fasteners with the wrench.</para>")
+    assert a7.veracity_failures(ok, op) == []
+    bad = veracity_proposal(before, "<para>Tighten the fasteners with the hammer.</para>")
+    assert [r.name for r in a7.veracity_failures(bad, op)] == ["veracity"]
+
+
 def test_generated_ids_and_unchanged_values_are_not_new():
     op = operation("insert_step", {"para": "Check."})
     proposal = Proposal(

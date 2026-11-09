@@ -102,6 +102,11 @@ class Run:
         now = (clock or datetime.datetime.now)()
         run_id = f"{now:%Y%m%d-%H%M%S}-{token or secrets.token_hex(2)}"
         run_dir = Path(runs_dir) / run_id
+        # read the request first: a bad mapping or form must not leave a half-created run
+        if request.mapping is not None:
+            operations = a2_mapping.mapping_operations(request.mapping)
+        else:
+            operations = a2_mapping.from_form(request.form or {})
         run_dir.mkdir(parents=True, exist_ok=False)
         workspace_file = Path(workspace_path).resolve()
         index, baseline = a1_indexer.run(wsmod.load_workspace(workspace_file))
@@ -121,10 +126,6 @@ class Run:
         run._index = index
         (run_dir / REQUEST_FILE).write_text(request.model_dump_json(indent=2), encoding="utf-8")
         run._save()
-        if request.mapping is not None:
-            operations = a2_mapping.mapping_operations(request.mapping)
-        else:
-            operations = a2_mapping.from_form(request.form or {})
         state.operations = operations
         state.stage = "ops_proposed"
         if request.version_policy is not None:
@@ -437,10 +438,16 @@ class Run:
         self._log(event="policy", mode=policy.mode, per_doc=policy.per_doc)
         self._save()
 
-    def write(self, today: datetime.date | None = None) -> WriteResult:
-        """A11: write the accepted / edited proposals into ``<run>/out``; stage ``written``."""
+    def write(
+        self, today: datetime.date | None = None, policy: VersionPolicy | None = None
+    ) -> WriteResult:
+        """A11: write the accepted / edited proposals into ``<run>/out``; stage ``written``.
+
+        ``policy`` (optional) is used for this write and saved only if the write succeeds.
+        """
         self._need(*STAGES_FOR_REVIEW)
-        if self.state.version_policy is None:
+        chosen = policy or self.state.version_policy
+        if chosen is None:
             raise PipelineError("no versioning policy chosen")
         flags = {p.id for p in self.state.proposals if p.status == "proposed" and self._is_flag(p)}
         try:
@@ -448,14 +455,17 @@ class Run:
                 self.run_dir,
                 self.index,
                 self.state.proposals,
-                self.state.version_policy,
+                chosen,
                 operations=self.state.operations,
                 zones=self.state.zones,
                 excluded=flags,  # flag-only proposals change nothing
                 today=today,
+                trace_config=self._trace,
             )
         except WriteRefused as exc:
             raise PipelineError(str(exc)) from exc
+        if policy is not None:
+            self.set_policy(policy)
         self.state.stage = "written"
         self._log(
             event="written",

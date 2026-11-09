@@ -120,7 +120,8 @@ def test_the_requested_policy_is_stored_with_the_suggestion(tmp_path: Path):
     run = env.lru_run(version_policy="new_issue")
     policy = run.state.version_policy
     assert policy.mode == "new_issue" and policy.reasons  # the reasons of the suggestion
-    assert env.lru_run().state.version_policy is None
+    other = env.start(orch.RunRequest(mapping=str(env.mapping())), token="cd34")
+    assert other.state.version_policy is None
 
 
 # --- checkpoints ---------------------------------------------------------------

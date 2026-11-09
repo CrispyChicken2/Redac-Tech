@@ -302,11 +302,13 @@ def write(
     run = _open_run(run_dir)
     _policy(version_policy)
     try:
+        chosen = run.state.version_policy
         if version_policy is not None:
-            run.set_policy(run.suggestion().model_copy(update={"mode": version_policy}))
-        if run.state.version_policy is None:
+            chosen = run.suggestion().model_copy(update={"mode": version_policy})
+        if chosen is None:
             _fail("no versioning policy chosen: give --version-policy none|in_work|new_issue")
-        result = run.write()
+        # the policy is saved only if the write succeeds: a refused command changes nothing
+        result = run.write(policy=chosen)
     except orchestrator.PipelineError as exc:
         _fail(str(exc))
     for path in result.written:
