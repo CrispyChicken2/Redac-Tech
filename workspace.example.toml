@@ -1,4 +1,4 @@
-# Copier en workspace.toml (ignoré par git) puis adapter les chemins.
+# Copy to workspace.toml (ignored by git), then adapt the paths.
 
 [[sources]]
 id = "bike41"
