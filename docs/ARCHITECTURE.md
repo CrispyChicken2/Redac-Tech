@@ -128,6 +128,94 @@ Une règle est lue dans `structureObjectRuleGroup/structureObjectRule` de chaque
 - `changed_elements(before, after)` : liste des XPath des éléments qui diffèrent. Les éléments sont appariés par `@id` unique, sinon par leur position sous l'ancêtre le plus proche qui a un identifiant.
 - Sont signalés : les éléments dont le contenu propre diffère, ceux dont les enfants ont été réordonnés, le sommet des sous-arbres ajoutés (chemin dans `after`) et celui des sous-arbres supprimés (chemin dans `before`). Les ancêtres d'un changement ne sont pas signalés.
 
+## Workspace, index et baseline
+
+Modules : `sources/workspace.py`, `s1000d/index.py`, `agents/a1_indexer.py`.
+
+### Workspace (`sources/workspace.py`)
+
+- **Fichier** : `workspace.toml` (ignoré par git), créé par `workspace init` à partir de `workspace.example.toml`. Chaque `[[sources]]` a un `id` et un `path`, plus `brex_dirs`, `issue`, `writable` et, facultativement, `schemas_dir`.
+- **Chemins relatifs** : résolus par rapport au dossier du fichier workspace. À l'écriture, ils sont enregistrés relativement à ce même dossier quand c'est possible.
+- **Erreurs de lecture** : une source sans `id` ou sans `path`, ou un `id` en double, lève `ValueError`.
+- **`schemas_dir`** : si absent, on prend le dossier `schemas` voisin du dossier source (par exemple `data/s1000d-4.1/schemas` pour `data/s1000d-4.1/bike`), s'il existe.
+- **Ajout** (`add_source`) : identifiant déduit du nom du dossier s'il n'est pas donné, suffixé si déjà pris ; un dossier `brex` voisin est utilisé comme BREX s'il existe ; l'Issue est lue dans un segment `s1000d-4.1` ou `s1000d-4.2` du chemin.
+- **Balayage** (`scan`) : lecture à plat, sans récursion. Dans un dossier BREX, seuls les fichiers de rôle `brex` sont retenus. Un même `doc_key` apparaissant deux fois dans une source n'est listé qu'une fois, le dossier source l'emportant. Une source en lecture seule force `writable=False`.
+- **Création** (`init_workspace`) : refuse d'écraser un fichier existant, sauf avec `--force`.
+
+### Index du corpus (`s1000d/index.py`)
+
+`build_index(ws)` produit un `CorpusIndex` :
+
+- `docs` : tous les documents classés, par clé `source:doc_key`, avec la liste `brex_chain` des BREX de chaque DM ;
+- `brex_index` : index des BREX par source (DMC → fichier) ;
+- `parts` : occurrences de numéros de pièce par genre (`partNumber`, `partRef`, `partSpec`, `partIdent`, `para` pour le texte libre) ;
+- `texts`, `internal_refs`, `dm_refs`, `figures` : tables de texte libre, de liens internes, de références de DM et de figures ;
+- `warnings` : problèmes de chaîne BREX ; `unreadable` : documents illisibles, avec l'erreur (un document illisible ne fait pas échouer l'index).
+
+Points à connaître :
+
+- Seuls les rôles `dm` et `upf` sont indexés en contenu ; `dm` et `brex` ont leur chaîne BREX résolue.
+- Les documents en lecture seule (UPF, BREX, sources `writable=false`) sont indexés aussi ; leurs occurrences portent `writable=False`.
+- `find_part(index, numéro)` renvoie d'abord les occurrences structurées, puis les occurrences dans le texte libre. Le texte libre est cherché par mot entier : lettres, chiffres, `-` et `_` sont des caractères de mot. Recherche par chaînes uniquement, sans regex sur le XML.
+
+### Baseline (`agents/a1_indexer.py`)
+
+`run(ws)` indexe le corpus puis calcule la **baseline** : les problèmes déjà présents avant toute modification.
+
+- Seuls les DM (rôle `dm`) sont contrôlés : XSD (si la source a un dossier `schemas`), intégrité, identifiants, liens, ICN, puis chaîne BREX et règles BREX.
+- Sans dossier `schemas`, le XSD n'est pas contrôlé et un résultat `info` `ok=True` le dit.
+- Chaque résultat porte `origin="pre_existing"`. Les résultats `ok=True` sont conservés ; `problems()` ne garde que les `ok=False`.
+- Un fichier qui ne se traite pas ne bloque pas le reste : son échec devient un `ok=False` d'intégrité, de gravité `error`, et le balayage continue.
+
+### Commandes
+
+Commandes implémentées (les autres commandes de la CLI sont encore des squelettes) :
+
+```bash
+redactech workspace init                 # crée workspace.toml depuis workspace.example.toml
+redactech workspace add data/s1000d-4.1/bike --id bike41
+redactech workspace list                 # liste les sources, leur Issue et leur mode
+redactech index                          # nombre de fichiers par source et par rôle
+redactech baseline                       # problèmes préexistants par DM
+```
+
+Options communes : `--workspace FICHIER` (`-w`) pour un autre fichier que `config.toml` → `[workspace] file`. `workspace add` accepte `--brex-dir DOSSIER` (répétable) et `--id`. `workspace init` accepte `--force`.
+
+Sortie et codes de retour :
+
+- Fichier workspace absent ou invalide : message d'erreur, code `1`.
+- `index` : une ligne par source (nombre de fichiers par rôle), une ligne de total, puis les documents illisibles sur la sortie d'erreur.
+- `baseline` : une ligne par DM (erreurs et avertissements préexistants), puis une ligne de total.
+
+Exemple de `workspace.toml` (copie de `workspace.example.toml`, chemins relatifs au dossier du fichier) :
+
+```toml
+# Copy to workspace.toml (ignored by git), then adapt the paths.
+
+[[sources]]
+id = "bike41"
+path = "data/s1000d-4.1/bike"
+brex_dirs = ["data/s1000d-4.1/brex"]
+issue = "4.1"
+writable = true
+
+[[sources]]
+id = "bike42"
+path = "data/s1000d-4.2/bike"
+brex_dirs = ["data/s1000d-4.2/brex"]
+issue = "4.2"
+writable = true
+
+[[sources]]
+id = "fixtures"
+path = "tests/fixtures/s1000d"
+brex_dirs = ["tests/fixtures/s1000d"]
+issue = "4.1"
+writable = true
+```
+
+Ajouter `schemas_dir = "data/s1000d-4.1/schemas"` à une source la rattache explicitement à son dossier de schémas.
+
 ## Configuration (`config.toml`)
 
 Fichier à la racine du dépôt, suivi par git. Chargé par `config.py` ; si le fichier est absent, les valeurs par défaut s'appliquent.

@@ -1,5 +1,26 @@
 # Journal des modifications
 
+## 007 — Workspace, index, baseline
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/sources/workspace.py` : fichier `workspace.toml` (lecture, écriture, ajout de source, création depuis `workspace.example.toml`), balayage des dossiers source et BREX, dossier `schemas` voisin détecté par défaut.
+- `src/redactech/s1000d/index.py` : `CorpusIndex` (documents, chaînes BREX, occurrences de numéros de pièce par genre, texte libre, liens internes, références de DM, figures, documents illisibles) et recherche `find_part` par mot entier.
+- `src/redactech/agents/a1_indexer.py` : indexation du corpus et baseline des problèmes préexistants (`origin="pre_existing"`), un fichier défaillant ne bloque pas le reste.
+- CLI : `workspace init`, `workspace add`, `workspace list`, `index`, `baseline`. Options `--workspace`, `--brex-dir`, `--id`, `--force`.
+- `docs/ARCHITECTURE.md` : section « Workspace, index et baseline », avec les commandes et un exemple de `workspace.toml`.
+
+### Tests écrits, non exécutés
+
+Les tests du workspace, de l'index, de la baseline et de la CLI ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- Les commandes `request`, `review`, `write`, `check`, `render` et `eval` restent des squelettes (« not implemented yet », code `2`).
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 006 — Contrôles XSD/BREX
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
