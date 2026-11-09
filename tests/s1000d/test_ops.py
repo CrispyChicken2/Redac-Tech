@@ -12,6 +12,7 @@ from redactech.models import SourceRef, Zone
 from redactech.s1000d import diff, ops, validate
 from redactech.s1000d import io as xio
 from redactech.s1000d.ops import OpError
+from redactech.s1000d.ops._common import xml_of
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "s1000d"
 CODE = "AAA-D00-00-00-00AA"
@@ -78,6 +79,18 @@ def main_procedure_xml(tree: Any) -> str:
 
 def assert_ids_unique(tree: Any) -> None:
     assert all(r.ok for r in validate.check_ids(tree))
+
+
+def test_xml_of_is_standalone_without_inherited_namespace_declarations():
+    doc = load(PROCED)
+    para = doc.root.find(".//para")
+    text = xml_of(para)
+    assert text.startswith("<para>") and "xmlns:" not in text
+    dm_ref = xml_of(doc.root.find(".//brexDmRef/dmRef"))  # keeps the declaration it really uses
+    assert 'xmlns:xlink="http://www.w3.org/1999/xlink"' in dm_ref and "xmlns:xsi" not in dm_ref
+    assert "xmlns:" not in xml_of(doc.root.find(".//mainProcedure"))
+    assert not xml_of(para).endswith("\n")  # no tail
+    assert xio.dumps(doc) == doc.raw  # the document was not touched
 
 
 # --- replace_part -------------------------------------------------------------

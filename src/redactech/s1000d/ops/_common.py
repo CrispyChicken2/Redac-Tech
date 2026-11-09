@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -42,8 +43,17 @@ def root_of(tree: Any) -> Any:
 
 
 def xml_of(el: Any) -> str:
-    """Serialisation of one element (without its tail)."""
-    return etree.tostring(el, encoding="unicode", with_tail=False)
+    """Serialisation of one element, standalone: no tail and no inherited, unused namespaces.
+
+    lxml writes the namespace declarations of all the ancestors on a sub-element it serialises
+    (``xmlns:xsi``, ``xmlns:xlink`` of the root...). A copy of the element is serialised after
+    ``cleanup_namespaces`` instead, so only the declarations the element really uses remain
+    (for instance ``xlink`` on a ``dmRef`` with ``xlink:`` attributes).
+    """
+    clone = copy.deepcopy(el)
+    clone.tail = None
+    etree.cleanup_namespaces(clone)
+    return etree.tostring(clone, encoding="unicode")
 
 
 def path_of(el: Any) -> str:

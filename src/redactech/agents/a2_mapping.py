@@ -10,6 +10,7 @@ request (a dict). Nothing is guessed: a row or form with a missing value is refu
 from __future__ import annotations
 
 import csv
+import io
 import json
 from pathlib import Path
 from typing import Any
@@ -42,19 +43,22 @@ def _sniff_delimiter(first_line: str) -> str:
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
     text = path.read_text(encoding="utf-8-sig")
-    lines = text.splitlines()
-    if not lines:
+    lines = [line.rstrip("\r") for line in text.split("\n")]
+    if not text.strip():
         return []
     delimiter = _sniff_delimiter(lines[0])
-    reader = csv.reader(lines, delimiter=delimiter)
-    header = [h.strip().lower() for h in next(reader)]
+    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+    header = [h.strip().lower() for h in next(reader, [])]
+    previous = reader.line_num
     rows = []
-    for raw_line, values in zip(lines[1:], reader, strict=False):
+    for values in reader:
+        first, last = previous + 1, reader.line_num  # physical lines of this record
+        previous = last
         cells = [v.strip() for v in values]
         if not any(cells):
             continue
         row = dict(zip(header, cells, strict=False))
-        row[RAW] = raw_line.strip()
+        row[RAW] = "\n".join(lines[first - 1 : last]).strip()  # a quoted cell may span lines
         rows.append(row)
     return rows
 

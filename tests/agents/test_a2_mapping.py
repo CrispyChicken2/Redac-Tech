@@ -41,6 +41,25 @@ def test_csv_with_commas_bom_blank_lines_and_mixed_case_header(tmp_path: Path):
     assert rows[1]["old"] == "X2" and rows[1]["kind"] == ""
 
 
+def test_csv_cell_spanning_several_lines_keeps_rows_and_quotes_aligned(tmp_path: Path):
+    text = 'old;new;reason\nA;B;"line one\nline two"\nC;D;ok\n'
+    rows = a2.read_mapping(write(tmp_path, "m.csv", text))
+    assert [(r["old"], r["new"]) for r in rows] == [("A", "B"), ("C", "D")]
+    assert rows[0]["reason"] == "line one\nline two"
+    assert rows[0][a2.RAW] == 'A;B;"line one\nline two"'
+    assert rows[1][a2.RAW] == "C;D;ok"
+
+
+def test_csv_with_windows_line_endings(tmp_path: Path):
+    path = tmp_path / "m.csv"
+    path.write_bytes(b"old;new\r\nA;B\r\n\r\nC;D\r\n")
+    rows = a2.read_mapping(path)
+    assert [(r["old"], r["new"], r[a2.RAW]) for r in rows] == [
+        ("A", "B", "A;B"),
+        ("C", "D", "C;D"),
+    ]
+
+
 def test_empty_csv(tmp_path: Path):
     assert a2.read_mapping(write(tmp_path, "m.csv", "")) == []
     assert a2.read_mapping(write(tmp_path, "h.csv", "old;new\n")) == []
