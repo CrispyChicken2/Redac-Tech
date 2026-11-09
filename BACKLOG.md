@@ -6,7 +6,6 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 008 M1 Opérations (8 ops) + A4 localisateur + A5 préparateur de propositions
 - [ ] 009 M1 Traçabilité, marquage delete, versioning (3 politiques, suggestion, consolidation, renommage) + A11 writer
 - [ ] 010 M1 A7 checker introduced vs pre_existing + blocked_by_rule (≤ 3 essais) + alternatives après rejet
 - [ ] 011 M1 A0 orchestrateur (state.json, points d'arrêt, reprise, --auto-accept tests) + CLI typer complète
@@ -23,10 +22,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 007 M1 Workspace + index + A1 + baseline pre_existing
+- [~] 008 M1 Opérations (8 ops) + A4 localisateur + A5 préparateur de propositions
 
 ## Fait
 
+- [x] 007 M1 Workspace, index du corpus, A1 + baseline pre_existing, CLI index/baseline (978b62f)
 - [x] 006 M1 Contrôles XSD/intégrité/ids/liens/ICN + BREX (règles, chaîne, échange) + diff C14N (beb3107)
 - [x] 005 M1 io S1000D durci + identification + classifieur (7fbbc4b)
 - [x] 022 M0 CI : lint corrigé, étapes indépendantes, setup_data durci (b1c1dde)
