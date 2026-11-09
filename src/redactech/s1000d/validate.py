@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from collections.abc import Iterable
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -75,9 +76,14 @@ def schemas_dir_for(doc: Any, data_dir: Path | str) -> Path | None:
 
 def load_schema(path: Path | str) -> etree.XMLSchema:
     """Compile (once per path) an XSD read with the hardened parser (no network)."""
-    key = str(Path(path).resolve())
+    resolved = Path(path).resolve()
+    key = str(resolved)
     if key not in _SCHEMAS:
-        tree = etree.parse(key, xio.make_parser())
+        # Parse from bytes with a file URI as base: robust to non-ASCII Windows paths while
+        # relative includes/imports (xlink.xsd, ...) still resolve next to the schema.
+        tree = etree.parse(
+            BytesIO(resolved.read_bytes()), xio.make_parser(), base_url=resolved.as_uri()
+        )
         _SCHEMAS[key] = etree.XMLSchema(tree)
     return _SCHEMAS[key]
 

@@ -294,6 +294,21 @@ def test_value_allowed(value: str, form: str, allowed: str, expected: bool):
     assert brex.value_allowed(value, brex.BrexValue(form, allowed)) is expected
 
 
+def test_violations_are_capped_with_an_explanatory_note():
+    results = check("<r>" + "<p/>" * 250 + "</r>", rule("//p", 0, "no p"))
+    assert len(violations(results)) == brex.MAX_VIOLATIONS_PER_RULE == 200
+    (note,) = warnings(results)
+    assert "50 more violations not listed" in note.details
+
+
+def test_rule_xpath_keeps_inner_whitespace():
+    expr = "//p[@a='x  y']"
+    (loaded,) = brex.load_rules(xio.load_bytes(brex_xml("SYNTH", rule(expr, 0, "no"))))
+    assert loaded.xpath == expr
+    results = check('<r><p a="x  y"/><p a="x y"/></r>', rule(expr, 0, "no"))
+    assert len(violations(results)) == 1
+
+
 # --- index, chain, swap ---------------------------------------------------------------
 
 

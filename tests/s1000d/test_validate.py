@@ -118,6 +118,35 @@ def test_result_ref_uses_the_file_stem(fixtures_dir: Path, tmp_path: Path):
     assert result.ref.doc_key == PROCED.removesuffix(".XML")
 
 
+def test_schema_with_a_relative_include_in_a_non_ascii_folder(tmp_path: Path):
+    folder = tmp_path / "schémas 'x'"
+    folder.mkdir()
+    (folder / "part.xsd").write_text(
+        """<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="dmoduleType">
+    <xs:sequence>
+      <xs:element name="identAndStatusSection" type="xs:string"/>
+      <xs:element name="content" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    (folder / "mini.xsd").write_text(
+        """<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:include schemaLocation="part.xsd"/>
+  <xs:element name="dmodule" type="dmoduleType"/>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    good = mini_doc("<identAndStatusSection>a</identAndStatusSection><content>b</content>")
+    assert [r.ok for r in validate.check_xsd(good, folder)] == [True]
+    bad = mini_doc("<content>b</content>")
+    assert failures(validate.check_xsd(bad, folder))
+
+
 # --- integrity ------------------------------------------------------------------------------------
 
 
