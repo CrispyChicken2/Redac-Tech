@@ -49,31 +49,31 @@ Ils viennent du workshop et des réunions avec l'entreprise client (définition 
 
 | ID | Requirement | Characteristic | Metric & threshold | Why it matters (client need) | Validated by client? |
 |---|---|---|---|---|---|
-| REQ-1 | L'état de l'art couvre les 4 pistes d'automatisation identifiées avec LGM au sprint 1 | Functional suitability | ≥ 1 approche / outil documenté (avec source) pour chacune des 4 pistes : (a) conversion Word ↔ XML, (b) compilation des données d'entrée, (c) harmonisation de la rédaction, (d) multilingue | LGM doit pouvoir choisir où automatiser en connaissant les options | ☑ 09/10, Leny |
-| REQ-2 | La restitution permet de dégager des orientations de projet concrètes | Usability | ≥ 2 pistes retenues avec le client à la fin de la restitution | Le sujet est vaste : il faut réduire le périmètre | ☑ 09/10, Leny (retenues : (b) + ✏️) |
-| REQ-3 | Aucune donnée client dans le dépôt | Security & confidentiality | 0 fichier de données client versionné (`git ls-files` + `.gitignore`) | Documents techniques LGM confidentiels | ☑ 26/10, Leny (uniquement S1000D public) |
+| REQ-1 | L'état de l'art couvre les 4 pistes d'automatisation identifiées avec LGM au sprint 1 | Functional suitability | ≥ 1 approche / outil documenté (avec source) pour chacune des 4 pistes : (a) conversion Word ↔ XML, (b) compilation des données d'entrée, (c) harmonisation de la rédaction, (d) multilingue | LGM doit pouvoir choisir où automatiser en connaissant les options | ☑ 09/10, |
+| REQ-2 | La restitution permet de dégager des orientations de projet concrètes | Usability | ≥ 2 pistes retenues avec le client à la fin de la restitution | Le sujet est vaste : il faut réduire le périmètre | ☑ 09/10, (retenues : (b) + ✏️) |
+| REQ-3 | Aucune donnée client dans le dépôt | Security & confidentiality | 0 fichier de données client versionné (`git ls-files` + `.gitignore`) | Documents techniques LGM confidentiels | ☑ 26/10, (uniquement S1000D public) |
 
 ### Sprint 3 (semaine du 26/10) : orientation + premier POC « propagation d'une modification »
 
-Livrable : la note d'orientation, puis un premier POC **sans IA** (approche A, socle de l'approche C) qui propage le remplacement d'une pièce dans tout le manuel Bike 4.1 et écrit le nouveau manuel tracé. Scénario de test : la pièce `LRU1010` est remplacée par `LRU2020`. Elle apparaît 4 fois dans 3 fichiers : **2 occurrences à modifier** (déclaration de la pièce dans le dépôt commun `comrep`, référence dans la nomenclature illustrée `IPD`) et **2 traces historiques à laisser intactes** (fichier de mise à jour `UPF-…`, qui garde la trace de la suppression de la pièce). La règle pour l'`UPF` est à confirmer avec Leny.
+Livrable : la note d'orientation, puis un premier POC **sans IA** (approche A, socle de l'approche C) qui propage le remplacement d'une pièce dans tout le manuel Bike 4.1 et écrit le nouveau manuel tracé. Scénario de test : la pièce `LRU1010` est remplacée par `LRU2020`. Elle apparaît 4 fois dans 3 fichiers : **2 occurrences à modifier** (déclaration de la pièce dans le dépôt commun `comrep`, référence dans la nomenclature illustrée `IPD`) et **2 traces historiques à laisser intactes** (fichier de mise à jour `UPF-…`, qui garde la trace de la suppression de la pièce). La règle pour l'`UPF` est à confirmer avec le client.
 
 | ID | Requirement | Characteristic | Metric & threshold | Why it matters (client need) | Validated by client? |
 |---|---|---|---|---|---|
-| REQ-4 | L'orientation et les approches techniques sont écrites et validées par le client | Functional suitability | Note d'orientation (besoin, périmètre, hors périmètre, objectifs, ≥ 2 approches comparées, questions ouvertes) validée par Leny avant le 30/10 | Viser le même besoin que LGM | ☐ |
+| REQ-4 | L'orientation et les approches techniques sont écrites et validées par le client | Functional suitability | Note d'orientation (besoin, périmètre, hors périmètre, objectifs, ≥ 2 approches comparées, questions ouvertes) validée par le client avant le 30/10 | Viser le même besoin que LGM | ☐ |
 | REQ-5 | **Exhaustivité** : aucune modification nécessaire n'est oubliée | Functional suitability | Scénario `LRU1010` (contexte + liste des modifications attendues écrits **avant** d'exécuter l'outil) : 100 % des modifications attendues faites (2/2), 0 hors liste, et les 2 traces historiques laissées intactes | Les oublis sont l'erreur la plus fréquente de la reprise manuelle ; à l'inverse, réécrire l'historique fausserait le manuel | ☐ |
 | REQ-6 | **Intégrité** : seul ce qui est demandé change, et le manuel reste conforme | Functional suitability | 0 différence hors modifications attendues (diff XML canonique ancien / nouveau) ; 100 % des DM produits valides selon les XSD S1000D 4.1 | Une modification ne doit rien casser ailleurs | ☐ |
-| REQ-8 | Les appels à l'IA sont isolés et remplaçables par un modèle local | Security & confidentiality | 100 % des appels à l'IA dans un seul module ; passer d'un LLM en ligne à un modèle local = 1 changement de configuration | Chez LGM, aucune donnée client dans un LLM externe | ☑ 26/10, Leny (contrainte énoncée en réunion) |
+| REQ-8 | Les appels à l'IA sont isolés et remplaçables par un modèle local | Security & confidentiality | 100 % des appels à l'IA dans un seul module ; passer d'un LLM en ligne à un modèle local = 1 changement de configuration | Chez LGM, aucune donnée client dans un LLM externe | ☑ 26/10, le client (contrainte énoncée en réunion) |
 | REQ-9 | Le POC se lance sans nous | Maintainability | Installation + exécution en ≤ 3 commandes en suivant le README, testé par un membre qui n'a pas écrit le code | Démarche POC de LGM : briques reprises ensuite par leur équipe | ☐ |
 | REQ-10 | **Traçabilité S1000D** du nouveau manuel | Compatibility | 100 % des DM modifiés : `inWork` incrémenté, `changeMark="1"` + `changeType` sur chaque élément modifié, `reasonForUpdate` reprenant le contexte | Le DM doit se rouvrir dans Arbortext et se relire comme une reprise faite à la main | ☐ |
 
-> **REQ-8** : la contrainte (« pas d'IA hébergée, cible locale ») est validée par Leny ; le seuil exact reste à lui faire confirmer.
+> **REQ-8** : la contrainte (« pas d'IA hébergée, cible locale ») est validée par le client ; le seuil exact reste à lui faire confirmer.
 > **REQ-7** (revue avant / après) est déplacée au sprint 4 (voir ci-dessous), car le premier POC n'a pas encore d'interface.
 
 ### Sprint 4 (semaine du 09/11) : revue avant / après + conformité BREX *(prévu, à confirmer lundi 09/11)*
 
 | ID | Requirement | Characteristic | Metric & threshold | Why it matters (client need) | Validated by client? |
 |---|---|---|---|---|---|
-| REQ-7 | Le rédacteur garde la main : il voit l'avant / après et décide | Usability | Leny réalise le scénario seul (accepter / refuser / en attente + commentaire) ; note d'utilité ≥ 3/5 ; 0 changement appliqué sans décision | Demande explicite de LGM : un fonctionnement « comme git » | ☐ |
+| REQ-7 | Le rédacteur garde la main : il voit l'avant / après et décide | Usability | le client réalise le scénario seul (accepter / refuser / en attente + commentaire) ; note d'utilité ≥ 3/5 ; 0 changement appliqué sans décision | Demande explicite de LGM : un fonctionnement « comme git » | ☐ |
 | REQ-11 | Le nouveau manuel respecte le BREX par défaut | Compatibility | 100 % des DM produits sans violation du BREX par défaut S1000D 4.1 | Contrôle de LGM avant envoi au client | ☐ |
 
 ## 2. Verification (Q2 → Q3)
@@ -83,13 +83,13 @@ Livrable : la note d'orientation, puis un premier POC **sans IA** (approche A, s
 | REQ-1 | Checklist : tableau pistes × approches dans le document d'état de l'art | Chacune des 4 pistes a ≥ 1 approche sourcée | Avant la restitution | ✏️ | ✅ | ✏️ lien vers le document d'état de l'art |
 | REQ-2 | Revue avec le client à la restitution orale | ≥ 2 orientations notées dans le compte rendu | Démo du vendredi | ✏️ | ✅ | ✏️ lien vers le compte rendu du 09/10 |
 | REQ-3 | Audit : `git ls-files` + vérification du `.gitignore` | 0 fichier de données client | Chaque sprint | ✏️ | ✅ | 26/10 : `git ls-files` = code et docs seulement ; `.gitignore` en place |
-| REQ-4 | Revue de [docs/ORIENTATION.md](docs/ORIENTATION.md) par Leny | Validation écrite (Teams ou mail) | Avant le 30/10 | ✏️ | ⏳ | |
+| REQ-4 | Revue de [docs/ORIENTATION.md](docs/ORIENTATION.md) par le client | Validation écrite (Teams ou mail) | Avant le 30/10 | ✏️ | ⏳ | |
 | REQ-5 | Test automatique (pytest) : modifications faites comparées au fichier `tests/scenarios/lru1010/attendu.yaml`, écrit avant le code (2 modifications attendues + 2 occurrences à ne pas toucher) | 2/2 modifications faites, 0 hors liste, 2/2 traces historiques identiques à l'original | À chaque commit (CI) + en direct à la démo | ✏️ | ⏳ | |
 | REQ-6 | Test automatique : diff XML canonique ancien / nouveau limité aux éléments attendus + validation XSD 4.1 de chaque DM produit | 0 différence hors liste ; 100 % valides | À chaque commit (CI) + en direct à la démo | ✏️ | ⏳ | |
 | REQ-8 | Revue de code (recherche de tous les appels à l'IA) + test : le même scénario tourne avec le modèle changé dans la configuration | Tous les appels dans `llm.py` ; changer de modèle = 1 ligne de configuration | Chaque sprint | ✏️ | ⏳ | |
 | REQ-9 | Test interne : un membre qui n'a pas écrit le code suit le README sur une machine propre | ≤ 3 commandes, sans aide | Avant la démo | ✏️ | ⏳ | |
 | REQ-10 | Test automatique : relecture de chaque DM modifié (`issueInfo/@inWork`, `@changeMark`, `@changeType`, `reasonForUpdate`) | 100 % des DM modifiés conformes | À chaque commit (CI) | ✏️ | ⏳ | |
-| REQ-7 | Test utilisateur : Leny déroule le scénario seul, puis note l'utilité | Scénario terminé sans aide ; note ≥ 3/5 ; journal des décisions complet | Démo du sprint 4 | ✏️ | ⏳ | |
+| REQ-7 | Test utilisateur : le client déroule le scénario seul, puis note l'utilité | Scénario terminé sans aide ; note ≥ 3/5 ; journal des décisions complet | Démo du sprint 4 | ✏️ | ⏳ | |
 | REQ-11 | Test automatique : contrôle des DM produits contre le BREX par défaut (s1kd-brexcheck ou vérificateur XPath maison) | 0 violation | À chaque commit (CI), à partir du sprint 4 | ✏️ | ⏳ | |
 
 > Status: ⏳ not run yet · ✅ pass · ⚠️ partial · ❌ fail (say what you'll do about it in §3)
