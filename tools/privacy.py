@@ -7,6 +7,8 @@ one term or regex per line, ``#`` comments, case-insensitive, whole-word match.
 Overrides: ``REDACTECH_DENYLIST`` (newline-separated terms, used by CI),
 ``REDACTECH_DENYLIST_FILE`` (path), ``REDACTECH_ALLOWLIST`` (newline-separated).
 
+Content with a NUL byte in its first 8 KiB (binary, UTF-16) is not scanned; names always are.
+
 Every report is masked: a matched term is replaced by ``***`` and never printed.
 
 CLI::
@@ -198,9 +200,10 @@ def scan_named_content(
     allow: Sequence[str] = (),
 ) -> list[Match]:
     """Scan a file name and, unless it looks binary, its content."""
-    label = mask_text(name, terms, allow)
+    name_spans = _spans(name, [_compile(t) for t in terms], allow)
+    label = _mask_spans(name, name_spans) if name_spans else name
     hits = []
-    if label != name:
+    if name_spans:
         hits.append(Match(label, 0, label))
     if data is not None and b"\0" not in data[:8192]:
         hits.extend(scan_text(_decode(data), terms, allow, source=label))
@@ -260,6 +263,9 @@ def report(matches: Sequence[Match], stream=None) -> int:
     stream = stream or sys.stderr
     if not matches:
         return 0
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure:  # piped stderr uses the locale codec on Windows: never crash on output
+        reconfigure(errors="replace")
     print(f"privacy: {len(matches)} hit(s) on denylisted terms (masked):", file=stream)
     for m in matches:
         print(f"  {m}", file=stream)

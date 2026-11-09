@@ -42,6 +42,11 @@ def scan_push(lines: list[str], terms, allow) -> list[privacy.Match]:
             hits.extend(privacy.scan_named_content(ref, None, terms, allow))
         if set(local_sha) == {"0"}:  # deletion: nothing to scan
             continue
+        if local_ref.startswith("refs/tags/"):  # annotated tag message
+            kind = privacy._decode(privacy.run_git("cat-file", "-t", local_sha, check=False))
+            if kind.strip() == "tag":
+                body = privacy._decode(privacy.run_git("cat-file", "tag", local_sha))
+                hits.extend(privacy.scan_text(body, terms, allow, source="tag object"))
         for sha in _new_commits(local_sha, remote_sha):
             if sha in seen:
                 continue

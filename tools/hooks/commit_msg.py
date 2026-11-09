@@ -1,4 +1,4 @@
-"""commit-msg hook: scan the commit message file (git comment lines are ignored)."""
+"""commit-msg hook: scan the whole commit message file."""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print("usage: commit_msg.py <message-file>", file=sys.stderr)
         return 2
-    raw = Path(argv[1]).read_text(encoding="utf-8", errors="replace")
-    text = "\n".join(line for line in raw.splitlines() if not line.startswith("#"))
+    # Whole file: `git commit -m/-F` keeps lines starting with "#" (e.g. "#12 ..."), so no filter.
+    text = Path(argv[1]).read_text(encoding="utf-8", errors="replace")
     code = privacy.check(lambda t, a: privacy.scan_text(text, t, a, source="commit message"))
     if code:
         print("privacy: commit message refused.", file=sys.stderr)

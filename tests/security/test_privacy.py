@@ -56,5 +56,7 @@ def test_agents_dir_is_ignored():
     common = Path(_git("rev-parse", "--git-common-dir").strip())
     if not common.is_absolute():
         common = REPO / common
+    if not (common.parent / ".agents").is_dir():
+        pytest.skip("no .agents/ in the main checkout (e.g. fresh CI clone)")
     exclude = (common / "info" / "exclude").read_text(encoding="utf-8").splitlines()
     assert any(line.strip().strip("/") == ".agents" for line in exclude)

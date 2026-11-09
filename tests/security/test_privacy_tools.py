@@ -170,11 +170,33 @@ def test_commit_msg_rejects_term(tmp_path: Path):
     assert "zorglubcorp" not in (res.stdout + res.stderr).lower()
 
 
-def test_commit_msg_accepts_clean_and_ignores_comments(tmp_path: Path):
+def test_commit_msg_rejects_term_on_hash_line(tmp_path: Path):
     msg = tmp_path / "MSG"
-    msg.write_text("Add feature\n# Zorglubcorp in a git comment\n", encoding="utf-8")
+    msg.write_text("Fix bug\n#12 Zorglubcorp\n", encoding="utf-8")
+    res = _run([sys.executable, TOOLS / "hooks" / "commit_msg.py", msg], tmp_path, _env())
+    assert res.returncode == 1
+    assert "zorglubcorp" not in (res.stdout + res.stderr).lower()
+
+
+def test_commit_msg_accepts_clean(tmp_path: Path):
+    msg = tmp_path / "MSG"
+    msg.write_text("Add feature (#12)\n", encoding="utf-8")
     res = _run([sys.executable, TOOLS / "hooks" / "commit_msg.py", msg], tmp_path, _env())
     assert res.returncode == 0
+
+
+def test_long_or_padded_clean_name_is_not_a_hit():
+    assert privacy.scan_named_content("a/" * 100 + "x.txt", None, TERMS) == []
+    assert privacy.scan_named_content(" padded.txt ", None, TERMS) == []
+
+
+def test_gh_safe_file_args_stdin_and_input():
+    sys.path.insert(0, str(TOOLS))
+    import gh_safe
+
+    assert gh_safe._file_args(["api", "-F", "k=@-"]) == ([], True)
+    assert gh_safe._file_args(["api", "--input", "req.json"]) == (["req.json"], False)
+    assert gh_safe._file_args(["api", "-F", "k=@f.txt"]) == (["f.txt"], False)
 
 
 def test_pre_commit_rejects_staged_content(repo: Path):
@@ -237,6 +259,16 @@ def test_pre_push_rejects_diff_content(repo: Path):
 def test_pre_push_rejects_branch_name(repo: Path):
     sha = _commit(repo, "innocent")
     stdin = f"refs/heads/feat-zorglubcorp {sha} refs/heads/feat-zorglubcorp {ZERO_SHA}\n"
+    res = _run([sys.executable, TOOLS / "hooks" / "pre_push.py", "origin", "none"], repo, _env(), stdin)
+    assert res.returncode == 1
+    assert "zorglubcorp" not in (res.stdout + res.stderr).lower()
+
+
+def test_pre_push_rejects_annotated_tag_message(repo: Path):
+    _commit(repo, "innocent")
+    _git(repo, "tag", "-a", "v1", "-m", "release for Zorglubcorp")
+    tag_sha = _git(repo, "rev-parse", "v1")
+    stdin = f"refs/tags/v1 {tag_sha} refs/tags/v1 {ZERO_SHA}\n"
     res = _run([sys.executable, TOOLS / "hooks" / "pre_push.py", "origin", "none"], repo, _env(), stdin)
     assert res.returncode == 1
     assert "zorglubcorp" not in (res.stdout + res.stderr).lower()

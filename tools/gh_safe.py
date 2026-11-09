@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import privacy  # noqa: E402
 
-FILE_FLAGS = ("--body-file", "-F")
+FILE_FLAGS = ("--body-file", "-F", "--input")
 
 
 def _gh_command() -> list[str]:
@@ -41,7 +41,7 @@ def _file_args(args: Sequence[str]) -> tuple[list[str], bool]:
             elif arg.startswith(flag + "="):
                 value = arg[len(flag) + 1 :]
         if value is not None:
-            if value == "-":
+            if value == "-" or value.endswith("=@-"):
                 stdin = True
             elif "=@" in value:  # `gh api -F key=@file`
                 files.append(value.split("=@", 1)[1])
