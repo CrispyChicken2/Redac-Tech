@@ -27,7 +27,7 @@ An orchestrated pipeline with a typed shared state. Product agents (`src/redacte
 - **A5** Change preparer: builds before/after proposals, `blocked_by_rule` when the BREX forbids a change.
 - **A7** Checker: XSD, BREX, integrity, separating pre-existing from introduced problems.
 - **A10** Chat assistant: message to operations or answers computed by code (later).
-- **A11** Writer: writes the decided changes, the report and the customer questions export.
+- **A11** Writer: writes the decided changes, the report and the questions export.
 
 More documentation will live in [docs/](docs/). Quality requirements: [QUALITY.md](QUALITY.md). Contributing:
 [CONTRIBUTING.md](CONTRIBUTING.md).

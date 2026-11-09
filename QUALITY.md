@@ -30,7 +30,7 @@ Ils décrivent la qualité attendue : **exhaustivité, intégrité, homogénéit
 | OBJ-4 | **Traçabilité S1000D** | 100 % des DM modifiés : `issueInfo` mis à jour selon la politique de versioning, `changeMark` / `changeType` sur les éléments modifiés, `reasonForUpdate` | Scénario `LRU1010` | REQ-10 |
 | OBJ-5 | **Le rédacteur garde la main** (revue type git) | L'évaluateur déroule un scénario seul : accepter / refuser / en attente + commentaire ; 0 changement appliqué sans décision | Revue avant / après | REQ-7 |
 | OBJ-6 | **Compréhension de la demande** | ≥ 90 % des demandes en langage naturel traduites en opérations correctes, sur ≥ 20 demandes | IA locale | à créer |
-| OBJ-7 | **Homogénéité du style** | ≥ 80 % des passages rédigés par l'outil jugés « dans le style du manuel », notés à l'aveugle | Rédaction par le LLM | à créer |
+| OBJ-7 | **Homogénéité du style** | ≥ 80 % des passages rédigés par l'outil jugés « dans le style du manuel » par l'évaluateur et les rédacteurs, notés à l'aveugle | Rédaction par le LLM | à créer |
 | OBJ-8 | **Gain de temps** | Temps avec l'outil (revue comprise) ≤ 50 % du temps d'une reprise manuelle sur le même scénario (temps de référence mesuré par un rédacteur) | Évaluation finale | à créer |
 | OBJ-9 | **Confidentialité** : fonctionne avec une IA locale | REQ-5 et REQ-6 passent avec un modèle local (Ollama), sans aucun appel réseau sortant | Architecture, puis test réel | REQ-8 |
 | OBJ-10 | **Performance** | Propagation de 20 modifications sur le manuel complet en < 10 s (sans LLM) ; une demande traitée en < 2 min avec le LLM local, sur un portable standard | Sans LLM, puis avec LLM | à créer |
@@ -71,6 +71,8 @@ Ils décrivent la qualité attendue : **exhaustivité, intégrité, homogénéit
 
 > **REQ-8** : la contrainte (« pas d'IA hébergée, cible locale ») est actée ; le seuil exact reste à confirmer.
 
+> **Scénario `LRU1010` (REQ-5)** : `LRU1010` apparaît 4 fois dans 3 fichiers du jeu de données public Bike. 2 occurrences sont à modifier : la déclaration de la pièce dans le dépôt commun `comrep`, et la référence dans l'`IPD`. Les 2 autres sont des traces historiques dans le fichier `UPF`, à laisser intactes (« règle UPF à confirmer »).
+
 ## 2. Vérification (Q2 → Q3)
 
 | ID | Méthode de vérification | Critère de réussite | Quand (automatique / à chaque étape / avant démo) | Responsable | Résultat | Preuve |
@@ -85,7 +87,7 @@ Ils décrivent la qualité attendue : **exhaustivité, intégrité, homogénéit
 | REQ-8 | Revue de code (recherche de tous les appels à l'IA) + test : le même scénario tourne avec le modèle changé dans la configuration | Tous les appels dans `src/redactech/llm/` ; changer de modèle = 1 ligne de configuration | Chaque étape | ✏️ | ⏳ | |
 | REQ-9 | Test interne : un membre qui n'a pas écrit le code suit le README sur une machine propre | ≤ 3 commandes, sans aide | Avant la démo | ✏️ | ⏳ | |
 | REQ-10 | Test automatique : relecture de chaque DM modifié (`issueInfo`, `@changeMark`, `@changeType`, `reasonForUpdate`) | 100 % des DM modifiés conformes | À chaque commit (CI) | ✏️ | ⏳ | |
-| REQ-11 | Test automatique : contrôle des DM produits contre la chaîne BREX (`s1kd-brexcheck` ou vérificateur XPath interne) | 0 violation introduite | À chaque commit (CI) | ✏️ | ⏳ | |
+| REQ-11 | Test automatique : contrôle des DM produits contre la chaîne BREX (validateur BREX externe ou vérificateur XPath interne) | 0 violation introduite | À chaque commit (CI) | ✏️ | ⏳ | |
 | OBJ-21 | Test automatique : 3 politiques de versioning, renommage de fichier, journal | 100 % conformes | À chaque commit (CI) | ✏️ | ⏳ | |
 | OBJ-22 | Test automatique : DM déjà fautif en entrée | Erreurs classées `pre_existing`, 0 `introduced` | À chaque commit (CI) | ✏️ | ⏳ | |
 | OBJ-23 | Test automatique : scénario de demande interdite | `blocked_by_rule` en ≤ 3 essais, sans boucle | À chaque commit (CI) | ✏️ | ⏳ | |

@@ -1,5 +1,32 @@
 # Journal des modifications
 
+## 003 — CI, modèles et documents qualité neutres
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `.github/workflows/ci.yml` : CI (ruff, pytest sans les marqueurs `data41`, `data42`, `ollama`, contrôle de confidentialité si le secret de liste de termes est défini) ; job Windows lancé seulement sur `main`.
+- `.github/ISSUE_TEMPLATE/bug.yml`, `.github/ISSUE_TEMPLATE/task.yml`, `.github/pull_request_template.md` : modèles d'issue et de PR.
+- `CONTRIBUTING.md` : déroulé du travail (une tâche = une branche, tests d'abord, revue `OK` / `KO`, fusion par le chef seulement après `OK` et CI verte) et rappel de confidentialité.
+- `README.md` : squelette (présentation, statut « prototype en cours », installation à compléter) et liens vers `docs/`, `QUALITY.md`, `CONTRIBUTING.md`.
+- `QUALITY.md` : exigences (REQ), objectifs (OBJ), vérifications et journal, rédigés de façon neutre : seul le jeu de données public Bike est cité. Scénario `LRU1010` décrit sous le tableau des exigences (REQ-5).
+- `PLANNING.md` : planning par étapes d'une semaine, avec engagement et preuve de fin d'étape.
+- `tests/test_repo_files.py` : contrôle de la présence des fichiers requis, de la forme du workflow CI et de la présence des identifiants REQ / OBJ.
+
+### Modifié
+
+- `pyproject.toml` : ajustements mineurs.
+- `workspace.example.toml` : ajustement mineur d'un chemin.
+
+### Tests écrits, non exécutés
+
+Les tests de `tests/test_repo_files.py` ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils doivent être lancés par le chef de projet une fois les dépendances installées.
+
+### Non couvert
+
+- Pas de remote distant : la CI GitHub n'est pas exécutable pour l'instant.
+
 ## 002 — Contrats et squelette
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
