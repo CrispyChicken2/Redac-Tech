@@ -6,7 +6,6 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 004 M0 Données Bike 4.1/4.2 extraites des zip dans data/ (script tools/setup_data.py, zip intacts) + fixtures S1000D synthétiques (proced, IPD, comrep, BREX 022 chaîné, UPF, applic, ICN + PI, DM en erreur, DM marqué 007-00, cas XXE)
 - [ ] 005 M1 s1000d/io.py + ident.py + classifieur (aller-retour fidèle, noms de fichiers, rôles)
 - [ ] 006 M1 Contrôles : validate.py (XSD, intégrité, ids, liens, ICN) + brex.py (règles 0/1/2, objectValue, chaîne, échange de BREX) + diff C14N
 - [ ] 007 M1 Workspace + index + A1 + baseline pre_existing
@@ -27,10 +26,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 003 M0 CI GitHub Actions, modèles d'issue/PR, CONTRIBUTING.md, squelette README, QUALITY.md et PLANNING.md neutres
+- [~] 004 M0 Données Bike 4.1/4.2 extraites des zip dans data/ (script tools/setup_data.py, zip intacts) + fixtures S1000D synthétiques (proced, IPD, comrep, BREX 022 chaîné, UPF, applic, ICN + PI, DM en erreur, DM marqué 007-00, cas XXE)
 
 ## Fait
 
+- [x] 003 M0 CI, modèles, CONTRIBUTING, README, QUALITY.md et PLANNING.md neutres (f2c11e6)
 - [x] 002 M0 Contrats, squelette du paquet et CLI (a8b5ab1) — tests écrits, non exécutés
 - [x] 001 M0 Hygiène et confidentialité : .gitignore, hooks, tools/gh_safe.py, CLAUDE.md, tests de confidentialité (ae4abc9) — tests écrits, non exécutés (règle machine)
 
