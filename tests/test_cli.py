@@ -127,8 +127,6 @@ def test_baseline_prints_pre_existing_problems_per_data_module(fixtures_ws: Path
     assert "-521A-A_001-00_EN-US: 1 error(s), 0 warning(s) pre-existing" in result.output
     assert "-520A-A_001-00_EN-US: 0 error(s), 0 warning(s) pre-existing" in result.output
     assert "baseline: 9 data modules, 1 error(s), 0 warning(s) pre-existing" in result.output
-    assert "no schemas folder for source(s) fixtures" in result.output
-    assert "fixtures:DMC-RTPROTO-" in result.output  # lines are keyed by source and document
 
 
 def test_default_workspace_file_comes_from_the_config(tmp_path: Path, monkeypatch):

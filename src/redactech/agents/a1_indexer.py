@@ -32,31 +32,11 @@ def _problem(doc: SourceDoc, details: str) -> CheckResult:
     )
 
 
-def _brex_chain(
-    idx: index.CorpusIndex, doc: SourceDoc, xdoc: object, cache: dict[str, object]
-) -> tuple[list[object], list[CheckResult]]:
-    """BREX documents of ``doc`` from the chain stored by ``build_index`` (loaded once each)."""
-    key = index.ref_key(doc.ref)
-    entries = [idx.docs.get(index.ref_key(r)) for r in doc.brex_chain]
-    if any(e is None for e in entries):  # a BREX that was not scanned: resolve it the long way
-        notes: list[CheckResult] = []
-        index_for_source = idx.brex_index.get(doc.ref.source_id, {})
-        return brex.resolve_chain(xdoc, index_for_source, notes), notes
-    chain = []
-    for entry in entries:
-        path = str(entry.path)
-        if path not in cache:
-            cache[path] = xio.load(path)
-        chain.append(cache[path])
-    return chain, list(idx.chain_notes.get(key, []))
-
-
 def _check_one(
-    ws: wsmod.Workspace, idx: index.CorpusIndex, doc: SourceDoc, cache: dict[str, object]
+    ws: wsmod.Workspace, idx: index.CorpusIndex, doc: SourceDoc
 ) -> list[CheckResult]:
     source = ws.source(doc.ref.source_id)
-    key = index.ref_key(doc.ref)
-    xdoc = idx.loaded.get(key) or xio.load(doc.path)
+    xdoc = xio.load(doc.path)
     results: list[CheckResult] = []
     if source.schemas_dir is not None:
         results += validate.check_xsd(xdoc, source.schemas_dir, doc.ref)
@@ -74,7 +54,8 @@ def _check_one(
     results += validate.check_ids(xdoc, doc.ref)
     results += validate.check_links(xdoc, ref=doc.ref)
     results += validate.check_icn(xdoc, source.path, doc.ref)
-    chain, notes = _brex_chain(idx, doc, xdoc, cache)
+    notes: list[CheckResult] = []
+    chain = brex.resolve_chain(xdoc, idx.brex_index.get(doc.ref.source_id, {}), notes)
     results += [n.model_copy(update={"ref": doc.ref}) for n in notes]
     results += brex.check_brex(xdoc, chain, doc.ref)
     return results
@@ -82,18 +63,16 @@ def _check_one(
 
 def run(ws: wsmod.Workspace) -> tuple[index.CorpusIndex, list[CheckResult]]:
     """Index the workspace and compute the baseline. One bad file never stops the run."""
-    idx = index.build_index(ws, keep_docs=True)
-    cache: dict[str, object] = {}
+    idx = index.build_index(ws)
     baseline: list[CheckResult] = []
     for key in sorted(idx.docs):
         doc = idx.docs[key]
         if doc.role != "dm":
             continue
         try:
-            baseline += _mark(_check_one(ws, idx, doc, cache))
+            baseline += _mark(_check_one(ws, idx, doc))
         except Exception as exc:  # parse failure or unexpected error: report it, go on
             baseline.append(_problem(doc, f"{Path(doc.path).name} could not be checked: {exc}"))
-    idx.loaded.clear()  # the parsed documents are only needed during the run
     return idx, baseline
 
 

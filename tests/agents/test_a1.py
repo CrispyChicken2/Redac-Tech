@@ -95,11 +95,6 @@ def test_every_result_is_marked_pre_existing_and_belongs_to_a_dm():
     assert {r.ref.doc_key for r in results} == dm_keys  # BREX and update files are not checked
 
 
-def test_run_does_not_keep_the_parsed_documents():
-    index, _ = a1_indexer.run(fixture_workspace())
-    assert index.loaded == {}
-
-
 def test_checks_that_find_nothing_are_ok_results_not_problems():
     _, results = a1_indexer.run(fixture_workspace())
     mine = [r for r in results if r.ref.doc_key == stem(PROCED)]
