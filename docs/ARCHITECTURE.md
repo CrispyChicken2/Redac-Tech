@@ -28,7 +28,7 @@ Racine : `src/redactech/`. Chaque sous-paquet porte un rôle défini par la sect
 
 Implémentés depuis les tâches 005 et 006 : `s1000d/io.py`, `s1000d/ident.py` (voir « Lecture et identification S1000D »), `sources/classify.py`, `s1000d/validate.py`, `s1000d/brex.py` et `s1000d/diff.py` (voir « Contrôles »).
 
-Prévus dans `s1000d/` (non encore créés) : `index.py`, `trace.py` et `versioning.py`. La distinction base de référence / introduit et `blocked_by_rule` restent à câbler dans la couche pipeline.
+Implémentés depuis les tâches 007 à 009 : `s1000d/index.py`, `s1000d/trace.py`, `s1000d/versioning.py` et `agents/a11_writer.py` (voir « Workspace, index et baseline » et « Traçabilité, versioning et écriture »). La distinction base de référence / introduit et `blocked_by_rule` restent à câbler : le paquet `pipeline/` est encore vide.
 
 ## Lecture et identification S1000D
 
@@ -295,6 +295,60 @@ LRU1010;LRU2020;replace_part;Remplacement de la pièce
 ```
 
 Le même contenu en CSV séparé par des virgules (`old,new,kind,reason`) est accepté, ainsi qu'un XLSX à la même structure.
+
+## Traçabilité, versioning et écriture
+
+Modules : `s1000d/trace.py`, `s1000d/versioning.py`, `agents/a11_writer.py`.
+
+### Traçabilité (`s1000d/trace.py`)
+
+- **Motif de mise à jour** (`ensure_reason`) : écrit un `dmStatus/reasonForUpdate` avec un identifiant unique `rfu-NNNN` et un `simplePara` contenant le texte normalisé (espaces réduits). Il est placé à l'endroit attendu par le schéma S1000D 4.1 : après `qualityAssurance`, les codes d'article fonctionnel et `skillLevel`, avant `productSafety` et `remarks`. Un motif au texte identique est réutilisé.
+- **Marquage** (`mark`) : pose `changeMark="1"`, `changeType` et `reasonForUpdateRefIds` (ajouté sans doublon). Certains éléments n'acceptent pas ces attributs (`internalRef`, `dmCode`, `issueInfo`, `emphasis`, etc.) : la marque va sur l'ancêtre le plus proche qui les accepte.
+- **Priorité des types** : un élément déjà `add` reste `add` s'il est modifié de nouveau dans le même cycle ; `delete` l'emporte sur tout.
+- **Suppression** (`consolidate`) : seul endroit où un élément est réellement supprimé. Lors d'une nouvelle issue, les éléments marqués `delete` disparaissent (les plus hauts seulement), tous les motifs de mise à jour sont retirés et tous les attributs de marquage sont effacés.
+
+Avant consolidation, une suppression reste donc visible : l'élément est gardé et marqué `changeType="delete"`.
+
+### Politiques de versioning (`s1000d/versioning.py`)
+
+Trois politiques : `none` (`issueInfo` inchangé), `in_work` (`inWork` + 1) et `new_issue` (consolidation, `issueNumber` + 1, `inWork` remis à `00`). Exemples :
+
+| Politique | Avant | Après |
+|---|---|---|
+| `in_work` | `007-00` | `007-01` |
+| `new_issue` | `007-00` | `008-00` |
+
+Application (`apply_policy`) : pour `in_work` et `new_issue`, la date `issueDate` prend la date du jour, et `dmStatus/@issueType` passe à `changed` s'il existe et si l'issue n'est pas `001`. Le nouveau nom de fichier est renvoyé par `ident.filename_for`. Un `inWork` ou un `issueNumber` non numérique, ou qui déborde sa largeur (2 et 3 chiffres), lève `VersioningError`.
+
+**Suggestion** (`suggest_policy`) : chaque opération est classée ; la politique la plus forte l'emporte, et `reasons` liste chaque déclenchement. Sans opération, `none`.
+
+| Opération | Condition | Politique suggérée |
+|---|---|---|
+| `update_ref` | toujours | `in_work` |
+| `replace_text` | `old` et `new` sont des nombres | `new_issue` |
+| `replace_text` | sinon | `in_work` |
+| `replace_part` | `requirement` de type `spare` ou `supply` dans les paramètres | `new_issue` |
+| `replace_part` | sinon | `in_work` |
+| `add_requirement`, `remove_requirement` | `spare` ou `supply` | `new_issue` |
+| `add_requirement`, `remove_requirement` | `supportEquipment` / `tool` | `in_work` |
+| `insert_step`, `delete_step`, `move_step` | paramètre `warning` ou `caution` | `new_issue` |
+| `insert_step`, `delete_step`, `move_step` | sinon | `in_work` |
+| ensemble | plus de 3 étapes insérées ou supprimées (`insert_step` + `delete_step`) | `new_issue` |
+
+Point d'attention : pour `replace_part`, la condition lit `params["requirement"]`, que le fichier de correspondances ne renseigne jamais. Une correspondance de pièce de rechange est donc suggérée en `in_work` aujourd'hui ; seule une demande structurée qui donne `requirement` déclenche `new_issue`.
+
+### Écriture (`agents/a11_writer.py`)
+
+`write(run_dir, index, proposals, policy, …)` écrit les propositions décidées dans `<run_dir>/out`.
+
+- **Ce qui est écrit** : seulement les propositions `accepted` ou `edited`. `edited` remplace l'élément généré par le `edited_xml` du rédacteur, qui doit être bien formé. Les `rejected`, `pending_client` et `blocked_by_rule` ne sont jamais écrits.
+- **Refus global** : une proposition encore `proposed` (et non exclue) bloque tout. `decided=False` refuse aussi. Rien n'est écrit en cas de refus : toutes les opérations sont préparées en mémoire avant l'écriture.
+- **Ce qui n'est jamais écrit** : les zones d'illustration (signalées, sans changement) ; les documents en lecture seule (UPF, BREX, documents d'une source `writable=false`), qui sont ignorés et listés avec leur raison. Seuls les DM (`dm`) sont écrits.
+- **Fichiers source** : jamais modifiés. Chaque DM est rechargé, les opérations sont rejouées sur cette copie privée (sans épissage de chaînes), les éléments modifiés sont marqués, un motif de mise à jour est ajouté à partir de la justification de l'opération, la politique est appliquée, puis le résultat est enregistré sous son nouveau nom.
+- **Cibles positionnelles** : avant les opérations, chaque élément cible reçoit un attribut temporaire (`rt-target`), supprimé avant l'enregistrement. Les insertions précédentes ne décalent ainsi pas les chemins XPath des zones suivantes.
+- **Consolidation** : pour une politique `new_issue`, la consolidation est faite en premier. Une cible déjà marquée `delete` dans un cycle précédent disparaît à cette consolidation : l'écriture la refuse.
+- **Dossier de sortie** : doit être différent du dossier source, sinon refus.
+- **Journal** : une entrée par document (ancien et nouveau nom, politique, propositions, marques posées), et une liste des propositions ignorées avec leur raison.
 
 ## Configuration (`config.toml`)
 

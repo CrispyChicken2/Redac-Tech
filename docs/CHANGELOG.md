@@ -1,5 +1,27 @@
 # Journal des modifications
 
+## 009 — Traçabilité et versioning
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/s1000d/trace.py` : motif de mise à jour `reasonForUpdate` (identifiant `rfu-NNNN`, placement selon le schéma 4.1, réutilisation d'un texte identique), marquage `changeMark` / `changeType` / `reasonForUpdateRefIds` sur l'ancêtre qui accepte les attributs, consolidation lors d'une nouvelle issue (seul endroit où un élément est supprimé).
+- `src/redactech/s1000d/versioning.py` : trois politiques (`none`, `in_work`, `new_issue`), application (`inWork`, `issueNumber`, date, `issueType`), nouveau nom de fichier, suggestion de politique avec motifs.
+- `src/redactech/agents/a11_writer.py` : écriture des seules propositions `accepted` ou `edited` dans `<run>/out`. Refus global si une proposition est encore `proposed`. Les sources, UPF, BREX et illustrations ne sont jamais écrites. Les opérations sont rejouées sur une copie privée.
+- `tests/s1000d/test_trace.py`, `tests/s1000d/test_versioning.py`, `tests/agents/test_a11_writer.py`.
+- `docs/ARCHITECTURE.md` : section « Traçabilité, versioning et écriture ».
+
+### Tests écrits, non exécutés
+
+Les tests ci-dessus ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- La suggestion de politique pour `replace_part` lit `params["requirement"]`, que les correspondances ne fournissent pas : une modification de pièce de rechange depuis une table reste en `in_work`.
+- Les conflits et les questions au client ne sont pas traités par l'écriture.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 008 — Opérations et propositions
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
