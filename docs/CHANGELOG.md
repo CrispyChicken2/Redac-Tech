@@ -1,5 +1,29 @@
 # Journal des modifications
 
+## 004 — Données Bike et fixtures
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `tools/setup_data.py` : reconstruit `data/` à partir des deux archives publiques S1000D placées à la racine du dépôt (`S1000D Issue 4.1.zip`, `S1000D Issue 4.2.zip`). Les archives ne sont ni modifiées ni suivies. Options `--dry-run`, `--archives-dir`, `--data-dir`.
+  - Résultat attendu : `bike/` 152 (4.1) et 155 (4.2), `brex/` 2 et 2, `schemas/` 30 et 32.
+  - Refus avant toute écriture des membres d'archive au chemin absolu, avec lettre de lecteur ou `..` (protection contre le zip-slip).
+  - Idempotent : relancer ne modifie que les fichiers qui ont changé.
+- `tests/fixtures/s1000d/` : fixtures synthétiques, fictives, de type Issue 4.1 (valeurs `FAKE-PN-001`, `X2`, `X3`, `LRU1010`, `LRU2020`, identifiant de modèle `RTPROTO`). Aucun fichier Bike n'est copié. Inclut deux fichiers de sécurité (entité externe, expansion d'entités) qui ne doivent jamais être développés.
+- `tests/fixtures/README.md` : description de chaque fixture.
+- `.gitattributes` : fixtures lues octet pour octet (pas de normalisation des fins de ligne).
+- `tests/test_setup_data.py` : tests de l'extraction, du zip-slip, de l'idempotence, du `--dry-run`, de l'intégrité des archives et du cas d'une seule archive présente.
+- `tests/test_fixtures.py` : tests de parsing des fixtures, de la chaîne BREX, des contenus attendus et de l'absence de données réelles.
+
+### Tests écrits, non exécutés
+
+Les tests `tests/test_setup_data.py` et `tests/test_fixtures.py` ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Seul le mode `--dry-run` de `tools/setup_data.py` a été lancé (bibliothèque standard, aucune écriture) ; il confirme les comptes ci-dessus. Les tests doivent être lancés par le chef de projet une fois les dépendances installées.
+
+### Non couvert
+
+- Les données Bike ne sont pas reproduites dans le dépôt : elles restent dans `data/`, ignoré par git.
+
 ## 003 — CI, modèles et documents qualité neutres
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
