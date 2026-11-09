@@ -12,9 +12,8 @@ from typing import Any
 
 from redactech.config import TraceConfig
 from redactech.models import Operation, VersionPolicy
-from redactech.s1000d import ident
+from redactech.s1000d import ident, trace
 from redactech.s1000d import io as xio
-from redactech.s1000d import trace
 
 MODES = ("none", "in_work", "new_issue")
 RANK = {"none": 0, "in_work": 1, "new_issue": 2}

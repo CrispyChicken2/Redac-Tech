@@ -228,6 +228,15 @@ def test_insert_step_after_a_step():
     assert expected in xml
 
 
+def test_insert_step_with_a_note_puts_it_before_the_paragraph():
+    _, tree, result = run(
+        PROCED, "insert_step", zone(), {"after_id": "stp-0002", "para": "Check.", "note": "Hot."}
+    )
+    assert "<note><notePara>Hot.</notePara></note>" in result.after_xml
+    assert result.after_xml.index("<note>") < result.after_xml.index("<para>")
+    assert values(tree) - values(load(PROCED).tree) == {"stp-0006", "Hot.", "Check."}
+
+
 def test_insert_step_before_first_and_after_last_keep_the_layout():
     _, tree, _ = run(PROCED, "insert_step", zone(), {"before_id": "stp-0001", "para": "First."})
     assert step_ids(tree)[0] == "stp-0006"
