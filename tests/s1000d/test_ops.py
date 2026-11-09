@@ -74,7 +74,7 @@ def step_ids(tree: Any) -> list[str]:
 
 def main_procedure_xml(tree: Any) -> str:
     element = xio.root_of(tree).find(".//mainProcedure")
-    return etree.tostring(element, encoding="unicode", with_tail=False)
+    return xml_of(element)  # standalone: no inherited namespace declarations
 
 
 def assert_ids_unique(tree: Any) -> None:
@@ -425,7 +425,7 @@ def test_add_a_spare_after_the_existing_ones():
     assert {"spr-0002", "Plate", "Y9"} <= introduced  # veracity: only given values or the new id
     assert introduced <= {"spr-0002", "Plate", "Y9", "2", "FAKE1"}
     assert_ids_unique(tree)
-    group = etree.tostring(xio.root_of(tree).find(".//spareDescrGroup"), encoding="unicode")
+    group = xml_of(xio.root_of(tree).find(".//spareDescrGroup"))
     layout = (
         '</spareDescr>\n            <spareDescr id="spr-0002">\n'
         "              <name>Plate</name>"
