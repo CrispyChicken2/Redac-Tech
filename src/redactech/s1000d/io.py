@@ -13,6 +13,10 @@ Design:
   modified it is re-serialised (``render``): original prolog re-emitted verbatim, root serialised
   by lxml, comments and processing instructions around the root kept, newline style and BOM
   restored. Limitation: ASCII-compatible encodings only for the newline restore.
+* ``load`` may refuse a document: libxml2 raises ``XMLSyntaxError`` for malformed XML and also
+  for entity-amplification documents (billion laughs: "Maximum entity amplification factor
+  exceeded"), even though entities are never substituted. Callers must treat that refusal as
+  the safe outcome (``classify`` does).
 * Regular expressions are used only on the raw prolog text (declaration encoding), never on
   XML content.
 """
@@ -270,6 +274,11 @@ def canonical(obj: Any) -> bytes:
 
 def _tree_or_element(obj: Any) -> Any:
     return obj.tree if isinstance(obj, XmlDoc) else obj
+
+
+def tree_of(obj: Any) -> Any:
+    """The lxml tree of an ``XmlDoc`` (trees and elements are returned as is)."""
+    return _tree_or_element(obj)
 
 
 def root_of(obj: Any) -> Any:

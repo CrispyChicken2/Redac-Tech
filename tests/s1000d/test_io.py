@@ -30,9 +30,27 @@ def bike_xml(repo_root: Path, version: str) -> list[Path]:
 
 def test_fixtures_round_trip_byte_identical(fixtures_dir: Path):
     paths = fixture_files(fixtures_dir) + security_files(fixtures_dir)
-    assert len(paths) == 12
+    assert len(paths) == 14
     for path in paths:
-        assert xio.dumps(xio.load(path)) == path.read_bytes(), path.name
+        try:
+            doc = xio.load(path)
+        except etree.XMLSyntaxError:
+            # libxml2 may refuse entity-amplification documents: the safe outcome.
+            assert path.name == "billion_laughs.xml", path.name
+            continue
+        assert xio.dumps(doc) == path.read_bytes(), path.name
+
+
+def test_render_reproduces_lf_fixtures_exactly(fixtures_dir: Path):
+    """The serialiser itself (not the raw-bytes shortcut) reproduces plain LF fixtures."""
+    checked = 0
+    for path in fixture_files(fixtures_dir):
+        raw = path.read_bytes()
+        if b"\r\n" in raw or b"&" in raw:
+            continue
+        assert xio.render(xio.load(path)) == raw, path.name
+        checked += 1
+    assert checked >= 8
 
 
 def test_rendered_fixtures_are_canonically_identical(fixtures_dir: Path):
@@ -188,7 +206,10 @@ def test_xxe_fixture_is_inert(fixtures_dir: Path):
 
 
 def test_billion_laughs_is_not_expanded(fixtures_dir: Path):
-    doc = xio.load(fixtures_dir / "security" / "billion_laughs.xml")
+    try:
+        doc = xio.load(fixtures_dir / "security" / "billion_laughs.xml")
+    except etree.XMLSyntaxError:
+        return  # refused by libxml2 (entity amplification limit): the safe outcome
     para = doc.root.find("para")
     assert not para.text
     assert len(etree.tostring(doc.tree)) < 10_000

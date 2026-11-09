@@ -7,7 +7,9 @@ All files are in `s1000d/`; `<code>` stands for `AAA-D00-00-00-00AA`.
 
 - `DMC-RTPROTO-<code>-520A-A_001-00_EN-US.XML`: procedure with 5 steps (`stp-0001`..`stp-0005`), tool, supply and spare (`X2`) requirements, `internalRef` irtt05/irtt04/irtt06.
 - `DMC-RTPROTO-<code>-941A-D_001-00_EN-US.XML`: illustrated parts data with 3 entries (`LRU1010`, `X2`, `FAKE-PN-001`).
-- `DMC-RTPROTO-<code>-0A3A-D_001-00_EN-US.XML`: common repository declaring `LRU1010` and `X2`, a tool and a supply.
+- `DMC-RTPROTO-<code>-0A3A-D_001-00_EN-US.XML`: common repository (parts) declaring `LRU1010` and `X2`.
+- `DMC-RTPROTO-<code>-0A6A-D_001-00_EN-US.XML`: common repository (tools): one tool.
+- `DMC-RTPROTO-<code>-0A7A-D_001-00_EN-US.XML`: common repository (supplies): one supply.
 - `DMC-RTDEFLT-<code>-022A-D_001-00_EN-US.XML`: default-like BREX with rules of flag 0, 1 and 2 (with `objectValue`).
 - `DMC-RTPROTO-<code>-022A-D_001-00_EN-US.XML`: project BREX chained to the default-like one, forbidding `note` in a step.
 - `UPF-RTPROTO-<code>-0A3A-D_001-00_EN-US.XML`: read-only update trace mentioning `LRU1010`.

@@ -8,6 +8,7 @@ from redactech.models import SourceDoc, SourceRef
 from redactech.s1000d import ident
 from redactech.s1000d import io as xio
 
+READ_ONLY_ROLES = {"brex", "upf", "icn", "pm", "ddn"}
 GRAPHIC_EXTENSIONS = {".cgm", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".svg", ".gif"}
 UPF_ROOTS = {"dataUpdateFile", "updateFile"}
 PREFIX_ROLES = {"PMC": "pm", "DDN": "ddn", "UPF": "upf"}
@@ -27,7 +28,8 @@ def classify(path: Path | str, source_id: str = "") -> SourceDoc:
 
     * graphic extensions or an ``ICN-`` name -> role ``icn``, kind ``graphic``, not writable;
     * XML whose root is ``dmodule`` -> ``dm``, or ``brex`` (info code 022, not writable);
-    * root ``pm`` / ``ddn`` -> ``pm`` / ``ddn`` (a ``PMC-`` / ``DDN-`` name is a fallback);
+    * root ``pm`` / ``ddn`` -> ``pm`` / ``ddn``, not writable (a ``PMC-`` / ``DDN-`` name is a
+      fallback);
     * root ``dataUpdateFile`` (or a ``UPF-`` name) -> ``upf``, not writable;
     * anything else, unreadable or garbled -> ``other``.
     ``doc_key`` is the file name without extension; ``issue`` comes from ``detect_issue``.
@@ -46,7 +48,7 @@ def classify(path: Path | str, source_id: str = "") -> SourceDoc:
             doc = xio.load(p)
         except Exception:
             role = PREFIX_ROLES.get(prefix, "other")
-            return SourceDoc(**base, kind="other", role=role, writable=role != "upf")
+            return SourceDoc(**base, kind="other", role=role, writable=role not in READ_ONLY_ROLES)
         root_tag = str(doc.root.tag)
         issue = ident.detect_issue(doc)
         if root_tag == "dmodule":
@@ -58,9 +60,9 @@ def classify(path: Path | str, source_id: str = "") -> SourceDoc:
             )
         if root_tag == "pm" or prefix == "PMC":
             return SourceDoc(**base, kind="s1000d", role="pm", issue=issue,
-                             language=_language_tag(None, name))
+                             language=_language_tag(None, name), writable=False)
         if root_tag == "ddn" or prefix == "DDN":
-            return SourceDoc(**base, kind="s1000d", role="ddn", issue=issue)
+            return SourceDoc(**base, kind="s1000d", role="ddn", issue=issue, writable=False)
         if root_tag in UPF_ROOTS or prefix == "UPF":
             return SourceDoc(**base, kind="s1000d", role="upf", issue=issue,
                              language=_language_tag(None, name), writable=False)

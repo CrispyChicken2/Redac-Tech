@@ -28,7 +28,7 @@ def all_xml(fixtures_dir: Path) -> list[Path]:
 
 
 def test_expected_number_of_fixtures(fixtures_dir: Path):
-    assert len(all_xml(fixtures_dir)) == 10
+    assert len(all_xml(fixtures_dir)) == 12
 
 
 def test_all_fixtures_parse(fixtures_dir: Path):
@@ -116,8 +116,15 @@ def test_comrep_declares_parts(fixtures_dir: Path):
     root = parse(fx(fixtures_dir, "RTPROTO", "0A3A", "D"))
     parts = {p.get("partNumberValue") for p in root.findall(".//partRepository/partSpec/partIdent")}
     assert parts == {"LRU1010", "X2"}
-    assert root.find(".//toolRepository") is not None
-    assert root.find(".//supplyRepository") is not None
+    assert root.find(".//toolRepository") is None  # one repository kind per data module
+
+
+def test_tool_and_supply_repositories(fixtures_dir: Path):
+    tools = parse(fx(fixtures_dir, "RTPROTO", "0A6A", "D"))
+    assert tools.find(".//toolRepository/toolSpec/toolIdent").get("toolNumber") == "FAKE-PN-001"
+    supplies = parse(fx(fixtures_dir, "RTPROTO", "0A7A", "D"))
+    ident = supplies.find(".//supplyRepository/supplySpec/supplyIdent")
+    assert (ident.get("supplyNumber"), ident.get("supplyNumberType")) == ("SUP-001", "sp01")
 
 
 def test_upf_mentions_lru1010(fixtures_dir: Path):

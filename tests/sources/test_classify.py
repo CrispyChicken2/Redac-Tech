@@ -75,8 +75,9 @@ def test_graphic_extensions_without_icn_name(tmp_path: Path, ext: str):
 def test_pm_and_ddn_and_update_roots(tmp_path: Path):
     pm = classify(write(tmp_path, "PMC-X-C0419-00001-00_001-00_EN-US.XML", b"<pm/>"))
     assert (pm.role, pm.kind, pm.language) == ("pm", "s1000d", "EN-US")
+    assert pm.writable is False
     ddn = classify(write(tmp_path, "DDN-X-C3002-U8025-2012-00001.XML", b"<ddn/>"))
-    assert (ddn.role, ddn.kind) == ("ddn", "s1000d")
+    assert (ddn.role, ddn.kind, ddn.writable) == ("ddn", "s1000d", False)
     upf = classify(write(tmp_path, "something.XML", b"<dataUpdateFile/>"))
     assert (upf.role, upf.writable) == ("upf", False)
 
