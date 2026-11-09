@@ -6,6 +6,7 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
+- [ ] 022 M0 CI verte : corriger le lint ruff, lint et tests en étapes séparées, pytest vert sur GitHub (branche prototype1)
 - [ ] 005 M1 s1000d/io.py + ident.py + classifieur (aller-retour fidèle, noms de fichiers, rôles)
 - [ ] 006 M1 Contrôles : validate.py (XSD, intégrité, ids, liens, ICN) + brex.py (règles 0/1/2, objectValue, chaîne, échange de BREX) + diff C14N
 - [ ] 007 M1 Workspace + index + A1 + baseline pre_existing
