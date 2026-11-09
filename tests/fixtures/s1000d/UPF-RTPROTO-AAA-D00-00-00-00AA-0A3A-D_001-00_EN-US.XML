@@ -22,11 +22,36 @@
       <originator enterpriseCode="FAKE1">
         <enterpriseName>Example Org</enterpriseName>
       </originator>
+      <brexDmRef><dmRef xlink:type="simple" xlink:actuate="onRequest" xlink:show="replace"><dmRefIdent><dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/><issueInfo issueNumber="001" inWork="00"/></dmRefIdent></dmRef></brexDmRef>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
     </updateStatus>
+    <targetDmStatus issueType="changed">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </originator>
+      <applic><displayText><simplePara>All</simplePara></displayText></applic>
+      <brexDmRef><dmRef xlink:type="simple" xlink:actuate="onRequest" xlink:show="replace"><dmRefIdent><dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/><issueInfo issueNumber="001" inWork="00"/></dmRefIdent></dmRef></brexDmRef>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
+      <reasonForUpdate id="rfu-0001" updateHighlight="1" updateReasonType="urt01">
+        <simplePara>The part LRU1010 deleted from the repository (historical trace, read-only).</simplePara>
+      </reasonForUpdate>
+    </targetDmStatus>
   </updateIdentAndStatusSection>
-  <updateContent>
-    <updateInstruction>
-      <para>Part LRU1010 was deleted from the repository in the target issue (historical trace, read-only).</para>
-    </updateInstruction>
-  </updateContent>
+  <content>
+    <update>
+      <deleteObjectGroup>
+        <deleteObject>
+          <partIdent partNumberValue="LRU1010" manufacturerCodeValue="FAKE1"/>
+        </deleteObject>
+      </deleteObjectGroup>
+    </update>
+  </content>
 </dataUpdateFile>

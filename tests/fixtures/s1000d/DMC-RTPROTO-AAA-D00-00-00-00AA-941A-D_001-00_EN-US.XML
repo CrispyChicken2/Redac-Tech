@@ -39,7 +39,6 @@
           <partRef manufacturerCodeValue="FAKE1" partNumberValue="LRU1010"/>
           <partSegment>
             <itemIdentData>
-              <partNumber>LRU1010</partNumber>
               <descrForPart>Line replaceable unit</descrForPart>
             </itemIdentData>
           </partSegment>
@@ -51,7 +50,6 @@
           <partRef manufacturerCodeValue="FAKE1" partNumberValue="X2"/>
           <partSegment>
             <itemIdentData>
-              <partNumber>X2</partNumber>
               <descrForPart>Bracket</descrForPart>
             </itemIdentData>
           </partSegment>
@@ -63,7 +61,6 @@
           <partRef manufacturerCodeValue="FAKE1" partNumberValue="FAKE-PN-001"/>
           <partSegment>
             <itemIdentData>
-              <partNumber>FAKE-PN-001</partNumber>
               <descrForPart>Torque wrench</descrForPart>
             </itemIdentData>
           </partSegment>

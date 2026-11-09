@@ -12,7 +12,7 @@
         <issueDate year="2024" month="01" day="15"/>
         <dmTitle>
           <techName>Prototype unit</techName>
-          <infoName>Common information repository</infoName>
+          <infoName>Common information repository - parts</infoName>
         </dmTitle>
       </dmAddressItems>
     </dmAddress>
@@ -47,18 +47,6 @@
           </itemIdentData>
         </partSpec>
       </partRepository>
-      <toolRepository>
-        <toolSpec>
-          <toolIdent manufacturerCodeValue="FAKE1" toolNumber="FAKE-PN-001"/>
-          <name>Torque wrench</name>
-        </toolSpec>
-      </toolRepository>
-      <supplyRepository>
-        <supplySpec>
-          <supplyIdent supplyNumber="SUP-001"/>
-          <name>Contact grease</name>
-        </supplySpec>
-      </supplyRepository>
     </commonRepository>
   </content>
 </dmodule>
