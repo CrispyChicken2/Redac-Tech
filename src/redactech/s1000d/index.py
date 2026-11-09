@@ -10,7 +10,7 @@ Part number occurrences (``find_part``) have a ``kind``:
 ``partRef``     ``partRef/@partNumberValue`` (``context`` = enclosing ``catalogSeqNumber``);
 ``partSpec``    ``partIdent/@partNumberValue`` inside a comrep ``partSpec`` (declaration);
 ``partIdent``   ``partIdent/@partNumberValue`` anywhere else (for instance in an update file);
-``para``        free text (``para``, ``simplePara``, titles, descriptions...).
+``para``        free text: the own text of any element (titles, descriptions, notes...).
 
 Read-only documents (update files, BREX, read-only sources) are indexed too; their
 occurrences carry ``writable=False``.
@@ -18,6 +18,7 @@ occurrences carry ``writable=False``.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -25,24 +26,33 @@ from typing import Any
 from redactech.models import CheckResult, SourceDoc, SourceRef
 from redactech.s1000d import brex, ident
 from redactech.s1000d import io as xio
+from redactech.s1000d.text import contains_token
 from redactech.sources import workspace as wsmod
 
 INDEXED_ROLES = ("dm", "upf")
 CHAIN_ROLES = ("dm", "brex")
-FREE_TEXT_TAGS = (
-    "para",
-    "simplePara",
-    "notePara",
-    "title",
-    "name",
-    "descrForPart",
-    "entry",
-    "remarks",
-    "attentionListItemPara",
-    "warningAndCautionPara",
+# Free text is read from the own text of EVERY element, except the subtrees below (identification
+# and status boilerplate: codes, companies, security, BREX reference...) and metadata elements
+# in a namespace. Text of ``partNumber`` is a structured occurrence and is not repeated as text.
+DENY_SUBTREES = frozenset(
+    {
+        "dmIdent",
+        "dataRestrictions",
+        "responsiblePartnerCompany",
+        "originator",
+        "security",
+        "brexDmRef",
+        "applicCrossRefTableRef",
+        "qualityAssurance",
+        "logo",
+        "sourceDmIdent",
+        "repositorySourceDmIdent",
+        "updateIdent",
+        "updateAddress",
+        "targetDmIssueInfo",
+    }
 )
-SKIP_INLINE = (*FREE_TEXT_TAGS, "partNumber")
-WORD_CHARS = "-_"
+DENY_TEXT = frozenset({"partNumber"})
 
 
 def ref_key(ref: SourceRef) -> str:
@@ -111,6 +121,8 @@ class CorpusIndex:
     figures: dict[str, Figure] = field(default_factory=dict)
     warnings: list[CheckResult] = field(default_factory=list)  # BREX chain problems
     unreadable: dict[str, str] = field(default_factory=dict)  # doc key -> parse error
+    chain_notes: dict[str, list[CheckResult]] = field(default_factory=dict)  # per doc key
+    loaded: dict[str, Any] = field(default_factory=dict)  # XmlDoc kept by keep_docs=True
 
     def counts(self) -> dict[str, dict[str, int]]:
         """Number of documents per source and per role."""
@@ -136,26 +148,6 @@ def _nearest_id(el: Any) -> str | None:
 
 def _path(el: Any) -> str:
     return el.getroottree().getpath(el)
-
-
-def contains_token(text: str, token: str) -> bool:
-    """Is ``token`` in ``text`` as a whole word?
-
-    Letters, digits, ``-`` and ``_`` are word characters; any other character is a boundary.
-    """
-    if not token:
-        return False
-    start = text.find(token)
-    while start != -1:
-        end = start + len(token)
-        before = text[start - 1] if start > 0 else " "
-        after = text[end] if end < len(text) else " "
-        if not (before.isalnum() or before in WORD_CHARS) and not (
-            after.isalnum() or after in WORD_CHARS
-        ):
-            return True
-        start = text.find(token, start + 1)
-    return False
 
 
 def _add_part(index: CorpusIndex, occ: Occurrence) -> None:
@@ -189,22 +181,27 @@ def _index_parts(index: CorpusIndex, ref: SourceRef, writable: bool, root: Any) 
         _add_part(index, occ)
 
 
-def _own_text(el: Any) -> str:
-    """Text of ``el`` without the text of nested free-text elements (they are indexed apart)."""
-    parts = [el.text or ""]
-    for child in el:
-        if isinstance(child.tag, str) and child.tag not in SKIP_INLINE:
-            parts.append("".join(child.itertext()))
-        parts.append(child.tail or "")
-    return " ".join(parts)
+def _text_blocks(root: Any) -> Iterator[tuple[Any, str]]:
+    """``(element, own text)`` for every element that carries text, denied subtrees skipped.
+
+    The own text of an element is its text and the text following each of its children (the
+    text of child elements belongs to those children), whitespace-normalised.
+    """
+    stack = [root]
+    while stack:
+        el = stack.pop()
+        if not isinstance(el.tag, str) or el.tag.startswith("{") or el.tag in DENY_SUBTREES:
+            continue
+        if el.tag not in DENY_TEXT:
+            text = " ".join(" ".join([el.text or "", *[c.tail or "" for c in el]]).split())
+            if text:
+                yield el, text
+        stack.extend(reversed(list(el)))
 
 
 def _index_text(index: CorpusIndex, ref: SourceRef, writable: bool, root: Any) -> None:
-    names = " or ".join(f"self::{tag}" for tag in FREE_TEXT_TAGS)
-    for el in xio.xpath(root, f"//*[{names}]"):
-        text = " ".join(_own_text(el).split())
-        if text:
-            index.texts.append(TextBlock(ref, _path(el), _nearest_id(el), text, writable))
+    for el, text in _text_blocks(root):
+        index.texts.append(TextBlock(ref, _path(el), _nearest_id(el), text, writable))
 
 
 def _index_internal_refs(index: CorpusIndex, ref: SourceRef, root: Any) -> None:
@@ -265,8 +262,12 @@ def _ref_for_path(by_path: dict[Path, SourceRef], source_id: str, path: Path) ->
 # --- build --------------------------------------------------------------------
 
 
-def build_index(ws: wsmod.Workspace) -> CorpusIndex:
-    """Scan the workspace and index every data module and update file."""
+def build_index(ws: wsmod.Workspace, keep_docs: bool = False) -> CorpusIndex:
+    """Scan the workspace and index every data module and update file.
+
+    With ``keep_docs`` the parsed data modules stay in ``index.loaded`` (by document key) so a
+    caller that needs them again does not parse them twice; the caller should clear it.
+    """
     index = CorpusIndex()
     docs = wsmod.scan(ws)
     by_path = {Path(d.path).resolve(): d.ref for d in docs}
@@ -287,6 +288,8 @@ def build_index(ws: wsmod.Workspace) -> CorpusIndex:
             index.unreadable[key] = str(exc)
             continue
         root = xdoc.root
+        if keep_docs and doc.role == "dm":
+            index.loaded[key] = xdoc
         if doc.role in INDEXED_ROLES:
             _index_parts(index, doc.ref, doc.writable, root)
             _index_text(index, doc.ref, doc.writable, root)
@@ -301,6 +304,7 @@ def build_index(ws: wsmod.Workspace) -> CorpusIndex:
             ]
             index.docs[key] = doc.model_copy(update={"brex_chain": refs})
             index.warnings.extend(notes)
+            index.chain_notes[key] = notes
     return index
 
 
