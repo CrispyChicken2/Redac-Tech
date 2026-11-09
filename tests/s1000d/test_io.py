@@ -171,7 +171,7 @@ def test_external_entity_is_not_expanded_and_no_file_is_read(tmp_path: Path):
         f'<!DOCTYPE r [<!ENTITY xxe SYSTEM "{secret.as_uri()}">]>\n'
         "<r><para>&xxe;</para></r>\n"
     )
-    doc = xio.load_bytes(xml.encode("utf-8"))
+    doc = xio.load_bytes(xml.encode())
     para = doc.root.find("para")
     assert not para.text
     assert any(isinstance(child, etree._Entity) for child in para)
