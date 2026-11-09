@@ -134,6 +134,17 @@ def test_mark_without_change_attributes_goes_to_the_nearest_ancestor():
     assert trace.mark(inline.root.find(".//emphasis"), "add", "x").tag == "para"
 
 
+def test_more_elements_without_change_attributes_mark_their_ancestor():
+    doc = load(PROCED)
+    serial = find(doc, "//spareDescr//partAndSerialNumber")
+    assert trace.mark(serial, "modify", "rfu-0001").tag == "identNumber"
+    group = find(doc, "//spareDescrGroup")
+    assert trace.mark(group, "add", "rfu-0001").tag == "reqSpares"
+    ipd = load(f"DMC-RTPROTO-{CODE}-941A-D_001-00_EN-US.XML")
+    segment = xio.xpath(ipd.root, "//partSegment")[0]
+    assert trace.mark(segment, "modify", "rfu-0001").tag == "itemSeqNumber"
+
+
 def test_mark_errors():
     doc = load(PROCED)
     step = find(doc, "//proceduralStep[@id='stp-0001']")

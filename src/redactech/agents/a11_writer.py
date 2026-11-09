@@ -74,8 +74,9 @@ def _tag_targets(tree: Any, group: list[Proposal], zones: dict[str, Zone]) -> di
                 raise WriteRefused(f"invalid zone xpath {zone.xpath!r}: {exc}") from exc
             if not isinstance(found, list) or not found:
                 raise WriteRefused(f"zone {zone.id}: target not found in the data module")
-            found[0].set(TEMP_ATTRIBUTE, str(number))
-            zone = zone.model_copy(update={"xpath": f"//*[@{TEMP_ATTRIBUTE}='{number}']"})
+            handle = found[0].get(TEMP_ATTRIBUTE) or str(number)  # reuse a shared target's handle
+            found[0].set(TEMP_ATTRIBUTE, handle)
+            zone = zone.model_copy(update={"xpath": f"//*[@{TEMP_ATTRIBUTE}='{handle}']"})
         resolved[proposal.id] = zone
     return resolved
 
@@ -99,9 +100,18 @@ def _prepare_document(
     """The modified document, its new file name and its log entry."""
     xdoc = xio.load(doc.path)
     mode = _policy_mode(policy, key, doc.ref.doc_key)
+    # Zone xpaths are positional on the ORIGINAL file: resolve them (tag the targets) BEFORE the
+    # consolidation removes elements and shifts the positions.
+    resolved = _tag_targets(xdoc.tree, group, zones)
     if mode == "new_issue" and config.consolidate_on_new_issue:
         trace.consolidate(xdoc)  # first: this cycle's marks are written afterwards
-    resolved = _tag_targets(xdoc.tree, group, zones)
+        for proposal in group:
+            zone = resolved[proposal.id]
+            if zone.xpath.startswith("//*[@") and not xio.xpath(xdoc.tree, zone.xpath):
+                raise WriteRefused(
+                    f"{proposal.id}: its target was marked for deletion in a previous cycle "
+                    "and disappears when the new issue consolidates"
+                )
     write_marks = mode != "none" or config.marks_when_none
     marks: list[dict[str, str]] = []
     for proposal in group:

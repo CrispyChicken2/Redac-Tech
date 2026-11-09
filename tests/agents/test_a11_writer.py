@@ -69,7 +69,8 @@ class Plan:
             shutil.copy(FIXTURES / name, self.src / name)
         folder = self.src.resolve()
         source = wsmod.Source("fixtures", folder, [folder], "4.1")
-        self.index = ix.build_index(wsmod.Workspace([source], folder))
+        self.workspace = wsmod.Workspace([source], folder)
+        self.index = ix.build_index(self.workspace)
         self.run_dir = tmp_path / "run"
         self.operations: list[Operation] = []
         self.zones: list[Zone] = []
@@ -386,6 +387,92 @@ def test_rerunning_the_write_overwrites_only_the_output(tmp_path: Path):
     assert sorted(p.name for p in (plan.run_dir / "out").iterdir()) == sorted(
         p.name for p in second.written
     )
+
+
+# --- new issue: positions are resolved before the consolidation -----------------------------
+
+
+def deleted_step_first(plan: Plan) -> xio.XmlDoc:
+    """520B with its deleted step moved to the front and a second paragraph mentioning 'step'."""
+    path = plan.src / MARKED
+    doc = xio.load(path)
+    steps = {s.get("id"): s for s in xio.xpath(doc.root, "//proceduralStep")}
+    steps["stp-0001"].addprevious(steps["stp-0004"])
+    steps["stp-0002"].find("para").text = "Another step."
+    xio.save(doc, path)
+    plan.index = ix.build_index(plan.workspace)
+    return xio.load(path)
+
+
+def manual_proposal(plan: Plan, doc: xio.XmlDoc, step_id: str, number: int) -> None:
+    """A replace_text of 'step' by 'STEP' in the paragraph of a step, zone xpath positional."""
+    para = xio.xpath(doc.root, f"//proceduralStep[@id='{step_id}']/para")[0]
+    key = f"fixtures:{MARKED.removesuffix('.XML')}"
+    ref = plan.index.docs[key].ref
+    zone = Zone(
+        id=f"zone-{number}",
+        ref=ref,
+        xpath=para.getroottree().getpath(para),
+        element_id=None,
+        certainty="certain",
+        found_by="code",
+        reason="r",
+        operation_id=f"op-{number:04d}",
+    )
+    op = operation("replace_text", {"old": "step", "new": "STEP"}, number=number)
+    proposal = Proposal(
+        id=f"prop-{number}",
+        operation_id=op.id,
+        zone_id=zone.id,
+        ref=ref,
+        before_xml="<para/>",
+        after_xml="<para/>",
+        change_type="modify",
+        status="accepted",
+    )
+    plan.operations.append(op)
+    plan.zones.append(zone)
+    plan.proposals.append(proposal)
+
+
+def test_new_issue_changes_the_decided_element_not_its_shifted_neighbour(tmp_path: Path):
+    plan = Plan(tmp_path, (MARKED, PROJECT, DEFAULT))
+    doc = deleted_step_first(plan)
+    manual_proposal(plan, doc, "stp-0001", 1)  # positional xpath: proceduralStep[2]
+    (path,) = plan.write(NEW_ISSUE).written
+    paras = {s.get("id"): s.find("para").text for s in find(out_doc(path), "//proceduralStep")}
+    assert paras["stp-0001"] == "Unchanged STEP."
+    assert paras["stp-0002"] == "Another step."  # the shifted neighbour was not touched
+    assert "stp-0004" not in paras  # consolidated
+
+
+def test_new_issue_refuses_a_target_that_the_consolidation_removes(tmp_path: Path):
+    plan = Plan(tmp_path, (MARKED, PROJECT, DEFAULT))
+    doc = deleted_step_first(plan)
+    manual_proposal(plan, doc, "stp-0004", 1)  # inside the step marked as deleted
+    with pytest.raises(WriteRefused) as error:
+        plan.write(NEW_ISSUE)
+    assert "marked for deletion" in str(error.value) and "prop-1" in str(error.value)
+    assert not (plan.run_dir / "out").exists()
+
+
+def test_two_operations_on_one_paragraph_share_the_handle(tmp_path: Path):
+    plan = Plan(tmp_path)
+    doc = xio.load(plan.src / PROCED)
+    para = xio.xpath(doc.root, "//proceduralStep[@id='stp-0003']/para")[0]
+    where = Target(
+        ref=plan.index.docs[f"fixtures:{PROCED.removesuffix('.XML')}"].ref,
+        xpath=para.getroottree().getpath(para),
+    )
+    plan.add(operation("replace_text", {"old": "fasteners", "new": "bolts"}, where, 1))
+    plan.add(operation("replace_text", {"old": "hand", "new": "wrench"}, where, 2))
+    plan.proposals = decide(plan.proposals, "accepted")
+    (path,) = plan.write().written
+    out = out_doc(path)
+    (changed,) = find(out, "//proceduralStep[@id='stp-0003']/para")
+    assert changed.text == "Tighten the bolts by wrench."
+    assert changed.get("reasonForUpdateRefIds") == "rfu-0001 rfu-0002"
+    assert "rt-target" not in path.read_text(encoding="utf-8")
 
 
 # --- real Bike data (skipped when data/ is absent) ----------------------------
