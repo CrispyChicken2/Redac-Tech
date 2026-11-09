@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_4-1/xml_schema_flat/proced.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="520" infoCodeVariant="B" itemLocationCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="US"/>
+        <issueInfo issueNumber="007" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2024" month="01" day="15"/>
+        <dmTitle>
+          <techName>Prototype unit</techName>
+          <infoName>Procedure with change marks</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="changed">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </originator>
+      <applic><displayText><simplePara>All</simplePara></displayText></applic>
+      <brexDmRef><dmRef xlink:type="simple" xlink:actuate="onRequest" xlink:show="replace"><dmRefIdent><dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/><issueInfo issueNumber="001" inWork="00"/></dmRefIdent></dmRef></brexDmRef>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
+      <reasonForUpdate id="rfu-0001" updateReasonType="urt02"><simplePara>Step added.</simplePara></reasonForUpdate>
+      <reasonForUpdate id="rfu-0002" updateReasonType="urt02"><simplePara>Step modified.</simplePara></reasonForUpdate>
+      <reasonForUpdate id="rfu-0003" updateReasonType="urt02"><simplePara>Step deleted.</simplePara></reasonForUpdate>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <procedure>
+      <preliminaryRqmts>
+        <reqCondGroup><noConds/></reqCondGroup>
+        <reqSupportEquips><noSupportEquips/></reqSupportEquips>
+        <reqSupplies><noSupplies/></reqSupplies>
+        <reqSpares><noSpares/></reqSpares>
+        <reqSafety><noSafety/></reqSafety>
+      </preliminaryRqmts>
+      <mainProcedure>
+        <proceduralStep id="stp-0001">
+          <para>Unchanged step.</para>
+        </proceduralStep>
+        <proceduralStep id="stp-0002" changeMark="1" changeType="add" reasonForUpdateRefIds="rfu-0001">
+          <para>Step added in the previous cycle.</para>
+        </proceduralStep>
+        <proceduralStep id="stp-0003" changeMark="1" changeType="modify" reasonForUpdateRefIds="rfu-0002">
+          <para>Step modified in the previous cycle.</para>
+        </proceduralStep>
+        <proceduralStep id="stp-0004" changeMark="1" changeType="delete" reasonForUpdateRefIds="rfu-0003">
+          <para>Step marked as deleted but still present.</para>
+        </proceduralStep>
+      </mainProcedure>
+      <closeRqmts>
+        <reqCondGroup><noConds/></reqCondGroup>
+      </closeRqmts>
+    </procedure>
+  </content>
+</dmodule>

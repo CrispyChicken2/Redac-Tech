@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataUpdateFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_4-1/xml_schema_flat/update.xsd">
+  <updateIdentAndStatusSection>
+    <updateAddress>
+      <updateIdent>
+        <updateCode objectIdentCode="UPF" modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="0A3" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="US"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </updateIdent>
+      <issueDate year="2024" month="01" day="15"/>
+    </updateAddress>
+    <updateStatus>
+      <sourceDmIdent>
+        <dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="0A3" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="US"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </sourceDmIdent>
+      <targetDmIssueInfo inWork="00" issueNumber="002"/>
+      <responsiblePartnerCompany enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </originator>
+    </updateStatus>
+  </updateIdentAndStatusSection>
+  <updateContent>
+    <updateInstruction>
+      <para>Part LRU1010 was deleted from the repository in the target issue (historical trace, read-only).</para>
+    </updateInstruction>
+  </updateContent>
+</dataUpdateFile>
