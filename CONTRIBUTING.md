@@ -30,6 +30,18 @@ ruff check .                # lint
 python tools/privacy.py scan --tracked
 ```
 
+## Tests
+
+- Les tests (`pytest`) et le lint (`ruff check .`) sont exécutés par la CI GitHub à chaque push. C'est la référence.
+- En local, sur le poste de développement, seules ces vérifications sont autorisées :
+
+```bash
+py -3 -m compileall -q src tools tests     # compilation de tout le code Python
+py -3 tools/privacy.py scan --tracked      # contrôle de confidentialité
+```
+
+- Ne pas lancer `pytest`, `uv` ni `pip` en local sur ce poste, et ne rien télécharger pour les tests.
+
 ## Conventions
 
 - Python 3.11+, `pathlib`, explicit UTF-8, Windows-safe code.

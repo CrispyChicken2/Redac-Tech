@@ -1,5 +1,24 @@
 # Journal des modifications
 
+## 022 — CI verte
+
+**Statut :** fusionnée. **Tests exécutés uniquement par la CI GitHub** (aucun test sur ce poste). Le statut de la CI sur GitHub n'est pas vérifié depuis ce poste : pas de remote configuré.
+
+### Modifié
+
+- Lint corrigé : erreurs `ruff` corrigées dans le code et les tests.
+- `.github/workflows/ci.yml` : les étapes sont indépendantes. Les tests tournent même si le lint échoue (`if: always()`), avec `pytest -q --maxfail=50 -rA` pour lister tous les résultats.
+- `tools/setup_data.py` : durcissement de l'extraction (`tests/test_setup_data.py` étendu, 33 lignes ajoutées).
+- Petites corrections dans `tools/gh_safe.py`, `tools/privacy.py`, `tools/hooks/pre_push.py` et `tests/security/test_privacy_tools.py`, `tests/test_fixtures.py`.
+
+### Documentation
+
+- `CONTRIBUTING.md` : section « Tests » ajoutée. Les tests sont exécutés par la CI GitHub ; en local, seulement `compileall` et le scan de confidentialité.
+
+### Non couvert
+
+- Pas de remote distant sur ce poste : la CI n'a pas pu être lancée depuis ce poste.
+
 ## 004 — Données Bike et fixtures
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
