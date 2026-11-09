@@ -1,5 +1,26 @@
 # Journal des modifications
 
+## 010 — Checker et blocked_by_rule
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/agents/a7_checker.py` : vérification d'une proposition sur copie en mémoire (XSD, intégrité, identifiants, liens, ICN, chaîne et règles BREX), classement de chaque échec en `pre_existing` ou `introduced` par rapport à la baseline, contrôle de véracité (valeurs nouvelles absentes de la demande), avertissement pour les illustrations.
+- `src/redactech/agents/a5_preparer.py` : `prepare_checked`. Un échec BREX introduit déclenche au plus 2 alternatives calculées par le code (3 tentatives au total). Si toutes les tentatives échouent sur la même règle, la proposition passe en `blocked_by_rule`, avec une question client pré-remplie. Si les règles diffèrent, la proposition reste `proposed` avec ses erreurs.
+- `tests/agents/test_a7_checker.py`, `tests/agents/test_blocked_by_rule.py`, `tests/agents/test_a5_preparer.py`.
+- `docs/ARCHITECTURE.md` : section « Vérification des propositions et règles bloquantes ».
+
+### Tests écrits, non exécutés
+
+Les tests ci-dessus ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- La question client pré-remplie est en anglais, dans le code ; le reste du projet est en français.
+- Le paquet `pipeline/` est toujours vide : l'enchaînement des étapes (demande, localisation, vérification, écriture) n'existe pas encore.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 009 — Traçabilité et versioning
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**

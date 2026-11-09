@@ -350,6 +350,54 @@ Point d'attention : pour `replace_part`, la condition lit `params["requirement"]
 - **Dossier de sortie** : doit être différent du dossier source, sinon refus.
 - **Journal** : une entrée par document (ancien et nouveau nom, politique, propositions, marques posées), et une liste des propositions ignorées avec leur raison.
 
+## Vérification des propositions et règles bloquantes
+
+Modules : `agents/a7_checker.py` (vérification), `agents/a5_preparer.py` (boucle de reprise et `blocked_by_rule`).
+
+### Vérification d'une proposition (`a7_checker.check_proposal`)
+
+1. La proposition est rejouée sur une **copie en mémoire** du DM, avec ses marques de traçabilité, exactement comme le ferait l'écrivain (`apply_to_copy`, politique `none`). Rien n'est écrit.
+2. Les contrôles sont lancés sur la copie : XSD (si la source a un dossier `schemas`), intégrité, identifiants, liens, ICN, chaîne de BREX et règles BREX. Seuls les échecs sont conservés.
+3. Chaque échec est classé :
+   - `pre_existing` si la baseline du document d'origine contient un échec équivalent ;
+   - `introduced` sinon. Un échec `introduced` ne doit jamais être livré (REQ-11).
+4. Si la proposition ne peut pas être rejouée, un seul échec `integrity` de gravité `error`, `introduced`, indique « the proposal cannot be applied ».
+
+**Clé d'appariement** : les numéros de ligne et les positions ne comptent pas, car une modification peut les décaler.
+
+| Contrôle | Clé |
+|---|---|
+| `xsd` | nom du contrôle + message sans le préfixe `line N:` |
+| `brex` | nom du contrôle + identifiant de la règle + message (qui contient la valeur fautive) |
+| autres | nom du contrôle + message |
+
+Les correspondances se font une à une : si la baseline a deux échecs d'un genre et que le résultat en a trois, un seul est `introduced`.
+
+**Contrôle de véracité** (`veracity_failures`) : pour chaque valeur nouvelle de l'élément modifié (valeurs d'attributs sauf `id`, et textes non vides), absente de l'élément avant modification, une erreur `introduced` est ajoutée si aucune chaîne de la demande n'est contenue dans cette valeur. Les chaînes de la demande sont les paramètres de l'opération et les citations de sa source. Une proposition `edited` (saisie par le rédacteur) est exemptée.
+
+**Illustrations** : une zone d'illustration ne donne que son avertissement « to check », sans rejeu.
+
+**Document de sortie** (`check_doc`) : même classement, appliqué à un document complet produit, avec la baseline de la source d'origine.
+
+### Reprise sur règle BREX et `blocked_by_rule` (`a5_preparer.prepare_checked`)
+
+Pour chaque zone de contenu :
+
+1. La proposition est vérifiée. S'il n'y a pas d'échec BREX `introduced` (gravité `error`), elle est retenue telle quelle.
+2. Sinon, jusqu'à `max_rule_retries` (2 par défaut) **alternatives** calculées par le code (les mêmes que pour un rejet : première ou dernière mention, position voisine). Chaque alternative est vérifiée à son tour.
+3. La première alternative sans échec BREX `introduced` remplace la proposition : elle porte `replaces` et `attempt`, et son opération dérivée est ajoutée à `extra_operations` (l'écrivain en a besoin).
+4. Si aucune alternative ne passe :
+   - **même règle à chaque tentative** (intersection non vide des identifiants de règle) : statut `blocked_by_rule`, `attempt` = nombre de tentatives, et les tentatives échouées sont notées dans `rejection_feedback`. Une question au client, pré-remplie avec la règle et la citation de la demande, est ajoutée aux `questions` de l'opération ;
+   - **règles différentes** : la proposition d'origine est gardée en `proposed`, avec ses erreurs, et laissée au rédacteur.
+
+**Nombre de tentatives** : au plus `1 + max_rule_retries`, soit 3 par défaut. La boucle ne peut pas tourner indéfiniment, y compris quand aucune alternative n'existe : on s'arrête alors à la première tentative.
+
+Une zone que l'opération ne sait pas appliquer est rapportée dans `errors`, sans bloquer les autres zones.
+
+**Question pré-remplie** (`customer_question`) : le texte est en anglais dans le code : « The request '…' conflicts with business rule <id>: <message>. How should we proceed? ».
+
+L'écrivain ne traite jamais un statut `blocked_by_rule` : il le saute (voir « Écriture »).
+
 ## Configuration (`config.toml`)
 
 Fichier à la racine du dépôt, suivi par git. Chargé par `config.py` ; si le fichier est absent, les valeurs par défaut s'appliquent.
