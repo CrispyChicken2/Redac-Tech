@@ -116,6 +116,16 @@ Seules les propositions de zone certaine, de contenu, sans aucun problème intro
 
 Les options se combinent dans un même appel. Après chaque appel, la commande affiche les propositions et le nombre restant à décider.
 
+**Rouvrir** une décision déjà prise :
+
+```bash
+redactech review runs/<id> --reopen <id-probable>
+```
+
+Une proposition décidée ne se décide pas une seconde fois : `--accept` ou `--reject` sur elle sont refusés. Pour la changer, il faut la rouvrir. Elle redevient à décider (`reopened <id>: proposed`), et les alternatives encore ouvertes qui la remplaçaient sont rejetées, avec le motif « superseded by reopened proposal ». La réouverture est refusée si l'une de ces alternatives est déjà acceptée ou éditée : il faut alors rouvrir celle-ci d'abord.
+
+Une demande **bloquée par une règle** ne se rouvre pas, mais une demande mise en attente pour le client revient à l'état bloqué si elle l'était avant : elle ne reçoit jamais une nouvelle tentative.
+
 ## 6. Écrire
 
 ```bash
@@ -125,6 +135,17 @@ redactech write runs/<id>
 Écrit les propositions `accepted` ou `edited` dans `runs/<id>/out/`, sous leur nouveau nom de fichier. Les propositions `rejected` et `pending_client` ne sont pas écrites, et ne sont pas listées non plus. Les documents en lecture seule sont ignorés et affichés avec leur raison. Les illustrations, signalées sans changement, ne sont pas écrites.
 
 La commande refuse tant qu'une proposition est encore `proposed` (hors illustrations) : le rédacteur doit décider de toutes.
+
+Deux propositions appliquées ne peuvent pas être de la même famille : même zone et même demande, l'une étant une variante de l'autre. Dans ce cas, `write` refuse et demande d'en garder une seule (« mutually exclusive »).
+
+Si des propositions sont **mises en attente pour le client**, l'écriture a lieu, mais la commande affiche un avertissement suivi de la liste des questions ouvertes :
+
+```text
+warning: 2 questions client ouvertes (en attente)
+  - prop-op-0001-2 (DMC-…): Faut-il traiter cette mention ?
+```
+
+Il ne bloque pas l'écriture : il rappelle seulement que ces points restent ouverts. La commande `request` ne l'affiche que si elle écrit elle-même (option cachée `--auto-accept`, réservée aux tests).
 
 Si la politique n'a pas été choisie à la demande, l'option `--version-policy none|in_work|new_issue` est obligatoire ici. Elle n'est enregistrée que si l'écriture réussit.
 
@@ -223,6 +244,8 @@ Cliquer sur **Nouvelle demande** pour quitter le run en cours et revenir au form
 6. **Tout accepter** n'accepte que les propositions que le pipeline juge certaines et sans problème. Il ne décide rien d'autre. Le message indique combien ont été acceptées et combien restent à décider.
 
 Pour une illustration signalée, l'interface n'offre ni édition ni rejet : seulement **Accepter** (acquittement) et **En attente**.
+
+**Rouvrir** : une proposition déjà décidée (accepter, éditer, rejeter, en attente) affiche un bouton **Rouvrir** sous son volet. Il la remet à décider. Les alternatives encore ouvertes qui la remplaçaient sont rejetées ; le bouton est refusé si l'une d'elles est déjà acceptée ou éditée. Une demande bloquée par une règle n'a pas de bouton **Rouvrir**.
 
 ### Onglet « Livraison »
 

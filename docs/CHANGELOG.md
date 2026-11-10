@@ -1,5 +1,33 @@
 # Journal des modifications
 
+## 026 — Réouverture des décisions
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+Correctif trouvé par le prototype de logique (024) : une même proposition pouvait être décidée deux fois, et deux variantes d'une même demande pouvaient être appliquées ensemble.
+
+### Modifié
+
+- Une proposition décidée ne se décide plus une seconde fois. Pour la changer, elle se **rouvre** :
+  - interface : bouton **Rouvrir** sous le volet d'une proposition décidée ;
+  - ligne de commande : `redactech review runs/<id> --reopen <identifiant>`.
+- Réouverture : la proposition redevient à décider. Les alternatives encore ouvertes qui la remplaçaient sont rejetées (« superseded by reopened proposal »). Refusée si une de ces alternatives est déjà acceptée ou éditée.
+- Une demande bloquée par une règle ne se rouvre pas ; une demande mise en attente pour le client revient à l'état bloqué si elle l'était avant.
+- L'écrivain refuse d'écrire deux propositions appliquées de la même famille (même zone, même demande).
+- `write` affiche un avertissement lorsque des questions client sont en attente, suivi de leur liste. L'écriture reste permise.
+
+### Documentation
+
+- `docs/DEMO.md` : réouverture (ligne de commande et interface), refus de la même famille, avertissement des questions ouvertes.
+
+### Tests écrits, non exécutés
+
+Les tests de cette tâche ont été écrits, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 021 — Assistant
 
 **Statut :** fusionnée. **Résultat de CI rapporté, non vérifié sur ce poste.**
