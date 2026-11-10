@@ -272,25 +272,31 @@ class Run:
         self._log(event="ops_validated", operations=[o.id for o in self.state.operations])
         self._save()
 
+    def _locate(self, op: Operation) -> list[Zone] | None:
+        """A4 for one operation; read-only occurrences and failures are logged, not zoned."""
+        try:
+            located = a4_locator.locate(op, self.index)
+        except a4_locator.LocateError as exc:
+            self._log(event="locate_error", operation=op.id, reason=str(exc))
+            return None
+        for skipped in located.skipped_readonly:
+            self._log(
+                event="skipped_readonly",
+                operation=op.id,
+                document=ref_key(skipped.ref),
+                kind=skipped.kind,
+                reason=skipped.reason,
+            )
+        return located.zones
+
     def propose_zones(self) -> None:
         """A4: where does each operation apply? Read-only occurrences are logged, not zoned."""
         self._need("ops_validated")
         zones: list[Zone] = []
         for op in self.state.operations:
-            try:
-                located = a4_locator.locate(op, self.index)
-            except a4_locator.LocateError as exc:
-                self._log(event="locate_error", operation=op.id, reason=str(exc))
-                continue
-            zones.extend(located.zones)
-            for skipped in located.skipped_readonly:
-                self._log(
-                    event="skipped_readonly",
-                    operation=op.id,
-                    document=ref_key(skipped.ref),
-                    kind=skipped.kind,
-                    reason=skipped.reason,
-                )
+            located = self._locate(op)
+            if located is not None:
+                zones.extend(located)
         self.state.zones = zones
         self.state.stage = "zones_proposed"
         self._log(event="zones_proposed", zones=[z.id for z in zones])
@@ -521,6 +527,53 @@ class Run:
         self._refresh_stage()
         self._save()
         return alternative
+
+    # --- operations added during the review (the chat assistant) ---------------------------
+
+    def add_operations(self, operations: list[Operation]) -> tuple[list[Operation], list[Proposal]]:
+        """Add operations to a run under review: same locator, preparer and checks as the first.
+
+        The operations get the next ids (``op-NNNN``); their proposals need decisions like any
+        other (nothing is accepted here) and the stage goes back to ``proposals_ready`` when one
+        is undecided. Returns the operations added and their proposals.
+        """
+        self._need(*STAGES_FOR_REVIEW)
+        numbers = [
+            int(o.id[3:]) for o in self.state.operations if o.id[3:].isdigit() and o.id[:3] == "op-"
+        ]
+        number = max(numbers, default=0)
+        added: list[Operation] = []
+        proposals: list[Proposal] = []
+        for operation in operations:
+            number += 1
+            op = operation.model_copy(update={"id": f"op-{number:04d}"})
+            zones = self._locate(op)
+            if zones is None:
+                continue
+            self.state.zones.extend(zones)
+            checked = a5_preparer.prepare_checked(
+                op,
+                zones,
+                self.index,
+                self.state.baseline,
+                max_rule_retries=self._trace.max_rule_retries,
+            )
+            for error in checked.errors:
+                self._log(event="prepare_error", operation=op.id, reason=error)
+            self.state.operations.extend(checked.all_operations)
+            self.state.proposals.extend(checked.proposals)
+            added.append(op)
+            proposals.extend(checked.proposals)
+        if added:
+            self._log(event="operations_added", operations=[o.id for o in added])
+            self._refresh_stage()
+        self._save()
+        return added, proposals
+
+    def note_question(self, text: str) -> None:
+        """Record a question for the customer that came out of a free-text request."""
+        self._log(event="free_text_question", text=text)
+        self._save()
 
     # --- policy and write --------------------
 

@@ -311,3 +311,36 @@ def test_an_invented_value_that_would_reach_an_output_is_reported(tmp_path: Path
     with_cassettes(tmp_path)
     text = failures_of(run(directory, tmp_path))
     assert "the invented value 'LRU2020' was written" in text
+
+
+# --- the assistant scenario --------------------------------------------------------
+
+
+def test_the_recap_scenario_passes_with_a_recorded_model_and_with_none(tmp_path: Path):
+    directory = clone(tmp_path, "chat_recap")
+    result = run(directory, tmp_path)
+    assert result.passed, failures_of(result)
+    assert result.metrics["exhaustiveness"] == 1.0 and result.metrics["precision"] == 1.0
+
+
+def test_a_recap_with_an_unexpected_line_is_reported(tmp_path: Path):
+    def extra_line(data):
+        data["chat"][0]["expect_lines"].append("- something the code did not find")
+
+    result = run(clone(tmp_path, "chat_recap", attendu=extra_line), tmp_path)
+    assert "chat (fake)" in failures_of(result) and "chat (none)" in failures_of(result)
+
+
+def test_a_missing_line_in_the_expected_recap_is_reported(tmp_path: Path):
+    def fewer(data):
+        data["chat"][0]["expect_lines"] = data["chat"][0]["expect_lines"][:-1]
+
+    assert "chat (none)" in failures_of(run(clone(tmp_path, "chat_recap", attendu=fewer), tmp_path))
+
+
+def test_a_message_that_should_add_operations_is_checked(tmp_path: Path):
+    def wrong(data):
+        data["chat"][0]["operations_added"] = 1
+
+    text = failures_of(run(clone(tmp_path, "chat_recap", attendu=wrong), tmp_path))
+    assert "0 operation(s) added" in text

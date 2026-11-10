@@ -224,6 +224,9 @@ def run_scenario(
             if proposal.status == "proposed" and zone and zone.kind == "content":
                 if zone.certainty in wanted:
                     run.decide(proposal.id, "accepted", "scenario", actor="auto")
+                elif zone.certainty in decisions.get("pending_certainty", []):
+                    comment = decisions.get("pending_comment", "Ask the customer")
+                    run.decide(proposal.id, "pending_client", comment, actor="auto")
         policy = scenario.get("version_policy", "none")
         run.set_policy(run.suggestion().model_copy(update={"mode": policy}))
         written = run.write(today=DAY)
@@ -356,6 +359,7 @@ def _compare(
         fail(f"{blocked} blocked proposal(s), expected {attendu.get('blocked', 0)}")
     _check_blocked(attendu, run, fail)
     _check_free_text(attendu, run, written, fail)
+    _check_chat(attendu, run, folder, fail)
     _check_baseline(attendu, run, fail)
     _check_illustrations(attendu, run, pairs, fail)
 
@@ -507,6 +511,24 @@ def _check_free_text(attendu: dict, run: orch.Run, written: list[Path], fail) ->
                 fail(f"{Path(path).name}: the invented value {value!r} was written")
         if any(value in str(op.params) for op in run.state.operations):
             fail(f"the invented value {value!r} is in an operation")
+
+
+def _check_chat(attendu: dict, run: orch.Run, folder: Path, fail) -> None:
+    """Messages to the assistant: the reply must be exactly the lines the inputs call for."""
+    from redactech.agents import a10_chat
+    from redactech.llm import NoLLM
+
+    for spec in attendu.get("chat", []):
+        for name in spec.get("providers", ["none"]):
+            cassettes = folder.parent.parent / "llm_cassettes"
+            provider = NoLLM() if name == "none" else FakeLLM(cassettes)
+            reply = a10_chat.answer(spec["message"], run, provider)
+            got = reply.text.splitlines()
+            if got != spec["expect_lines"]:
+                fail(f"chat ({name}): {got} instead of {spec['expect_lines']}")
+            added = len(reply.operations_added)
+            if added != spec.get("operations_added", 0):
+                fail(f"chat ({name}): {added} operation(s) added")
 
 
 def _check_baseline(attendu: dict, run: orch.Run, fail) -> None:

@@ -548,3 +548,80 @@ def test_free_text_is_refused_with_a_message_when_the_model_does_not_know_the_re
     ask_in_free_text(at, "A request nobody recorded")
     assert RUN not in at.session_state
     assert any("Demande refusée" in e.value for e in at.error)
+
+
+# --- the assistant panel -----------------------------------------------------
+
+
+def say(at: AppTest, message: str) -> None:
+    widget(at, "text_input", "chat_message").set_value(message)
+    at.run()
+    widget(at, "button", "chat_send").click()
+    at.run()
+    assert not at.exception
+
+
+def test_the_assistant_panel_is_there_with_its_stable_keys(tmp_path: Path, monkeypatch):
+    at = open_project(tmp_path, monkeypatch, LRU)
+    assert any(s.value == "Assistant" for s in at.subheader)
+    assert widget(at, "button", "chat_send").disabled is True  # nothing typed yet
+    assert has(at, "text_input", "chat_message") and has(at, "button", "chat_see_proposals")
+
+
+def test_without_a_run_the_assistant_says_so(tmp_path: Path, monkeypatch):
+    at = open_project(tmp_path, monkeypatch, LRU)
+    say(at, "Fais-moi un récap des erreurs")
+    page = texts(at)
+    assert "Vous" in page and "Aucun run en cours." in page
+
+
+def test_a_recap_is_built_by_code_from_the_run(tmp_path: Path, monkeypatch):
+    at = prepared(tmp_path, monkeypatch)
+    certain, probable = kinds_of(run_of(at))
+    widget(at, "text_input", f"pending_comment_{probable[0].id}").set_value("Ask the customer")
+    widget(at, "button", f"pending_{probable[0].id}").click()
+    at.run()
+    say(at, "Fais-moi un récap des erreurs et des points en attente")
+    page = texts(at)
+    assert "Erreurs introduites (0):" in page and "Erreurs préexistantes (0):" in page
+    assert "En attente du client (1):" in page and "Ask the customer" in page
+    reply = at.session_state["rt_chat"][-1][1]
+    assert "Bloquées" not in reply and "Pièces modifiées" not in reply  # not asked for
+    assert widget(at, "text_input", "chat_message").value == ""  # the box is emptied
+    assert [e for e in run_of(at).state.decisions_log if e.get("event") == "operations_added"] == []
+
+
+def test_the_link_shows_the_proposals_of_every_document(tmp_path: Path, monkeypatch):
+    at = prepared(tmp_path, monkeypatch)
+    widget(at, "checkbox", "only_this_doc").check()
+    at.run()
+    assert widget(at, "checkbox", "only_this_doc").value is True
+    widget(at, "button", "chat_see_proposals").click()
+    at.run()
+    assert not at.exception and widget(at, "checkbox", "only_this_doc").value is False
+
+
+def test_a_request_in_the_chat_adds_operations_that_still_need_a_decision(
+    tmp_path: Path, monkeypatch
+):
+    with_recorded_model(tmp_path)
+    at = open_project(tmp_path, monkeypatch, LRU)
+    replace_part(at, "X2", "X3")
+    confirm_policy(at, "in_work")
+    before = len(run_of(at).state.proposals)
+    say(at, FREE_TEXT_FR)
+    run = run_of(at)
+    assert [o.id for o in run.base_operations()] == ["op-0001", "op-0002"]
+    new = [p for p in run.state.proposals if p.operation_id == "op-0002"]
+    assert len(run.state.proposals) > before and {p.status for p in new} == {"proposed"}
+    assert "opération(s) ajoutée(s)" in texts(at)
+
+
+def test_the_assistant_never_decides(tmp_path: Path, monkeypatch):
+    with_recorded_model(tmp_path)
+    at = prepared(tmp_path, monkeypatch)
+    before = {p.id: p.status for p in run_of(at).state.proposals}
+    say(at, "Quelles demandes sont bloquées ?")
+    say(at, FREE_TEXT_TRAP)
+    after = {p.id: p.status for p in run_of(at).state.proposals}
+    assert after == before  # asking never changes a status
