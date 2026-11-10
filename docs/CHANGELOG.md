@@ -1,5 +1,29 @@
 # Journal des modifications
 
+## 021 — Assistant
+
+**Statut :** fusionnée. **Résultat de CI rapporté, non vérifié sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/agents/a10_chat.py` : assistant de discussion. Une question sur l'état du run (récapitulatif, erreurs, points en attente, demandes bloquées) reçoit une liste calculée par le code. Une reformulation du modèle, si elle existe, s'affiche en dessous, étiquetée « non vérifiée ». Une demande de modification passe par la lecture en texte libre (mêmes vérifications) et ajoute des opérations au run, qui restent à décider.
+- Panneau **Assistant** dans l'interface (zone de saisie **Votre message**, **Envoyer**, **Voir les propositions**).
+- `docs/MODELS.md` : modèle utilisé, réglages, fournisseurs, garanties.
+- Scénario `chat_recap` : récapitulatif vérifié avec un modèle enregistré et sans modèle.
+- `docs/DEMO.md` : section 12, « Assistant (optionnel) ».
+- `docs/SCENARIOS.md` : scénario `chat_recap`, avec son exigence proposée.
+
+### Tests : résultat de CI rapporté
+
+- Run `42835976809` sur la branche de travail, rapporté par le responsable du projet : 1059 tests réussis, lint propre. **Non vérifié** : ce poste n'a pas de dépôt distant ; `gh run view` ne peut pas consulter le run.
+
+### Non couvert
+
+- Aucun essai avec un modèle local réel : Ollama n'est pas installé sur le poste de build.
+- L'assistant n'existe qu'à l'interface : pas de commande en ligne de commande.
+- Le rattachement de `chat_recap` à REQ-8 et OBJ-3 est une proposition, à confirmer.
+- Pas de remote distant sur ce poste.
+
 ## 020 — Texte libre
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**

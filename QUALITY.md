@@ -131,6 +131,13 @@ Ils décrivent la qualité attendue : **exhaustivité, intégrité, homogénéit
 - Non vérifié : le parcours de l'interface à l'écran ; le test d'installation par un membre (REQ-9) et le test utilisateur avec l'évaluateur (REQ-7).
 - Suite : faire le test d'installation (REQ-9) et le test utilisateur (REQ-7) ; confirmer les résultats de CI sur le Bike réel.
 
+### Étape M3 : IA locale et assistant
+- Ajouté : couche IA (`src/redactech/llm/`) avec garde-fou d'hôte (localhost seulement), réessais en réinjectant l'erreur, garde-fou de taille par appel, journal sans prompt ; demande en texte libre (`a2_freetext`) ; assistant de discussion dont le récit est calculé par le code (`a10_chat`) ; documentation `docs/MODELS.md`.
+- Vérifié (rapporté, non vérifié sur ce poste) : la couche IA est testée **avec un faux modèle** (cassettes), sans réseau, en CI : `tests/llm/`, `tests/security/test_network_guard.py`, scénarios `free_text_fr`, `free_text_en`, `hallucination_trap` et `chat_recap`. Dernière CI rapportée : run `42835976809`, 1059 tests réussis, lint propre, rapporté par le responsable du projet ; ce poste n'a pas de dépôt distant.
+- Vérifié sur ce poste : `docs/DEMO.md` (sections 11 et 12) et `docs/MODELS.md` relus contre le code.
+- Non vérifié : **aucun essai avec un modèle local réel** (Ollama absent du poste de build) ; le fournisseur `ollama` n'a donc jamais répondu en vrai ; la qualité des reformulations du modèle ; le test utilisateur (REQ-7).
+- Suite : installer Ollama et le modèle de `docs/MODELS.md`, puis lancer les scénarios de texte libre et de l'assistant avec le modèle réel ; évaluer la reformulation.
+
 ## 4. Règles sur les données et la confidentialité
 
 - Données de travail : uniquement des données **publiques**, la norme S1000D (Bike data set Issue 4.1 pour le développement ; Issue 4.2 pour vérifier la compatibilité avec les XSD 4.2 et comme paires « ancienne / à jour » du mode comparaison, les mêmes DM existant dans les deux éditions ; BREX par défaut). Aucune documentation réelle, aucun projet passé, aucun BREX interne n'entre dans le projet.

@@ -282,3 +282,40 @@ Dans l'onglet **Demande**, un panneau **Texte libre** apparaît seulement si `[l
 Chaque appel au modèle est journalisé, sans le texte du prompt (seulement son empreinte). Pendant la demande, le journal s'écrit dans `runs/<id>.llm_calls.jsonl`, à côté des runs. Une fois le run créé, il est déplacé dans `runs/<id>/llm_calls.jsonl`. Si l'appel échoue, le journal reste à côté des runs, et l'erreur est affichée.
 
 Voir `docs/ARCHITECTURE.md`, sections « Couche IA locale » et « Demande, localisation et propositions ».
+
+## 12. Assistant (optionnel)
+
+L'assistant est un panneau à droite de l'interface, toujours visible quand un projet est chargé. Il répond à deux sortes de messages. Il n'existe pas de commande en ligne de commande pour lui : c'est une fonction de l'interface.
+
+### Questions sur l'état du run
+
+Exemples : « récap », « erreurs », « en attente », « bloqué », « quelles pièces modifiées ? » (en anglais aussi : « recap », « errors », « pending », « blocked », « changed parts »).
+
+La réponse est une liste à puces, **calculée par le code** à partir de l'état du run :
+
+- les pièces modifiées, par document ;
+- les erreurs introduites et les erreurs préexistantes ;
+- les points mis en attente pour le client, avec leur commentaire ;
+- les demandes bloquées par une règle.
+
+Cette liste est toujours la réponse. Si un modèle local est configuré, il peut en proposer une reformulation : elle s'affiche **en dessous**, sous le titre « Reformulation du modèle (non vérifiée) ». Elle ne remplace jamais la liste.
+
+Un message qui mélange une question et une modification reçoit la liste, suivie de la note : « La modification demandée n'a pas été traitée : envoyez-la en message séparé. »
+
+### Demandes de modification
+
+Exemple : « Remplacer la pièce LRU1010 par LRU2020 dans toute la documentation. »
+
+Le message passe par la même lecture que le texte libre de la section 11 : mêmes vérifications, même refus des valeurs inventées, mêmes questions. Les opérations qui passent sont **ajoutées au run** : elles sont localisées, préparées et vérifiées comme les premières, puis attendent les décisions du rédacteur. Rien n'est appliqué par l'assistant lui-même.
+
+Une demande de modification exige un modèle local (`[llm] provider` différent de `none`). Sinon, l'assistant répond : « Une demande en texte libre nécessite le modèle local ».
+
+Un run déjà écrit ne reçoit plus de changement : l'assistant le signale.
+
+### Champs et boutons
+
+- **Votre message** : zone de saisie.
+- **Envoyer** : envoie le message (inactif si la zone est vide).
+- **Voir les propositions** : affiche les propositions de tous les documents, et pas seulement celles du document choisi.
+
+Le panneau rappelle aussi l'onglet où décider : « Onglet « Document et propositions » : les propositions à décider. »
