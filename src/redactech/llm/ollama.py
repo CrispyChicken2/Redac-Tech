@@ -51,6 +51,12 @@ class OllamaProvider(LLMProvider):
         self._client = client
         self._pull_tried = False
 
+    def close(self) -> None:
+        """Close the HTTP client (also when it was handed in)."""
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+
     def _http(self) -> httpx.Client:
         if self._client is None:
             self._client = httpx.Client(timeout=self.config.timeout_s)

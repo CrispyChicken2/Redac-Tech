@@ -184,6 +184,8 @@ def _echo_proposals(run) -> None:
     for op in run.state.operations:
         for question in op.questions:
             typer.echo(f"question ({op.id}): {question}")
+    for question in run.free_text_questions():
+        typer.echo(f"question (free text): {question}")
 
 
 def _echo_policy(run) -> None:
@@ -203,6 +205,10 @@ def _pending(run) -> list[str]:
 @app.command()
 def request(
     mapping: Annotated[Path | None, typer.Option("--mapping", help="Mapping CSV/XLSX.")] = None,
+    text: Annotated[
+        str | None,
+        typer.Option("--text", help="Request in plain French or English (needs the local model)."),
+    ] = None,
     version_policy: Annotated[
         str | None, typer.Option("--version-policy", help="none | in_work | new_issue")
     ] = None,
@@ -214,16 +220,19 @@ def request(
     from redactech.agents.a2_mapping import MappingError
     from redactech.pipeline import orchestrator
 
-    if mapping is None:
-        _fail("give --mapping FILE (CSV or XLSX)")
-    if not mapping.is_file():
+    if (mapping is None) == (text is None):
+        _fail("give --mapping FILE (CSV or XLSX), or --text \"...\", but not both")
+    if mapping is not None and not mapping.is_file():
         _fail(f"no mapping file {mapping}")
     _policy(version_policy)
     file = _workspace_file(workspace)
     if not file.is_file():
         _fail(f"no workspace file {file}; run 'redactech workspace init' first")
     req = orchestrator.RunRequest(
-        mapping=str(mapping), version_policy=version_policy, auto_accept=auto_accept
+        mapping=str(mapping) if mapping is not None else None,
+        free_text=text,
+        version_policy=version_policy,
+        auto_accept=auto_accept,
     )
     try:
         run = orchestrator.start(req, file, out or Path("runs"))

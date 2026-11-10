@@ -268,3 +268,46 @@ def test_eval_exits_1_when_a_scenario_fails(tmp_path: Path):
 def test_eval_needs_a_folder(tmp_path: Path):
     result = runner.invoke(app, ["eval", str(tmp_path / "absent")])
     assert result.exit_code == 1 and "no scenarios folder" in result.output
+
+
+# --- free-text scenarios -------------------------------------------------------------
+
+
+def with_cassettes(tmp_path: Path) -> None:
+    shutil.copytree(TESTS / "llm_cassettes", tmp_path / "tests" / "llm_cassettes")
+
+
+def test_a_free_text_scenario_is_read_with_the_recorded_answers(tmp_path: Path):
+    directory = clone(tmp_path, "free_text_fr")
+    with_cassettes(tmp_path)
+    result = run(directory, tmp_path)
+    assert result.passed, failures_of(result)
+    assert result.metrics["exhaustiveness"] == 1.0 and result.metrics["precision"] == 1.0
+
+
+def test_a_free_text_scenario_without_a_model_fails_with_the_reason(tmp_path: Path):
+    from redactech.llm import NoLLM
+
+    directory = clone(tmp_path, "free_text_en")
+    result = sc.run_scenario(directory, tmp_path / "work", provider=NoLLM())
+    assert not result.passed and "free text needs the local model" in failures_of(result)
+
+
+def test_the_hallucination_trap_passes_and_checks_the_questions(tmp_path: Path):
+    directory = clone(tmp_path, "hallucination_trap")
+    with_cassettes(tmp_path)
+    assert run(directory, tmp_path).passed
+    expected = clone(tmp_path / "b", "hallucination_trap",
+                     attendu=lambda d: d.update(questions_min=3, question_contains=["never asked"]))
+    with_cassettes(tmp_path / "b")
+    text = failures_of(run(expected, tmp_path / "b"))
+    assert "1 free-text question(s), at least 3" in text and "never asked" in text
+
+
+def test_an_invented_value_that_would_reach_an_output_is_reported(tmp_path: Path):
+    """The check looks for the value in the outputs and in the operations."""
+    directory = clone(tmp_path, "free_text_fr", attendu=lambda d: d.update(
+        absent_in_outputs=["LRU2020"]))  # the genuine new value stands for an "invented" one
+    with_cassettes(tmp_path)
+    text = failures_of(run(directory, tmp_path))
+    assert "the invented value 'LRU2020' was written" in text

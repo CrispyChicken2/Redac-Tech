@@ -309,3 +309,57 @@ def test_render_leaves_the_document_untouched():
     before = MARKED_DM.read_bytes()
     run("render", str(MARKED_DM))
     assert MARKED_DM.read_bytes() == before
+
+
+# --- request --text ---------------------------------------------------------------------------
+
+CASSETTES = Path(__file__).resolve().parent / "llm_cassettes"
+
+
+@pytest.fixture
+def recorded_model(monkeypatch):
+    """The pipeline reads free text with the recorded answers, never a real model."""
+    from redactech.llm import FakeLLM
+    from redactech.pipeline import orchestrator
+
+    monkeypatch.setattr(orchestrator, "get_provider", lambda config: FakeLLM(CASSETTES))
+
+
+def text_args(project: dict, text: str, *extra: str) -> list[str]:
+    return ["request", "--text", text, "--out", project["runs"], "-w", project["ws"], *extra]
+
+
+def test_a_free_text_request_runs_to_the_proposals(project: dict, recorded_model):
+    text = "Remplacer la pièce LRU1010 par LRU2020 dans toute la documentation."
+    result = run(*text_args(project, text, "--version-policy", "in_work"))
+    assert result.exit_code == 0, result.output
+    assert "content/certain" in result.output and "content/probable" in result.output
+    assert "question (free text)" not in result.output
+    assert "free_text" in (the_run_dir(project) / "request.json").read_text(encoding="utf-8")
+
+
+def test_an_invented_value_is_printed_as_a_question(project: dict, recorded_model):
+    result = run(*text_args(project, "Replace the part LRU1010 by its successor."))
+    assert result.exit_code == 0, result.output
+    assert "question (free text):" in result.output and "LRU9999" in result.output
+    assert "no proposal" in result.output
+
+
+def test_free_text_without_a_model_is_refused(project: dict):
+    result = run(*text_args(project, "Replace the part LRU1010 by its successor."))
+    assert result.exit_code == 1 and "local model" in result.output
+    assert not Path(project["runs"]).exists()
+
+
+def test_give_the_mapping_or_the_text_but_not_both_or_none(project: dict):
+    both = run(*request_args(project), "--text", "Replace A by B")
+    assert both.exit_code == 1 and "not both" in both.output
+    neither = run("request", "--out", project["runs"], "-w", project["ws"])
+    assert neither.exit_code == 1 and "--mapping" in neither.output and "--text" in neither.output
+
+
+def test_the_text_option_exists(project: dict):
+    import typer.main
+
+    params = {p.name: p for p in typer.main.get_command(app).commands["request"].params}
+    assert params["text"].opts == ["--text"] and not params["text"].hidden

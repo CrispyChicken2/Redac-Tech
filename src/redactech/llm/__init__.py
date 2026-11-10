@@ -18,13 +18,14 @@ from redactech.llm.base import (
     PromptTooLarge,
     RemoteLLMRefused,
 )
-from redactech.llm.fake import CassetteMissing, FakeLLM
+from redactech.llm.fake import CassetteError, CassetteMissing, FakeLLM
 from redactech.llm.none import NoLLM
 
 PROVIDERS = ("none", "ollama", "fake")
 DEFAULT_CASSETTES = Path("tests") / "llm_cassettes"
 
 __all__ = [
+    "CassetteError",
     "CassetteMissing",
     "FakeLLM",
     "LLMError",

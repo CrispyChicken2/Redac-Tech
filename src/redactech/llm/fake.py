@@ -9,7 +9,12 @@ A cassette is a JSON file in the cassette folder (``tests/llm_cassettes/``)::
 next ones for the retries (the last one is repeated). A response is a JSON value or a plain text
 (to test an invalid answer); ``response`` (one answer) is accepted too. The key of a cassette is
 ``sha256(system + prompt + schema name)``; a request without cassette raises ``CassetteMissing``
-with that key.
+with that key. Two cassettes with the same key raise ``CassetteError``.
+
+A cassette that is easier to write by hand has ``prompt_contains`` (a piece of the user prompt)
+instead of ``prompt``: it answers every request of its ``schema`` whose prompt contains that text
+(and whose system text equals ``system`` when the cassette gives one); an exact key wins, and two
+loose cassettes matching the same request raise ``CassetteError``.
 """
 
 from __future__ import annotations
@@ -21,6 +26,10 @@ from typing import Any
 
 from redactech.config import LLMConfig
 from redactech.llm.base import LLMError, LLMProvider, Request
+
+
+class CassetteError(LLMError):
+    """The cassettes themselves are wrong (two with the same key, or several that match)."""
 
 
 class CassetteMissing(LLMError):
@@ -49,21 +58,44 @@ class FakeLLM(LLMProvider):
         self.cassette_dir = Path(cassette_dir)
         self.calls: list[Request] = []  # what was asked, for the tests
 
-    def _cassettes(self) -> dict[str, list[Any]]:
-        found: dict[str, list[Any]] = {}
+    def _load(self) -> tuple[dict[str, tuple[str, list[Any]]], list[dict[str, Any]]]:
+        """Exact cassettes by key (with their file), and the ``prompt_contains`` ones."""
+        exact: dict[str, tuple[str, list[Any]]] = {}
+        loose: list[dict[str, Any]] = []
         if not self.cassette_dir.is_dir():
-            return found
+            return exact, loose
         for path in sorted(self.cassette_dir.glob("*.json")):
             data = json.loads(path.read_text(encoding="utf-8"))
+            responses = list(data["responses"] if "responses" in data else [data["response"]])
+            if "prompt_contains" in data:
+                loose.append({**data, "responses": responses, "file": path.name})
+                continue
             key = cassette_key(data.get("system", ""), data["prompt"], data["schema"])
-            responses = data["responses"] if "responses" in data else [data["response"]]
-            found[key] = list(responses)
-        return found
+            if key in exact:
+                first = exact[key][0]
+                raise CassetteError(f"duplicate cassette key {key}: {first} and {path.name}")
+            exact[key] = (path.name, responses)
+        return exact, loose
+
+    def _find(self, request: Request, key: str) -> list[Any] | None:
+        exact, loose = self._load()
+        if key in exact:
+            return exact[key][1]
+        found = [
+            c for c in loose
+            if c["schema"] == request.schema_name
+            and c["prompt_contains"] in request.prompt
+            and c.get("system", request.system) == request.system
+        ]
+        if len(found) > 1:
+            names = ", ".join(c["file"] for c in found)
+            raise CassetteError(f"several cassettes match the request: {names}")
+        return found[0]["responses"] if found else None
 
     def _generate(self, request: Request) -> str:
         self.calls.append(request)
         key = cassette_key(request.system, request.prompt, request.schema_name)
-        responses = self._cassettes().get(key)
+        responses = self._find(request, key)
         if not responses:
             raise CassetteMissing(key, request.schema_name)
         answer = responses[min(request.attempt, len(responses) - 1)]

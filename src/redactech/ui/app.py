@@ -15,6 +15,7 @@ from typing import Any
 import streamlit as st
 from lxml import etree
 
+from redactech.config import load_config
 from redactech.pipeline import orchestrator as orch
 from redactech.render.published import PUBLISHED_CSS, render_published
 from redactech.render.side_by_side import SIDE_CSS, render_before_after, render_side_by_side
@@ -148,6 +149,8 @@ def request_tab(current: ui_state.Project) -> None:
     if run is not None:
         st.write(f"Run en cours : `{run.state.run_id}` ({run.state.stage}).")
         operations_table(run)
+        for question in run.free_text_questions():
+            st.warning(f"Question : {question}")
         if run.state.stage == "ops_proposed":
             versioning_panel(run)
         if st.button("Nouvelle demande", key="new_request"):
@@ -169,6 +172,7 @@ def request_tab(current: ui_state.Project) -> None:
     else:
         form_panel(current)
     forms = st.session_state.get(FORM_OPS) or None
+    free_text_panel(current)
     ready = mapping is not None if mode == "Tableau CSV/XLSX" else forms is not None
     if st.button("Préparer", key="prepare", disabled=not ready):
         try:
@@ -177,6 +181,23 @@ def request_tab(current: ui_state.Project) -> None:
                 forms=None if mode == "Tableau CSV/XLSX" else forms,
             )
         except Exception as exc:  # a bad mapping or form: shown, never a crash
+            st.error(f"Demande refusée : {exc}")
+        else:
+            st.session_state[RUN] = started
+            st.rerun()
+
+
+def free_text_panel(current: ui_state.Project) -> None:
+    """A request in plain French or English: only with a local model configured."""
+    st.subheader("Texte libre")
+    if load_config().llm.provider == "none":
+        st.info("Le texte libre nécessite le modèle local ([llm] provider dans config.toml).")
+        return
+    text = st.text_area("Décrivez la modification (français ou anglais)", key="free_text")
+    if st.button("Préparer (texte libre)", key="prepare_free_text", disabled=not text.strip()):
+        try:
+            started = ui_state.start_run(current, free_text=text)
+        except Exception as exc:  # the model is missing or answered badly: shown, never a crash
             st.error(f"Demande refusée : {exc}")
         else:
             st.session_state[RUN] = started

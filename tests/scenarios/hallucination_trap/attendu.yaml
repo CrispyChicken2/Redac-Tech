@@ -1,0 +1,13 @@
+# The only value in the request is LRU1010. The model answer holds LRU9999, which is not in the
+# request: the operation is turned into a question and nothing is written, so no output exists and
+# every source stays as it was.
+outputs: []
+unchanged:
+  - "DMC-RTPROTO-*"
+  - "DMC-RTDEFLT-*"
+questions_min: 1
+question_contains: ["LRU9999"]
+absent_in_outputs: ["LRU9999"]
+checks:
+  introduced_errors: 0
+blocked: 0

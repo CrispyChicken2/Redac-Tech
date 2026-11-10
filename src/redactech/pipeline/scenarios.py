@@ -34,6 +34,7 @@ from typing import Any
 import yaml
 
 from redactech.agents import a7_checker
+from redactech.llm import FakeLLM
 from redactech.models import SourceRef
 from redactech.pipeline import orchestrator as orch
 from redactech.s1000d import diff, validate
@@ -153,6 +154,8 @@ def _prepare_source(scenario: dict, directory: Path, work: Path, repo_root: Path
 def _request(scenario: dict, work: Path) -> orch.RunRequest:
     spec = scenario["request"]
     auto = bool(scenario.get("decisions", {}).get("auto_accept", False))
+    if "free_text" in spec:  # read by a language model (the recorded one unless one is given)
+        return orch.RunRequest(free_text=spec["free_text"], auto_accept=auto)
     if "mapping" in spec:
         rows = spec["mapping"]
         columns = list(dict.fromkeys(key for row in rows for key in row))
@@ -177,8 +180,13 @@ def run_scenario(
     work: Path | str,
     variant: str | None = None,
     repo_root: Path | str | None = None,
+    provider: Any = None,
 ) -> Result:
-    """Run one scenario (or one variant) in ``work`` and compare with ``attendu.yaml``."""
+    """Run one scenario (or one variant) in ``work`` and compare with ``attendu.yaml``.
+
+    A free-text scenario is read by ``provider``; by default the recorded answers of
+    ``tests/llm_cassettes/`` (no model is called).
+    """
     folder, work_dir = Path(directory).resolve(), Path(work)
     root = Path(repo_root) if repo_root is not None else folder.parents[2]
     scenario, attendu = load(folder, variant)
@@ -199,7 +207,12 @@ def run_scenario(
         return result
     before_files = _digest(source_dir)
     try:
-        run = orch.start(_request(scenario, work_dir), ws_file, work_dir / "runs", token="e000")
+        if "free_text" in scenario["request"] and provider is None:
+            provider = FakeLLM(folder.parent.parent / "llm_cassettes")
+        run = orch.start(
+            _request(scenario, work_dir), ws_file, work_dir / "runs", token="e000",
+            provider=provider,
+        )
         run.run_to_review()
         decisions = scenario.get("decisions", {})
         if decisions.get("auto_accept"):
@@ -342,6 +355,7 @@ def _compare(
     if blocked != attendu.get("blocked", 0):
         fail(f"{blocked} blocked proposal(s), expected {attendu.get('blocked', 0)}")
     _check_blocked(attendu, run, fail)
+    _check_free_text(attendu, run, written, fail)
     _check_baseline(attendu, run, fail)
     _check_illustrations(attendu, run, pairs, fail)
 
@@ -476,6 +490,23 @@ def _check_blocked(attendu: dict, run: orch.Run, fail) -> None:
         for needle in spec.get("question_contains", []):
             if not any(needle in q for q in questions):
                 fail(f"{wanted}: no question contains {needle!r}")
+
+
+def _check_free_text(attendu: dict, run: orch.Run, written: list[Path], fail) -> None:
+    """Questions raised by the interpretation, and values that must never reach an output."""
+    asked = run.free_text_questions()
+    least = attendu.get("questions_min", 0)
+    if len(asked) < least:
+        fail(f"{len(asked)} free-text question(s), at least {least} expected")
+    for needle in attendu.get("question_contains", []):
+        if not any(needle in question for question in asked):
+            fail(f"no free-text question contains {needle!r}")
+    for value in attendu.get("absent_in_outputs", []):
+        for path in written:
+            if value in Path(path).read_text(encoding="utf-8"):
+                fail(f"{Path(path).name}: the invented value {value!r} was written")
+        if any(value in str(op.params) for op in run.state.operations):
+            fail(f"the invented value {value!r} is in an operation")
 
 
 def _check_baseline(attendu: dict, run: orch.Run, fail) -> None:

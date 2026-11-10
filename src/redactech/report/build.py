@@ -219,6 +219,13 @@ def question_entries(state: RunState) -> list[QuestionEntry]:
                     rule=rule_text(rule),
                 )
             )
+    number = 0
+    for entry in state.decisions_log:  # what the free-text request left open
+        if entry.get("event") == "free_text_question":
+            number += 1
+            rows.append(
+                QuestionEntry(id=f"free-text-{number}", text=str(entry["text"]), status="open")
+            )
     for operation in state.operations:
         for question in operation.questions:
             if (operation.id, question) not in used:

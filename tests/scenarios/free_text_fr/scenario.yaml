@@ -1,0 +1,20 @@
+# The lru1010 change asked in plain French: a recorded model answer (tests/llm_cassettes/)
+# gives the operation, the code checks it, the result is the one of lru1010.
+description: Part replacement across a common repository, a parts catalogue and a text.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-040A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-0A3A-D_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-941A-D_001-00_EN-US.XML
+    - UPF-RTPROTO-AAA-D00-00-00-00AA-0A3A-D_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  free_text: "Remplacer la pièce LRU1010 par LRU2020 dans toute la documentation."
+version_policy: in_work
+decisions:
+  auto_accept: true
+  accept_certainty: [probable]
+max_seconds: 60
