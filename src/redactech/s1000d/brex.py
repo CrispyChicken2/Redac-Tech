@@ -71,7 +71,54 @@ def brex_key(doc: Any) -> str:
     return code.dmc_string() if code else ""
 
 
+# --- cache ------------------------------------------------------------
+# A batch checks many proposals against the same BREX chain: each BREX file is read once and its
+# rules extracted once. An entry is valid for a file as long as its path, modification time and
+# size are the same, so a changed or swapped BREX is read again.
+
+_DOCS: dict[tuple[str, int, int], Any] = {}
+_RULES: dict[tuple[str, int, int], list[BrexRule]] = {}
+
+
+def clear_cache() -> None:
+    """Forget every cached BREX document and rule list."""
+    _DOCS.clear()
+    _RULES.clear()
+
+
+def _stamp(path: Path | str) -> tuple[str, int, int] | None:
+    try:
+        resolved = Path(path).resolve()
+        stat = resolved.stat()
+    except OSError:
+        return None
+    return (str(resolved), stat.st_mtime_ns, stat.st_size)
+
+
+def load_brex(path: Path | str) -> Any:
+    """The BREX data module at ``path``, read once per file state (see the cache above)."""
+    key = _stamp(path)
+    if key is None:
+        return xio.load(path)  # let the loader report the problem
+    doc = _DOCS.get(key)
+    if doc is None:
+        doc = xio.load(path)
+        _DOCS[key] = doc
+    return doc
+
+
 def load_rules(brex_doc: Any) -> list[BrexRule]:
+    """Rules of the BREX, in document order (cached for documents read by ``load_brex``)."""
+    path = getattr(brex_doc, "path", None)
+    key = _stamp(path) if path else None
+    if key is not None and _DOCS.get(key) is brex_doc:
+        if key not in _RULES:
+            _RULES[key] = _read_rules(brex_doc)
+        return list(_RULES[key])
+    return _read_rules(brex_doc)
+
+
+def _read_rules(brex_doc: Any) -> list[BrexRule]:
     """Rules of ``structureObjectRuleGroup/structureObjectRule`` in document order."""
     root = xio.root_of(brex_doc)
     key = brex_key(brex_doc)
@@ -187,7 +234,7 @@ def resolve_chain(
         if path is None:
             warn(f"BREX {key} not found")
             break
-        brex_doc = xio.load(path)
+        brex_doc = load_brex(path)
         chain.append(brex_doc)
         if brex_ref_of(brex_doc) == key:  # refers to itself: top of the chain
             break

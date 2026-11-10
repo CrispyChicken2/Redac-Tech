@@ -174,6 +174,15 @@ def test_an_unknown_figure_is_reported(tmp_path: Path):
     assert "fig-9999: no illustration zone" in failures_of(result)
 
 
+def test_the_operations_that_must_flag_a_figure_are_checked(tmp_path: Path):
+    def wrong_operation(data):
+        data["illustrations"][0]["operations"] = ["op-0002", "op-0003"]  # op-0003 deletes stp-0003
+
+    result = run(clone(tmp_path, "ops_steps", attendu=wrong_operation), tmp_path)
+    assert "fig-0001: not flagged through op-0003" in failures_of(result)
+    assert "not flagged through op-0002" not in failures_of(result)
+
+
 def test_a_brex_patch_that_matches_nothing_is_a_failure(tmp_path: Path):
     def nothing(data):
         data["variants"][1]["brex_patch"]["old"] = "//not/in/the/brex"

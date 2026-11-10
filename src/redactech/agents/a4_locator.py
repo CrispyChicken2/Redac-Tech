@@ -5,19 +5,30 @@ a zone (structured occurrences are ``certain``, free-text mentions ``probable``)
 read-only documents (update files, BREX, read-only sources) never become zones: they are listed
 in ``LocateResult.skipped_readonly`` with the reason. Figures linked to a modified element give
 extra zones of kind ``illustration`` and certainty ``to_check`` (the tool never edits images).
-Other operations get one zone from their target.
+Other operations get one zone from their target; the step and requirement operations, the text
+replacement and ``update_ref`` also flag (``illustration`` zones) the figures that the changed
+element refers to (``internalRef`` of type ``irtt01``), contains, or sits in. For ``insert_step``
+and ``move_step`` the neighbouring step named by ``after_id`` / ``before_id`` counts too.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
+
+from lxml import etree
 
 from redactech.models import Operation, SourceRef, Zone
+from redactech.s1000d import io as xio
 from redactech.s1000d.index import CorpusIndex, Figure, Occurrence, find_part, ref_key
 
 WRITABLE_ROLES = ("dm",)
 CONTAINER_TAGS = ("proceduralStep", "levelledPara", "catalogSeqNumber", "description")
 STRUCTURED_KINDS = ("partNumber", "partRef", "partSpec", "partIdent")
+FIGURE_OPS = (
+    "insert_step", "move_step", "delete_step", "replace_text",
+    "add_requirement", "remove_requirement", "update_ref",
+)
 
 
 @dataclass(frozen=True)
@@ -126,6 +137,46 @@ def _locate_replace_part(op: Operation, index: CorpusIndex) -> LocateResult:
     return result
 
 
+def _changed_paths(op: Operation, doc: Any) -> list[str]:
+    """Paths of the element(s) an operation changes or sits next to (found in the document)."""
+    tree = xio.load(doc.path).tree
+    target, params = op.target, op.params
+    paths: list[str] = []
+    if target.xpath:
+        try:
+            found = xio.xpath(tree, target.xpath)
+        except etree.LxmlError:
+            found = []
+        if isinstance(found, list) and found:
+            paths.append(tree.getpath(found[0]))
+    candidates = (target.element_id, params.get("step_id"), params.get("id"),
+                  params.get("after_id"), params.get("before_id"))
+    for ident in dict.fromkeys(c for c in candidates if c):
+        found = xio.xpath(tree, "//*[@id=$i]", i=str(ident))
+        if found:
+            paths.append(tree.getpath(found[0]))
+    return list(dict.fromkeys(paths))
+
+
+def _figures_of(index: CorpusIndex, ref: SourceRef, paths: list[str]) -> list[Figure]:
+    """Figures of the document referred to from, contained in, or around the given elements."""
+    found: dict[str, Figure] = {}
+    for entry in index.internal_refs.get("irtt01", []):
+        if ref_key(entry.ref) != ref_key(ref):
+            continue
+        if any(entry.xpath == p or entry.xpath.startswith(p + "/") for p in paths):
+            key = f"{ref_key(ref)}#{entry.target_id}"
+            if key in index.figures:
+                found[key] = index.figures[key]
+    for key, figure in index.figures.items():
+        if ref_key(figure.ref) != ref_key(ref):
+            continue
+        if any(figure.xpath.startswith(p + "/") or p.startswith(figure.xpath + "/")
+               or p == figure.xpath for p in paths):
+            found[key] = figure
+    return list(found.values())
+
+
 def _locate_target(op: Operation, index: CorpusIndex) -> LocateResult:
     target = op.target
     if target.ref is None:
@@ -159,6 +210,23 @@ def _locate_target(op: Operation, index: CorpusIndex) -> LocateResult:
             operation_id=op.id,
         )
     )
+    if op.kind in FIGURE_OPS:
+        paths = _changed_paths(op, doc)
+        for number, figure in enumerate(_figures_of(index, target.ref, paths), 1):
+            label = figure.figure_id or figure.xpath
+            result.zones.append(
+                Zone(
+                    id=f"zone-{op.id}-fig-{number}",
+                    ref=figure.ref,
+                    xpath=figure.xpath,
+                    element_id=figure.figure_id,
+                    certainty="to_check",
+                    found_by="code",
+                    kind="illustration",
+                    reason=f"figure {label} is linked to the changed element; check the image",
+                    operation_id=op.id,
+                )
+            )
     return result
 
 

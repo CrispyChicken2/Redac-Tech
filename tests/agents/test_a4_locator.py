@@ -235,3 +235,88 @@ def index_occurrence_kind(index: ix.CorpusIndex, zone) -> str:
         if occ.ref == zone.ref and occ.xpath == zone.xpath:
             return occ.kind
     raise AssertionError("zone without occurrence")
+
+
+# --- figures flagged through step and element operations ------------------------
+
+STEPS_BODY = (
+    "<mainProcedure>"
+    '<proceduralStep id="s1"><para>One <internalRef internalRefId="fig-1" '
+    'internalRefTargetType="irtt01"/>.</para></proceduralStep>'
+    '<proceduralStep id="s2"><para>Two.</para>'
+    '<figure id="fig-2"><title>U</title><graphic infoEntityIdent="ICN-B"/></figure>'
+    "</proceduralStep>"
+    '<proceduralStep id="s3"><para>Three.</para></proceduralStep>'
+    '<figure id="fig-1"><title>T</title><graphic infoEntityIdent="ICN-A"/></figure>'
+    "</mainProcedure>"
+)
+
+
+def steps_index(tmp_path: Path) -> ix.CorpusIndex:
+    write_dm(tmp_path, STEPS_BODY)
+    return ix.build_index(workspace_for(tmp_path))
+
+
+def steps_target(index: ix.CorpusIndex, **kwargs) -> Target:
+    ref = next(iter(index.docs.values())).ref
+    return Target(ref=ref, **kwargs)
+
+
+def flagged(result: a4.LocateResult) -> list[str]:
+    return sorted(z.element_id for z in result.illustration_zones)
+
+
+@pytest.mark.parametrize(
+    ("kind", "params", "target", "figures"),
+    [
+        ("delete_step", {"step_id": "s1"}, {"element_id": "s1"}, ["fig-1"]),  # refers to it
+        ("delete_step", {"step_id": "s2"}, {"element_id": "s2"}, ["fig-2"]),  # contains it
+        ("delete_step", {"step_id": "s3"}, {"element_id": "s3"}, []),
+        ("move_step", {"step_id": "s3", "after_id": "s1"}, {"element_id": "s3"}, ["fig-1"]),
+        ("move_step", {"step_id": "s1", "before_id": "s3"}, {"element_id": "s1"}, ["fig-1"]),
+        ("insert_step", {"after_id": "s2", "para": "New."}, {"element_id": "s2"}, ["fig-2"]),
+        ("insert_step", {"after_id": "s3", "para": "New."}, {"element_id": "s3"}, []),
+        ("replace_text", {"old": "Two", "new": "2"}, {"element_id": "s2"}, ["fig-2"]),
+        ("replace_text", {"old": "Three", "new": "3"}, {"element_id": "s3"}, []),
+        (
+            "update_ref",
+            {"internal_ref_id": "s2"},
+            {"xpath": "//proceduralStep[@id='s1']/para/internalRef"},
+            ["fig-1"],
+        ),
+        ("remove_requirement", {"requirement": "tool", "id": "tool-1"}, {}, []),
+    ],
+    ids=lambda v: v if isinstance(v, str) else "",
+)
+def test_step_and_element_operations_flag_the_linked_figures(
+    tmp_path: Path, kind: str, params: dict, target: dict, figures: list[str]
+):
+    index = steps_index(tmp_path)
+    op = other_op(kind, params, steps_target(index, **target))
+    result = a4.locate(op, index)
+    (content,) = result.content_zones
+    assert content.certainty == "certain" and content.kind == "content"
+    assert flagged(result) == figures
+    for zone in result.illustration_zones:
+        assert (zone.kind, zone.certainty, zone.found_by) == ("illustration", "to_check", "code")
+        assert zone.operation_id == op.id and zone.ref == content.ref
+        assert zone.xpath.endswith("/figure") and zone.element_id in zone.reason
+
+
+def test_the_figure_zone_ids_are_unique_and_the_content_zone_comes_first(tmp_path: Path):
+    index = steps_index(tmp_path)
+    ref = next(iter(index.docs.values())).ref
+    op = other_op("move_step", {"step_id": "s1", "after_id": "s2"}, Target(ref=ref))
+    zones = a4.locate(op, index).zones
+    assert zones[0].kind == "content"
+    assert sorted(z.element_id for z in zones[1:]) == ["fig-1", "fig-2"]
+    assert len({z.id for z in zones}) == len(zones)
+
+
+def test_a_read_only_document_gives_no_figure_zone(tmp_path: Path):
+    write_dm(tmp_path, STEPS_BODY)
+    index = ix.build_index(workspace_for(tmp_path, writable=False))
+    ref = next(iter(index.docs.values())).ref
+    op = other_op("delete_step", {"step_id": "s1"}, Target(ref=ref, element_id="s1"))
+    result = a4.locate(op, index)
+    assert result.zones == [] and len(result.skipped_readonly) == 1

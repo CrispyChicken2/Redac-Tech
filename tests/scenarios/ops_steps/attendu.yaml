@@ -1,6 +1,7 @@
-# Input (procedure 523A): steps stp-0001 .. stp-0005; tool-0001, sup-0001 and spr-0001 in the
-# preliminary requirements; stp-0004 refers to sup-0001; stp-0005 mentions FAKE-PN-050 and refers
-# to the figure fig-0001. Seven changes, marks add / modify / delete, one figure to flag.
+# Input (procedure 523A): steps stp-0001 .. stp-0005; the ICN of the figure is declared in the
+# DOCTYPE; tool-0001, sup-0001 and spr-0001 in the preliminary requirements; stp-0004 refers to
+# sup-0001; stp-0005 mentions FAKE-PN-050 and refers to the figure fig-0001. Seven changes, marks
+# add / modify / delete, one figure to flag (through the step that holds its reference).
 outputs:
   - DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-01_EN-US.XML
 unchanged:
@@ -13,8 +14,8 @@ changes:
     after_contains: ["Wear protective gloves."]
     marks: {changeMark: "1", changeType: add}
   - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
-    before_xpath: "//proceduralStep[@id='stp-0004']"
-    scope_xpath: "//proceduralStep[@id='stp-0004']"
+    before_xpath: "//proceduralStep[@id='stp-0005']"
+    scope_xpath: "//proceduralStep[@id='stp-0005']"
     change_type: modify
     marks: {changeMark: "1", changeType: modify}
   - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
@@ -65,7 +66,9 @@ output_counts:
     "//supportEquipDescr[@id='tool-0001'][@changeType='delete']": 1
     "//*[@id='fig-0001']": 1
 illustrations:
-  - {figure_id: fig-0001, doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML}
+  - figure_id: fig-0001
+    doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    operations: [op-0002, op-0007]  # the step moved (it holds the reference) and the part
 checks:
   introduced_errors: 0
 blocked: 0
