@@ -68,7 +68,7 @@ La commande crée `runs/<AAAAMMJJ-HHMMSS>-<jeton>/`, lit les propositions et aff
 - la politique suggérée (avec ses motifs), et la politique choisie ;
 - le nombre de propositions à décider, avec la commande `review` à lancer.
 
-Attendu pour ce scénario (voir `QUALITY.md`, REQ-5) : 2 modifications à faire, et les 2 traces historiques du fichier UPF laissées intactes. Les UPF sont en lecture seule : leurs occurrences sont ignorées et tracées dans le journal, avec la raison.
+Attendu pour ce scénario (voir `QUALITY.md`, REQ-5) : 2 modifications structurées à faire, et les 2 traces historiques du fichier UPF laissées intactes. La démonstration propose aussi une mention en texte libre (niveau `probable`) : elle est à décider à la main. Le scénario automatique `lru1010` de `docs/SCENARIOS.md` la compte comme troisième changement. Les UPF sont en lecture seule : leurs occurrences sont ignorées et tracées dans le journal, avec la raison.
 
 Le reste de la démonstration utilise le dossier du run, noté `runs/<id>` ci-dessous. Remplacer `<id>` par le nom affiché.
 
@@ -135,3 +135,11 @@ redactech check runs/<id>/out
 Pour chaque fichier produit, affiche les problèmes **introduits** et **préexistants**, puis le total. La commande se termine avec le code `1` s'il reste une erreur introduite, `0` sinon.
 
 Le journal complet du run est dans `runs/<id>/state.json` (champ `decisions_log`), avec l'horodatage de chaque décision.
+
+## 8. Évaluer les scénarios
+
+```bash
+redactech eval tests/scenarios/
+```
+
+Lance tous les scénarios de `tests/scenarios/` (et leurs variantes), affiche `PASS`, `FAIL` ou `SKIP` pour chacun, écrit le rapport `runs/eval_<date>.md` (option `--out` pour un autre dossier), et se termine avec le code `1` si un scénario échoue. Le scénario `lru1010_bike41` est sauté sans les données Bike. Le détail des scénarios, de leurs attendus et des colonnes du rapport est dans `docs/SCENARIOS.md`.

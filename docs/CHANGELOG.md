@@ -1,5 +1,34 @@
 # Journal des modifications
 
+## 012 — Scénarios et eval
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/pipeline/scenarios.py` : lanceur de scénarios. Lit `scenario.yaml` et `attendu.yaml`, lance l'orchestrateur, compare les sorties à l'attendu (changements, éléments intacts, comptes, problèmes, marques) et calcule cinq mesures : exhaustivité, précision, préservation, validité, traçabilité.
+- Scénarios dans `tests/scenarios/`, chacun avec son `attendu.yaml` écrit avant exécution à partir des fichiers d'entrée :
+  - `lru1010` : remplacement de `LRU1010` dans un répertoire commun, un catalogue et un paragraphe, UPF intact (REQ-5, REQ-6) ;
+  - `lru1010_bike41` : même remplacement sur les vraies données Bike 4.1, sauté sans les données (REQ-5, REQ-6, REQ-10, REQ-11) ;
+  - `delete_mark` : suppression d'étape marquée, non supprimée (REQ-10) ;
+  - `versioning` : trois politiques sur le même changement (OBJ-21) ;
+  - `preexisting_brex` : problèmes préexistants classés comme tels, rien d'introduit (OBJ-22, REQ-11).
+- `tests/scenarios/_schemas/dmodule.xsd` : schéma minimal, utilisé par défaut pour la validité.
+- `tests/scenarios/test_scenarios.py` : un test par scénario et par variante.
+- CLI : `redactech eval tests/scenarios/` (option `--out`), qui écrit `runs/eval_<date>.md` et se termine avec le code `1` si un scénario échoue.
+- `docs/SCENARIOS.md` (nouveau) : format des deux fichiers, mesures, liste des scénarios et exigences prouvées, variantes, procédure d'ajout, colonnes du rapport.
+- `docs/DEMO.md` : étape 8, « Évaluer les scénarios ».
+
+### Tests écrits, non exécutés
+
+Les scénarios et le lanceur n'ont **pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets, et la commande `eval` n'a pas été lancée. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- Le scénario `lru1010` attend trois changements, dont une mention en texte libre. Le chiffre « 2/2 » de `QUALITY.md` (REQ-5) ne compte que les occurrences structurées. Les deux documents ne sont pas alignés ; à trancher par le chef de projet.
+- `lru1010_bike41` n'a pas pu être exécuté : les données Bike ne sont pas sur ce poste.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 011 — Orchestrateur et CLI
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
