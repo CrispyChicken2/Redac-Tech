@@ -24,7 +24,7 @@ Racine : `src/redactech/`. Chaque sous-paquet porte un rôle défini par la sect
 | `render/` | rendu : vue XML, vue publiée (XSLT 1.0), vue côte à côte | implémenté |
 | `report/` | rapport de livraison (`build`), page HTML (`html`), exports (`export`) | implémenté |
 | `ui/` | interface Streamlit, mode Document (`app`, `state`, `components`) | implémenté |
-| `llm/` | accès au LLM local (Ollama) ; tous les appels LLM passent ici (M3) | squelette |
+| `llm/` | couche IA : contrat, fournisseur Ollama local, cassettes de test, fournisseur « aucun » par défaut ; aucun agent du pipeline ne l'appelle encore | implémenté (non utilisé) |
 
 Le détail de chaque module est donné dans les sections suivantes : « Lecture et identification S1000D », « Contrôles », « Workspace, index et baseline », « Demande, localisation et propositions », « Traçabilité, versioning et écriture », « Vérification des propositions et règles bloquantes », et « Orchestrateur ».
 
@@ -543,13 +543,55 @@ L'écran comporte une barre latérale **Projet** et trois onglets :
 
 Les boutons de décision suivent les règles de l'orchestrateur (voir « Orchestrateur ») : un refus du pipeline est affiché tel quel, sans traitement particulier. Pour une illustration signalée, seuls **Accepter** et **En attente** sont offerts.
 
+## Couche IA locale
+
+Modules : `llm/base.py` (contrat commun), `llm/none.py`, `llm/ollama.py`, `llm/fake.py`, `llm/__init__.py` (`get_provider`). Principe (REQ-8) : **tout appel à un modèle passe par `src/redactech/llm/`**, et le modèle n'écrit jamais un document : sa réponse est un objet JSON typé, validé avant usage.
+
+### Choix du fournisseur
+
+`get_provider(config)` lit `[llm] provider` ; le modèle vient de `[llm] model` seulement.
+
+| Fournisseur | Comportement |
+|---|---|
+| `none` (défaut) | `NoLLM` : `complete_json` lève `LLMUnavailable` sans rien faire. L'appelant emprunte alors son chemin sans IA. |
+| `ollama` | `OllamaProvider` : requête `POST /api/chat` sur `http://localhost:11434`, avec le schéma JSON attendu dans le champ `format` et la température de la configuration. |
+| `fake` | `FakeLLM` : réponses enregistrées dans `tests/llm_cassettes/*.json`. La clé est `sha256(système + prompt + nom du schéma)`. Une requête sans cassette lève `CassetteMissing`, qui donne la clé à enregistrer. |
+
+**Garde-fou d'hôte** (`ollama.py`) : seuls `localhost`, `127.0.0.1` et `::1` sont acceptés. Tout autre hôte lève `RemoteLLMRefused`, sauf si la variable `REDACTECH_ALLOW_REMOTE_LLM` vaut `1`. Le contrôle est fait à la construction **et** à chaque appel.
+
+**Téléchargement** : importer le module ou construire le fournisseur ne télécharge rien. `ensure_model()` tente `ollama pull` une seule fois, et seulement si un appelant le demande. Il n'est jamais appelé à l'import ni dans les tests.
+
+### Contrat commun (`LLMProvider.complete_json`)
+
+`complete_json(prompt, schema, system=…, examples=…)` renvoie une instance validée du schéma pydantic :
+
+1. **Messages** : système (avec la consigne « un seul objet JSON »), exemples travaillés en tours utilisateur / assistant, puis le prompt.
+2. **Taille** : estimation d'un jeton pour quatre caractères. Au-delà de 6 000 jetons estimés, `PromptTooLarge` est levée **avant tout envoi**. Ce budget vaut pour un appel, pas pour l'ensemble d'un run.
+3. **Réessais** : en cas de réponse non valide, l'erreur de validation est réinjectée dans la conversation, et la demande est renvoyée. Au plus `[llm] max_retries` nouvelles tentatives (2 par défaut), soit 3 appels au total. Épuisées, `LLMOutputError` est levée.
+4. **Erreur du fournisseur** (indisponible, cassette absente, hôte refusé) : levée aussitôt, sans réessai.
+5. **Température** : `[llm] temperature` (0 par défaut).
+
+### Journal local
+
+Quand un chemin de journal est donné, chaque tentative ajoute une ligne JSON : heure, fournisseur, modèle, nom du schéma, **empreinte SHA-256 du prompt** (jamais le prompt lui-même), numéro de tentative, durée, succès ou erreur. L'appelant choisit le chemin ; la convention est `runs/<id>/llm_calls.jsonl`.
+
+### Modèle
+
+Une seule ligne à changer : `[llm] model` dans `config.toml` (défaut : `ministral-3:8b`). Aucune autre partie du code ne nomme un modèle.
+
+### État actuel
+
+- **Aucun agent du pipeline n'appelle la couche.** Les seuls appels sont dans les tests. Le pipeline tourne avec `provider = "none"`.
+- **Test réseau** : `tests/security/test_network_guard.py` vérifie que les appels au modèle restent dans `llm/`, et qu'aucun SDK de modèle hébergé n'apparaît dans le code.
+- **Essai avec un modèle local réel** : non fait. Ollama n'est pas installé sur le poste de build. À faire avant toute démonstration avec IA.
+
 ## Configuration (`config.toml`)
 
 Fichier à la racine du dépôt, suivi par git. Chargé par `config.py` ; si le fichier est absent, les valeurs par défaut s'appliquent.
 
 Section `[llm]` (utilisée à partir de M3) :
 
-- `provider` : fournisseur LLM ; `"none"` = repli sans IA, `"ollama"` en M3.
+- `provider` : fournisseur LLM : `"none"` (défaut : aucun modèle, repli sans IA), `"ollama"` (serveur Ollama local) ou `"fake"` (réponses enregistrées, pour les tests). Voir « Couche IA locale ».
 - `model` : nom du modèle local ; une seule ligne à changer pour en changer.
 - `temperature` : température de génération (0 par défaut).
 - `max_retries` : nombre de nouvelles tentatives d'un appel LLM.

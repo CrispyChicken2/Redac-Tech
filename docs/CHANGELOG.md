@@ -1,5 +1,29 @@
 # Journal des modifications
 
+## 019 — Couche LLM
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/llm/` : contrat commun (`base.py`) avec validation JSON, réessais en réinjectant l'erreur, garde-fou de taille (6 000 jetons estimés), journal local sans prompt ; fournisseur `none` (défaut, sans IA) ; fournisseur `ollama` limité à `localhost` (garde-fou d'hôte, pas de téléchargement à l'import) ; fournisseur `fake` avec cassettes.
+- `tests/llm_cassettes/` : trois cassettes (`plan_single`, `plan_retry`, `plan_replace`).
+- `tests/llm/` : tests du contrat, des cassettes, du fournisseur Ollama (serveur simulé, sans réseau) et de `get_provider`.
+- `tests/security/test_network_guard.py` : vérifie que les appels au modèle restent dans `llm/`.
+- Le modèle se règle par une seule ligne : `[llm] model` dans `config.toml`.
+- `docs/ARCHITECTURE.md` : section « Couche IA locale » ; tableau des modules et configuration `[llm]` mis à jour.
+
+### Tests écrits, non exécutés
+
+Les tests ci-dessus ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- **Aucun agent du pipeline n'appelle encore la couche** : le pipeline tourne sans IA.
+- **Aucun essai avec un modèle local réel** : Ollama n'est pas installé sur le poste de build (REQ-8 reste à confirmer).
+- La limite de taille vaut par appel, il n'existe pas de budget cumulé sur un run.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 018 — README et feuille de route
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
