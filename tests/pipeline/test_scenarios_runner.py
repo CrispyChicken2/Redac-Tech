@@ -141,6 +141,47 @@ def test_a_run_that_cannot_finish_is_a_failure_not_a_crash(tmp_path: Path):
     assert not result.passed and "the run failed" in failures_of(result)
 
 
+# --- blocked proposals, baseline, illustrations, BREX swap ---------------------
+
+
+def test_blocked_details_are_checked(tmp_path: Path):
+    def wrong(data):
+        data["blocked_details"] = [
+            {"operation": "op-0001", "attempts": 2, "rule_xpath": "//other",
+             "question_contains": ["never asked"]},
+            {"operation": "op-0002"},
+        ]
+
+    result = run(clone(tmp_path, "forbidden_request", attendu=wrong), tmp_path)
+    text = failures_of(result)
+    assert "3 attempt(s), expected 2" in text and "//other is not shown" in text
+    assert "no question contains" in text and "op-0002: no blocked proposal" in text
+
+
+def test_the_baseline_brex_count_is_checked(tmp_path: Path):
+    def too_many(data):
+        data["variants"]["project"]["baseline_brex"] = {"min": 3}
+
+    result = run(clone(tmp_path, "brex_swap", attendu=too_many), tmp_path, "project")
+    assert "BREX failure(s) in the baseline, at least 3" in failures_of(result)
+
+
+def test_an_unknown_figure_is_reported(tmp_path: Path):
+    def wrong_figure(data):
+        data["illustrations"][0]["figure_id"] = "fig-9999"
+
+    result = run(clone(tmp_path, "ops_steps", attendu=wrong_figure), tmp_path)
+    assert "fig-9999: no illustration zone" in failures_of(result)
+
+
+def test_a_brex_patch_that_matches_nothing_is_a_failure(tmp_path: Path):
+    def nothing(data):
+        data["variants"][1]["brex_patch"]["old"] = "//not/in/the/brex"
+
+    result = run(clone(tmp_path, "brex_swap", scenario=nothing), tmp_path, "swapped")
+    assert "could not be prepared" in failures_of(result)
+
+
 # --- markers, variants, report --------------------------------------------------
 
 

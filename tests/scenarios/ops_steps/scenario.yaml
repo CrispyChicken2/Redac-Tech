@@ -1,0 +1,47 @@
+# OBJ-1 / OBJ-19: the six step and requirement operations plus a part replacement, in ONE request,
+# on a procedure whose last step mentions a part number and refers to a figure.
+description: insert / move / delete step, add / remove requirement, update ref, replace part.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - scenarios/DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  form:
+    - kind: insert_step
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML, element_id: stp-0001}
+      params: {after_id: stp-0001, para: Wear protective gloves.}
+      reason: Safety
+    - kind: move_step
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML, element_id: stp-0004}
+      params: {step_id: stp-0004, after_id: stp-0005}
+      reason: Order of the work
+    - kind: delete_step
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML, element_id: stp-0003}
+      params: {step_id: stp-0003}
+      reason: Step no longer applicable
+    - kind: add_requirement
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML}
+      params: {requirement: spare, part_number: FAKE-PN-060, manufacturer_code: FAKE1, quantity: "2", name: Spare gasket}
+      reason: New spare
+    - kind: remove_requirement
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML}
+      params: {requirement: tool, id: tool-0001}
+      reason: Tool no longer needed
+    - kind: update_ref
+      target:
+        doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+        xpath: "//proceduralStep[@id='stp-0004']//internalRef"
+      params: {internal_ref_id: spr-0001, target_type: irtt06}
+      reason: Reference corrected
+    - kind: replace_part
+      old: FAKE-PN-050
+      new: FAKE-PN-250
+      reason: Part replaced
+version_policy: in_work
+decisions:
+  auto_accept: true
+  accept_certainty: [probable]
+max_seconds: 60

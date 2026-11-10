@@ -145,13 +145,20 @@ def _missing(kind: str, params: dict[str, Any]) -> list[str]:
     return missing
 
 
-def from_form(form: dict[str, Any]) -> list[Operation]:
-    """One operation from a structured request.
+def from_form(form: dict[str, Any] | list[dict[str, Any]]) -> list[Operation]:
+    """The operations of a structured request: one form, or a list of forms (ids op-0001...).
 
-    ``form`` has ``kind``, ``params`` (or, for the replacements, ``old`` / ``new`` at the top
+    A form has ``kind``, ``params`` (or, for the replacements, ``old`` / ``new`` at the top
     level), an optional ``target`` (``ref``: {source_id, doc_key}, ``xpath``, ``element_id``) and
     an optional ``reason``. The source quote is the form itself.
     """
+    forms = form if isinstance(form, list) else [form]
+    if not forms:
+        raise MappingError("the request holds no operation")
+    return [_operation_of(item, number) for number, item in enumerate(forms, 1)]
+
+
+def _operation_of(form: dict[str, Any], number: int) -> Operation:
     kind = form.get("kind")
     if kind not in REQUIRED:
         raise MappingError(f"unknown or missing operation kind {kind!r}")
@@ -162,12 +169,11 @@ def from_form(form: dict[str, Any]) -> list[Operation]:
     missing = _missing(kind, params)
     if missing:
         raise MappingError(f"{kind}: missing parameter(s): {', '.join(missing)}")
-    operation = Operation(
-        id="op-0001",
+    return Operation(
+        id=f"op-{number:04d}",
         kind=kind,
         target=Target(**(form.get("target") or {})),
         params=params,
         rationale=str(form.get("reason") or "").strip() or f"{kind} requested by form",
         source=[SourceSpan(doc="form", quote=json.dumps(form, sort_keys=True, default=str))],
     )
-    return [operation]

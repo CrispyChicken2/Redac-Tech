@@ -26,7 +26,18 @@ def test_scenario(directory: Path, variant: str | None, tmp_path: Path):
 
 def test_the_expected_scenarios_exist():
     names = {d.name for d in scenarios.discover(HERE)}
-    assert {"lru1010", "lru1010_bike41", "delete_mark", "versioning", "preexisting_brex"} <= names
+    expected = {"lru1010", "lru1010_bike41", "delete_mark", "versioning", "preexisting_brex"}
+    expected |= {"batch20", "batch20_bike41", "ops_steps", "forbidden_request", "brex_swap"}
+    assert expected <= names
     assert [d.name for d in scenarios.discover(HERE) if d.name.startswith("_")] == []
     versioning = HERE / "versioning"
     assert scenarios.variants_of(versioning) == ["none", "in_work", "new_issue"]
+
+
+def test_the_batch_scenarios_ask_for_twenty_parts_in_under_ten_seconds():
+    for name in ("batch20", "batch20_bike41"):
+        scenario, attendu = scenarios.load(HERE / name)
+        assert len(scenario["request"]["mapping"]) == 20 and scenario["max_seconds"] == 10
+        assert len(attendu["changes"]) >= 20
+    assert scenarios.load(HERE / "batch20_bike41")[0]["markers"] == ["data41"]
+    assert scenarios.variants_of(HERE / "brex_swap") == ["project", "swapped"]

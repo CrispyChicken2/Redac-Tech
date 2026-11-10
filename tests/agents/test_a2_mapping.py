@@ -201,3 +201,20 @@ def test_form_refuses_incomplete_requests(form: dict):
 def test_form_accepts_complete_requests(form: dict):
     (op,) = a2.from_form(form)
     assert op.kind == form["kind"]
+
+
+def test_form_accepts_a_list_of_forms_with_sequential_ids():
+    forms = [
+        {"kind": "replace_part", "old": "A1", "new": "A2"},
+        {"kind": "delete_step", "params": {"step_id": "stp-0001"}, "reason": "obsolete"},
+    ]
+    operations = a2.from_form(forms)
+    pairs = [(o.id, o.kind) for o in operations]
+    assert pairs == [("op-0001", "replace_part"), ("op-0002", "delete_step")]
+    assert operations[1].rationale == "obsolete"
+    single = a2.from_form({"kind": "replace_part", "old": "A1", "new": "A2"})
+    assert [o.id for o in single] == ["op-0001"]
+    with pytest.raises(a2.MappingError, match="no operation"):
+        a2.from_form([])
+    with pytest.raises(a2.MappingError, match="missing parameter"):
+        a2.from_form([forms[0], {"kind": "delete_step"}])

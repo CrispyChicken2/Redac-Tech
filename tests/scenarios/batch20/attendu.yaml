@@ -1,0 +1,175 @@
+# Written from the input files: DM 0B<n>A holds FAKE-PN-<100+4(n-1)+1> .. +4, each declared
+# once; nothing else mentions them.
+outputs:
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-0B1A-D_001-01_EN-US.XML
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-0B2A-D_001-01_EN-US.XML
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-0B3A-D_001-01_EN-US.XML
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-0B4A-D_001-01_EN-US.XML
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-0B5A-D_001-01_EN-US.XML
+unchanged:
+  - "DMC-RTDEFLT-*"
+  - "DMC-RTPROTO-*-022A-D_*"
+changes:
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B1A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-101']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-201']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-101"']
+    after_contains: ['partNumberValue="FAKE-PN-201"', "Fictitious part 101"]
+    after_absent: ["FAKE-PN-101"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B1A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-102']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-202']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-102"']
+    after_contains: ['partNumberValue="FAKE-PN-202"', "Fictitious part 102"]
+    after_absent: ["FAKE-PN-102"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B1A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-103']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-203']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-103"']
+    after_contains: ['partNumberValue="FAKE-PN-203"', "Fictitious part 103"]
+    after_absent: ["FAKE-PN-103"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B1A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-104']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-204']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-104"']
+    after_contains: ['partNumberValue="FAKE-PN-204"', "Fictitious part 104"]
+    after_absent: ["FAKE-PN-104"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B2A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-105']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-205']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-105"']
+    after_contains: ['partNumberValue="FAKE-PN-205"', "Fictitious part 105"]
+    after_absent: ["FAKE-PN-105"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B2A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-106']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-206']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-106"']
+    after_contains: ['partNumberValue="FAKE-PN-206"', "Fictitious part 106"]
+    after_absent: ["FAKE-PN-106"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B2A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-107']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-207']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-107"']
+    after_contains: ['partNumberValue="FAKE-PN-207"', "Fictitious part 107"]
+    after_absent: ["FAKE-PN-107"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B2A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-108']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-208']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-108"']
+    after_contains: ['partNumberValue="FAKE-PN-208"', "Fictitious part 108"]
+    after_absent: ["FAKE-PN-108"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B3A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-109']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-209']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-109"']
+    after_contains: ['partNumberValue="FAKE-PN-209"', "Fictitious part 109"]
+    after_absent: ["FAKE-PN-109"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B3A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-110']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-210']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-110"']
+    after_contains: ['partNumberValue="FAKE-PN-210"', "Fictitious part 110"]
+    after_absent: ["FAKE-PN-110"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B3A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-111']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-211']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-111"']
+    after_contains: ['partNumberValue="FAKE-PN-211"', "Fictitious part 111"]
+    after_absent: ["FAKE-PN-111"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B3A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-112']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-212']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-112"']
+    after_contains: ['partNumberValue="FAKE-PN-212"', "Fictitious part 112"]
+    after_absent: ["FAKE-PN-112"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B4A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-113']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-213']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-113"']
+    after_contains: ['partNumberValue="FAKE-PN-213"', "Fictitious part 113"]
+    after_absent: ["FAKE-PN-113"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B4A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-114']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-214']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-114"']
+    after_contains: ['partNumberValue="FAKE-PN-214"', "Fictitious part 114"]
+    after_absent: ["FAKE-PN-114"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B4A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-115']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-215']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-115"']
+    after_contains: ['partNumberValue="FAKE-PN-215"', "Fictitious part 115"]
+    after_absent: ["FAKE-PN-115"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B4A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-116']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-216']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-116"']
+    after_contains: ['partNumberValue="FAKE-PN-216"', "Fictitious part 116"]
+    after_absent: ["FAKE-PN-116"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B5A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-117']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-217']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-117"']
+    after_contains: ['partNumberValue="FAKE-PN-217"', "Fictitious part 117"]
+    after_absent: ["FAKE-PN-117"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B5A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-118']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-218']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-118"']
+    after_contains: ['partNumberValue="FAKE-PN-218"', "Fictitious part 118"]
+    after_absent: ["FAKE-PN-118"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B5A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-119']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-219']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-119"']
+    after_contains: ['partNumberValue="FAKE-PN-219"', "Fictitious part 119"]
+    after_absent: ["FAKE-PN-119"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0B5A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-120']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-220']"
+    change_type: modify
+    before_contains: ['partNumberValue="FAKE-PN-120"']
+    after_contains: ['partNumberValue="FAKE-PN-220"', "Fictitious part 120"]
+    after_absent: ["FAKE-PN-120"]
+    marks: {changeMark: "1", changeType: modify}
+checks:
+  introduced_errors: 0
+blocked: 0

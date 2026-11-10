@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_4-1/xml_schema_flat/proced.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="523" infoCodeVariant="A" itemLocationCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="US"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2024" month="01" day="15"/>
+        <dmTitle>
+          <techName>Prototype unit</techName>
+          <infoName>Replace the bracket</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="new">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </originator>
+      <applic><displayText><simplePara>All</simplePara></displayText></applic>
+      <brexDmRef><dmRef xlink:type="simple" xlink:actuate="onRequest" xlink:show="replace"><dmRefIdent><dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/><issueInfo issueNumber="001" inWork="00"/></dmRefIdent></dmRef></brexDmRef>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <procedure>
+      <preliminaryRqmts>
+        <reqCondGroup><noConds/></reqCondGroup>
+        <reqSupportEquips>
+          <supportEquipDescrGroup>
+            <supportEquipDescr id="tool-0001">
+              <name>Torque wrench</name>
+              <identNumber><manufacturerCode>FAKE1</manufacturerCode><partAndSerialNumber><partNumber>FAKE-PN-001</partNumber></partAndSerialNumber></identNumber>
+              <reqQuantity>1</reqQuantity>
+            </supportEquipDescr>
+          </supportEquipDescrGroup>
+        </reqSupportEquips>
+        <reqSupplies>
+          <supplyDescrGroup>
+            <supplyDescr id="sup-0001">
+              <name>Contact grease</name>
+              <identNumber><manufacturerCode>FAKE1</manufacturerCode><partAndSerialNumber><partNumber>FAKE-PN-001</partNumber></partAndSerialNumber></identNumber>
+              <reqQuantity>1</reqQuantity>
+            </supplyDescr>
+          </supplyDescrGroup>
+        </reqSupplies>
+        <reqSpares>
+          <spareDescrGroup>
+            <spareDescr id="spr-0001">
+              <name>Bracket</name>
+              <identNumber><manufacturerCode>FAKE1</manufacturerCode><partAndSerialNumber><partNumber>X2</partNumber></partAndSerialNumber></identNumber>
+              <reqQuantity>1</reqQuantity>
+            </spareDescr>
+          </spareDescrGroup>
+        </reqSpares>
+        <reqSafety><noSafety/></reqSafety>
+      </preliminaryRqmts>
+      <mainProcedure>
+        <proceduralStep id="stp-0001">
+          <para>Prepare the <internalRef internalRefId="tool-0001" internalRefTargetType="irtt05"/> and open the access panel.</para>
+        </proceduralStep>
+        <proceduralStep id="stp-0002">
+          <para>Install the spare <internalRef internalRefId="spr-0001" internalRefTargetType="irtt06"/> on the unit.</para>
+        </proceduralStep>
+        <proceduralStep id="stp-0003">
+          <para>Tighten the fasteners by hand.</para>
+        </proceduralStep>
+        <proceduralStep id="stp-0004">
+          <para>Apply the <internalRef internalRefId="sup-0001" internalRefTargetType="irtt04"/> to the contact surface.</para>
+        </proceduralStep>
+        <proceduralStep id="stp-0005">
+          <para>Close the access panel, check part FAKE-PN-050 and see <internalRef internalRefId="fig-0001" internalRefTargetType="irtt01"/>.</para>
+          <figure id="fig-0001">
+            <title>Access panel</title>
+            <graphic id="gra-0001" infoEntityIdent="ICN-RTPROTO-A-000002-A-00001-A-001-01"/>
+          </figure>
+        </proceduralStep>
+      </mainProcedure>
+      <closeRqmts>
+        <reqCondGroup><noConds/></reqCondGroup>
+      </closeRqmts>
+    </procedure>
+  </content>
+</dmodule>
