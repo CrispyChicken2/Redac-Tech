@@ -1,5 +1,25 @@
 # Journal des modifications
 
+## 017 — Tests de l'interface
+
+**Statut :** fusionnée. **Résultat de CI rapporté, non vérifié sur ce poste.**
+
+### Ajouté
+
+- `tests/ui/test_app.py` : tests de l'interface avec `streamlit.testing` (AppTest) : parcours de la page, règles des signalements et compteurs exposés par l'orchestrateur.
+- `tests/pipeline/test_orchestrator.py` et `tests/render/test_published.py` : cas ajoutés pour les signalements et les compteurs.
+- Ajustements mineurs dans `src/redactech/ui/app.py`, `src/redactech/ui/components.py`, `src/redactech/pipeline/orchestrator.py` et `src/redactech/render/published.py`, nécessaires aux nouveaux tests.
+
+### Résultat de CI rapporté
+
+- Run `42790955399` sur la branche `prototype1`, rapporté par le responsable du projet : 834 tests réussis.
+- **Non vérifié** : ce poste n'a pas de dépôt distant ; `gh run view` ne peut pas consulter le run.
+
+### Non couvert
+
+- Le test utilisateur avec l'évaluateur (REQ-7) reste à faire : les tests automatiques ne le remplacent pas.
+- Pas de remote distant sur ce poste.
+
 ## 016 — Interface Streamlit
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
