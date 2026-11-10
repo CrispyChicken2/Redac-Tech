@@ -260,3 +260,33 @@ def test_every_bike_41_data_module_renders():
         html = render_published(xio.load(path))
         assert html.startswith('<div class="rt-doc">'), path.name
         assert "<script" not in html.lower() and "<img" not in html
+
+
+def test_the_transform_gets_a_copy_of_the_whole_tree_with_its_doctype(
+    fixtures_dir: Path, monkeypatch
+):
+    """The DOCTYPE and its internal subset (ICN entities) are kept in the copy."""
+    seen = []
+
+    def fake_transform(source, **params):
+        seen.append(source)
+        return "<div/>"
+
+    monkeypatch.setattr(published, "_stylesheet", lambda: fake_transform)
+    doc = xio.load(fixtures_dir / FIGURE)
+    before = xio.canonical(doc)
+    assert published.render_published(doc, show_deleted=False) == "<div/>"
+    (source,) = seen
+    assert source is not doc.tree and hasattr(source, "getroot")
+    assert source.getroot() is not doc.tree.getroot()
+    entities = {e.name for e in source.docinfo.internalDTD.iterentities()}
+    assert "ICN-RTPROTO-A-000001-A-00001-A-001-01" in entities
+    assert xio.canonical(doc) == before  # the caller's tree was not touched
+
+
+def test_an_element_is_wrapped_in_a_new_tree(monkeypatch):
+    seen = []
+    monkeypatch.setattr(published, "_stylesheet", lambda: lambda s, **p: seen.append(s) or "x")
+    element = etree.fromstring("<dmodule><content/></dmodule>")
+    published.render_published(element)
+    assert seen[0].getroot().tag == "dmodule" and seen[0].getroot() is not element

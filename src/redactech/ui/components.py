@@ -191,12 +191,7 @@ def status_label(status: str) -> str:
 
 def counts_by_status(run: Run) -> dict[str, int]:
     """Number of proposals per status (flag-only illustrations excluded)."""
-    flags = {z.id for z in run.state.zones if z.kind == "illustration"}
-    counts: dict[str, int] = {}
-    for proposal in run.state.proposals:
-        if proposal.zone_id not in flags:
-            counts[proposal.status] = counts.get(proposal.status, 0) + 1
-    return counts
+    return run.counts()
 
 
 def can_decide(run: Run) -> bool:
