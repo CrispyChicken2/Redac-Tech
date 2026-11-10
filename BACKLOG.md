@@ -6,7 +6,6 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 016 M2 Interface Streamlit mode Document (§12)
 - [ ] 017 M2 Tests UI (AppTest) : modale versioning, accepter/rejeter/en attente, alternative, accept-all limité, vues
 - [ ] 018 M2 README (installation ≤ 3 commandes), docs/DEMO.md parcours UI, docs/ROADMAP_NEXT.md
 - [ ] 019 M3 (stretch) Couche llm/ : OllamaProvider localhost, FakeLLM + cassettes, NoLLM, garde réseau
@@ -15,10 +14,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 015 M2 Rendu : vue XML, vue Publiée (IETP) XSLT 1.0, côte à côte, masquer les suppressions
+- [~] 016 M2 Interface Streamlit mode Document (§12)
 
 ## Fait
 
+- [x] 015 M2 Vues XML, publiée IETP (XSLT 1.0), côte à côte, redactech render (4f10212)
 - [x] 014 M2 Rapport HTML/JSON, export questions CSV/XLSX, journal des décisions (69cb752)
 - [x] 023 M1 Figures signalées pour les opérations sur étapes, fixture ICN, cache BREX (0cbb303) — jalon M1 clos (tag m1)
 - [x] 013 M1 Scénarios batch20, ops_steps, forbidden_request, brex_swap (17fe7f8)
