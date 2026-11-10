@@ -6,17 +6,17 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 018 M2 README (installation ≤ 3 commandes), docs/DEMO.md parcours UI, docs/ROADMAP_NEXT.md
 - [ ] 019 M3 (stretch) Couche llm/ : OllamaProvider localhost, FakeLLM + cassettes, NoLLM, garde réseau
 - [ ] 020 M3 (stretch) A2 texte libre FR/EN → opérations avec citations + scénarios free_text_fr/en, hallucination_trap
 - [ ] 021 M3 (stretch) A10 chat (ops + récap calculé par le code) + panneau assistant + chat_recap + docs/MODELS.md
 
 ## En cours
 
-- [~] 017 M2 Tests UI (AppTest) : modale versioning, accepter/rejeter/en attente, alternative, accept-all limité, vues
+- [~] 018 M2 README (installation ≤ 3 commandes), docs/DEMO.md parcours UI, docs/ROADMAP_NEXT.md
 
 ## Fait
 
+- [x] 017 M2 Tests UI AppTest (modale versioning, décisions, accept-all limité, vues, pas d'auto-accept) (bf26ff2)
 - [x] 016 M2 Interface Streamlit mode Document (f9ed418)
 - [x] 015 M2 Vues XML, publiée IETP (XSLT 1.0), côte à côte, redactech render (4f10212)
 - [x] 014 M2 Rapport HTML/JSON, export questions CSV/XLSX, journal des décisions (69cb752)
