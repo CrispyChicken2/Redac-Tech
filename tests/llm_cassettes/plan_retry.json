@@ -1,0 +1,10 @@
+{
+  "system": "You plan changes to technical documentation.",
+  "prompt": "Replace X2 by X3",
+  "schema": "Plan",
+  "responses": [
+    "this is not json",
+    {"kind": "replace_part", "old": "X2"},
+    {"kind": "replace_part", "old": "X2", "new": "X3"}
+  ]
+}
