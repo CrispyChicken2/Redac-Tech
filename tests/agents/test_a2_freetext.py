@@ -69,10 +69,37 @@ def test_a_clear_request_gives_one_operation_with_its_source(index):
     (operation,) = result.operations
     assert (operation.id, operation.kind) == ("op-0001", "replace_part")
     assert operation.params == {"old": "LRU1010", "new": "LRU2020"}
-    assert operation.rationale == "Remplacement" and operation.target.ref is None
+    assert operation.rationale == 'Free-text request: "LRU1010 par LRU2020"'
+    assert operation.target.ref is None
     (span,) = operation.source
     assert span.doc == "free_text" and span.quote == "LRU1010 par LRU2020"
     assert FR[span.start:span.end] == span.quote  # the offsets point at the quote
+
+
+def test_the_rationale_comes_from_the_request_never_from_the_model(index):
+    """It is written into the delivered module: a reason the request does not hold is not used."""
+    for reason in ("Remplacement de la pièce", "replaced by LRU9999", "  "):
+        answer = response(op("replace_part", {"old": "LRU1010", "new": "LRU2020"},
+                             ["LRU1010 par LRU2020"], reason=reason))
+        (operation,) = ft.interpret(FR, index, Scripted(answer))
+        assert operation.rationale == 'Free-text request: "LRU1010 par LRU2020"'
+        assert "LRU9999" not in operation.rationale and "Remplacement" not in operation.rationale
+
+
+def test_a_reason_that_is_a_piece_of_the_request_is_kept(index):
+    answer = response(op("replace_part", {"old": "LRU1010", "new": "LRU2020"},
+                         ["LRU1010 par LRU2020"], reason="dans toute la documentation"))
+    (operation,) = ft.interpret(FR, index, Scripted(answer))
+    assert operation.rationale == "dans toute la documentation"
+    assert operation.rationale in FR
+
+
+def test_every_rationale_is_made_of_the_request_text(index):
+    text = "Delete step stp-0003 of the bracket procedure"
+    answer = response(op("delete_step", {"step_id": "stp-0003"}, ["Delete step stp-0003"],
+                         target_doc=PROCED, reason="Obsolete, see LRU9999"))
+    (operation,) = ft.interpret(text, index, Scripted(answer))
+    assert operation.rationale == 'Free-text request: "Delete step stp-0003"'
 
 
 def test_the_operations_are_ordinary_operations_for_the_pipeline(index):

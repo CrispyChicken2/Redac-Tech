@@ -626,3 +626,94 @@ def test_a_missing_cassette_is_a_refusal_not_a_crash(tmp_path: Path):
     env = Env(tmp_path, LRU_FILES)
     with pytest.raises(orch.PipelineError, match="no cassette"):
         start_free_text(env, "A request nobody recorded", FakeLLM(CASSETTES))
+
+
+# --- free text: the log of the model calls, the stored text, the rationale --
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def test_a_free_text_run_has_its_llm_log_in_the_run_folder(tmp_path: Path):
+    from redactech.llm import FakeLLM
+
+    env = Env(tmp_path, LRU_FILES)
+    llm = FakeLLM(CASSETTES)
+    run = start_free_text(env, FR, llm)
+    entries = read_jsonl(run.run_dir / "llm_calls.jsonl")
+    assert len(entries) == 1
+    assert (entries[0]["provider"], entries[0]["ok"], entries[0]["schema"]) == (
+        "fake", True, "OpsResponse")
+    assert len(entries[0]["prompt_sha256"]) == 64 and "LRU1010" not in json.dumps(entries)
+    assert [p.name for p in env.runs.iterdir()] == [run.run_dir.name]  # no stray log file
+    assert llm.log_path is None  # a provider handed in gets its own log path back
+
+
+def test_the_trap_run_is_logged_too(tmp_path: Path):
+    from redactech.llm import FakeLLM
+
+    env = Env(tmp_path, LRU_FILES)
+    run = start_free_text(env, TRAP, FakeLLM(CASSETTES))
+    assert len(read_jsonl(run.run_dir / "llm_calls.jsonl")) == 1
+
+
+def test_a_refused_request_keeps_the_log_of_its_attempt_next_to_the_runs(tmp_path: Path):
+    from redactech.llm import FakeLLM
+
+    env = Env(tmp_path, LRU_FILES)
+    with pytest.raises(orch.PipelineError):
+        start_free_text(env, "A request nobody recorded", FakeLLM(CASSETTES), token="ft09")
+    (entry,) = read_jsonl(env.runs / "20250307-140509-ft09.llm_calls.jsonl")
+    assert entry["ok"] is False and entry["error"].startswith("CassetteMissing")
+    assert not (env.runs / "20250307-140509-ft09").exists()  # still no run folder
+
+
+def test_a_provider_made_here_is_closed_and_a_given_one_is_not(
+    tmp_path: Path, monkeypatch
+):
+    from redactech.llm import FakeLLM
+
+    closed = []
+
+    class Closing(FakeLLM):
+        def close(self) -> None:
+            closed.append(self)
+
+    env = Env(tmp_path, LRU_FILES)
+    monkeypatch.setattr(orch, "get_provider", lambda config: Closing(CASSETTES))
+    start_free_text(env, FR, None, token="ft10")
+    assert len(closed) == 1  # made by the pipeline: closed
+    given = Closing(CASSETTES)
+    start_free_text(env, FR, given, token="ft11")
+    assert len(closed) == 1 and given not in closed  # handed in: left to its owner
+
+
+def test_the_stored_text_is_stripped_so_the_offsets_fit_it(tmp_path: Path):
+    from redactech.llm import FakeLLM
+
+    env = Env(tmp_path, LRU_FILES)
+    run = start_free_text(env, "  \n" + FR + "  ", FakeLLM(CASSETTES))
+    assert run.request.free_text == FR
+    assert orch.load(run.run_dir).request.free_text == FR
+    span = run.state.operations[0].source[0]
+    assert run.request.free_text[span.start:span.end] == span.quote
+
+
+def test_the_reason_for_update_comes_from_the_request_not_from_the_model(tmp_path: Path):
+    from redactech.llm import FakeLLM
+
+    env = Env(tmp_path, LRU_FILES)
+    run = start_free_text(env, FR, FakeLLM(CASSETTES))
+    assert run.state.operations[0].rationale == 'Free-text request: "LRU1010 par LRU2020"'
+    run.set_policy(run.suggestion().model_copy(update={"mode": "in_work"}))
+    run.run_to_review()
+    for proposal in run.state.proposals:
+        if not run.is_flag(proposal):
+            run.decide(proposal.id, "accepted")
+    written = run.write(today=TODAY).written
+    assert len(written) == 3
+    for path in written:
+        text = path.read_text(encoding="utf-8")
+        assert "Free-text request" in text and "LRU1010 par LRU2020" in text
+        assert "Remplacement de la pièce" not in text  # the model's own wording

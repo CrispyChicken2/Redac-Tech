@@ -9,6 +9,8 @@ The language model (through ``redactech.llm``) only PROPOSES operations as typed
   value that does not is turned into a question;
 * the ``old`` value of a replacement must exist in the documentation (else a "not found" question);
 * the target document must be one of the documents of the index;
+* the rationale (written into the delivered module as a reason for update) is built by code from
+  the request: the model's own reason is kept only if it is an exact piece of the request;
 * a required parameter that is missing becomes a question.
 
 Ambiguities the model reports are questions too. The operations that survive are ordinary
@@ -192,6 +194,9 @@ def check_operation(spec: OpSpec, text: str, index: CorpusIndex) -> tuple[Operat
         if key is None:
             return None, f"Which document does the {label} operation concern?"
         target = Target(ref=index.docs[key].ref, element_id=spec.target_id)
+    reason = spec.reason.strip()
+    # the rationale reaches the delivered module: it comes from the request, never from the model
+    rationale = reason if reason and reason in text else f'Free-text request: "{quotes[0]}"'
     spans = [
         SourceSpan(doc=SOURCE_DOC, start=text.find(q), end=text.find(q) + len(q), quote=q)
         for q in quotes
@@ -201,7 +206,7 @@ def check_operation(spec: OpSpec, text: str, index: CorpusIndex) -> tuple[Operat
         kind=spec.kind,
         target=target,
         params=params,
-        rationale=spec.reason.strip() or f"{spec.kind} requested in free text",
+        rationale=rationale,
         source=spans,
     )
     return operation, ""

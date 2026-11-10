@@ -35,3 +35,5 @@ changes:
 checks:
   introduced_errors: 0
 blocked: 0
+# the model's own wording must not reach the delivered modules (the reason comes from the request)
+absent_in_outputs: ["Part replacement"]

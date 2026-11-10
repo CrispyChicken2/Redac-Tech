@@ -55,6 +55,7 @@ Mode = Literal["none", "in_work", "new_issue"]
 STAGES_FOR_REVIEW = ("proposals_ready", "reviewed")
 DECISIONS = ("accepted", "edited", "rejected", "pending_client")
 STATE_FILE = "state.json"
+LLM_LOG_FILE = "llm_calls.jsonl"
 REQUEST_FILE = "request.json"
 
 
@@ -124,6 +125,8 @@ class Run:
         now = (clock or datetime.datetime.now)()
         run_id = f"{now:%Y%m%d-%H%M%S}-{token or secrets.token_hex(2)}"
         run_dir = Path(runs_dir) / run_id
+        # the model calls are logged here while the run folder does not exist yet
+        log_file = Path(runs_dir) / f"{run_id}.{LLM_LOG_FILE}"
         workspace_file = Path(workspace_path).resolve()
         workspace = wsmod.load_workspace(workspace_file)
         indexed = None
@@ -134,14 +137,14 @@ class Run:
         elif request.form is not None:
             operations = a2_mapping.from_form(request.form)
         else:  # free text: the prompt needs the index
+            # the stored text is the stripped one, so the offsets of the quotes fit it
+            request = request.model_copy(update={"free_text": (request.free_text or "").strip()})
             indexed = a1_indexer.run(workspace)
-            try:
-                model = provider or get_provider(load_config())
-                found = a2_freetext.interpret_full(request.free_text or "", indexed[0], model)
-            except LLMError as exc:
-                raise PipelineError(f"free text needs the local model: {exc}") from exc
+            found = cls._interpret(request.free_text or "", indexed[0], provider, log_file)
             operations, questions = found.operations, found.questions
         run_dir.mkdir(parents=True, exist_ok=False)
+        if log_file.is_file():  # the log of the model calls moves into the run folder
+            log_file.replace(run_dir / LLM_LOG_FILE)
         index, baseline = indexed or a1_indexer.run(workspace)
         for swapped in request.brex_swaps:  # chains resolved again, baseline recomputed
             baseline = a1_indexer.swap_brex(workspace, index, swapped)
@@ -171,6 +174,32 @@ class Run:
         run._log(event="ops_proposed", operations=[o.id for o in operations])
         run._save()
         return run
+
+    @staticmethod
+    def _interpret(
+        text: str, index: CorpusIndex, provider: LLMProvider | None, log_file: Path
+    ) -> a2_freetext.Interpretation:
+        """Read a free-text request with the model; every call is logged to ``log_file``.
+
+        A provider made here is closed afterwards; one that is handed in is left open and gets
+        its own log path back. A failed call keeps its log next to the runs
+        (``<run id>.llm_calls.jsonl``): the refusal is explained, the attempt is not lost.
+        """
+        owned = provider is None
+        model = None
+        previous = None
+        try:
+            model = provider or get_provider(load_config())
+            previous = model.log_path
+            model.log_path = log_file
+            return a2_freetext.interpret_full(text, index, model)
+        except (LLMError, ValueError) as exc:
+            raise PipelineError(f"free text needs the local model: {exc}") from exc
+        finally:
+            if model is not None:
+                model.log_path = previous
+                if owned:
+                    model.close()
 
     @classmethod
     def load(
