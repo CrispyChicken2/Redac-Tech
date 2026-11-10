@@ -6,14 +6,14 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 025 Prototype UI (skill prototype) : 3 variantes radicalement différentes de l'écran mode Document via ?variant= + barre flottante, branche jetable prototype/025-ui-variants
 
 ## En cours
 
-- [~] 026 Correctif issu du prototype 024 : une proposition ne se décide qu'une fois (double rejet = id dupliqué), proposition rejetée puis éditée + alternative acceptée écrites deux fois, avertissement questions client ouvertes
+- [~] 025 Prototype UI (skill prototype) : 3 variantes radicalement différentes de l'écran mode Document via ?variant= + barre flottante, branche jetable prototype/025-ui-variants
 
 ## Fait
 
+- [x] 026 Correctif issu du prototype 024 : décisions définitives sauf « Rouvrir », plus de double application, avertissement questions ouvertes (7291747)
 - [x] 024 Prototype logique du cycle de revue (branche jetable prototype/024-review-logic, aa36955, non fusionnée) — a révélé 2 bugs produit → tâche 026
 - [x] 021 M3 Assistant de chat A10 (récap calculé par le code), panneau, docs/MODELS.md (a6e0765) — jalon M3 clos (tag m3)
 - [x] 020 M3 Texte libre FR/EN → opérations vérifiées par le code, piège à hallucination (ff2f39c) — FakeLLM uniquement
