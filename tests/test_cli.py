@@ -16,18 +16,21 @@ COMMANDS = [
 ]
 
 
+def click_commands() -> dict:
+    """The click commands of the app: robust to colours and rich formatting of --help."""
+    import typer.main
+
+    return typer.main.get_command(app).commands
+
+
 def test_help_lists_all_commands():
-    result = runner.invoke(app, ["--help"])
-    assert result.exit_code == 0
-    for name in COMMANDS:
-        assert name in result.output
+    assert runner.invoke(app, ["--help"]).exit_code == 0
+    assert set(COMMANDS) <= set(click_commands())
 
 
 def test_workspace_help_lists_subcommands():
-    result = runner.invoke(app, ["workspace", "--help"])
-    assert result.exit_code == 0
-    for name in ("init", "add", "list"):
-        assert name in result.output
+    assert runner.invoke(app, ["workspace", "--help"]).exit_code == 0
+    assert {"init", "add", "list"} <= set(click_commands()["workspace"].commands)
 
 
 # --- workspace init / add / list, index, baseline -----------------------------
@@ -187,7 +190,8 @@ def test_request_without_mapping_or_with_a_bad_policy_fails(project: dict):
 
 
 def test_auto_accept_is_a_hidden_option(project: dict):
-    assert "auto-accept" not in run("request", "--help").output
+    params = {p.name: p for p in click_commands()["request"].params}
+    assert params["auto_accept"].hidden is True  # not shown in --help, usable by the tests
 
 
 def test_review_lists_and_records_decisions_then_write_produces_the_documents(project: dict):
