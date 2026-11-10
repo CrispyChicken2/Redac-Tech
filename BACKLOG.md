@@ -17,10 +17,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 013 M1 Scénarios batch20 (< 10 s), ops_steps, forbidden_request, brex_swap + docs/DEMO.md CLI
+- [~] 023 M1 A4 : figures signalées aussi pour les opérations sur les étapes (OBJ-19), fixture ICN déclarée, cache des contrôles pour batch20
 
 ## Fait
 
+- [x] 013 M1 Scénarios batch20, ops_steps, forbidden_request, brex_swap (merge en cours de CI)
 - [x] 012 M1 Scénarios lru1010 (fixtures + Bike 4.1), delete_mark, versioning, preexisting_brex + redactech eval (1075732)
 - [x] 011 M1 Orchestrateur A0 (points d'arrêt, state.json, reprise) + CLI request/review/write/check (1c358e9)
 - [x] 010 M1 A7 checker introduced/pre_existing + blocked_by_rule ≤ 3 essais + alternatives (3a14461)
