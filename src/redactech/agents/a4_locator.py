@@ -137,9 +137,12 @@ def _locate_replace_part(op: Operation, index: CorpusIndex) -> LocateResult:
     return result
 
 
-def _changed_paths(op: Operation, doc: Any) -> list[str]:
-    """Paths of the element(s) an operation changes or sits next to (found in the document)."""
-    tree = xio.load(doc.path).tree
+def _changed_paths(op: Operation, doc: Any, loaded: Any = None) -> list[str]:
+    """Paths of the element(s) an operation changes or sits next to (found in the document).
+
+    ``loaded`` is the document already parsed by the index (``keep_docs``), if it kept it.
+    """
+    tree = (loaded or xio.load(doc.path)).tree
     target, params = op.target, op.params
     paths: list[str] = []
     if target.xpath:
@@ -211,7 +214,7 @@ def _locate_target(op: Operation, index: CorpusIndex) -> LocateResult:
         )
     )
     if op.kind in FIGURE_OPS:
-        paths = _changed_paths(op, doc)
+        paths = _changed_paths(op, doc, index.loaded.get(key))
         for number, figure in enumerate(_figures_of(index, target.ref, paths), 1):
             label = figure.figure_id or figure.xpath
             result.zones.append(

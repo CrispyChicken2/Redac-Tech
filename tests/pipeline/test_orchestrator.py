@@ -469,6 +469,9 @@ def test_write_delivers_the_report_the_questions_and_the_decisions(tmp_path: Pat
     assert len(report["documents"]) == 3
     assert all(d["new_name"].endswith("_001-01_EN-US.XML") for d in report["documents"])
     assert report["version_policy"]["mode"] == "in_work"
+    assert len(report["outputs"]) == 3  # the delivered files are checked (REQ-11)
+    assert report["counts"]["delivered_introduced_errors"] == 0
+    assert all(o["introduced_errors"] == 0 and o["error"] is None for o in report["outputs"])
     assert "<!DOCTYPE html>" in (run.run_dir / "report.html").read_text(encoding="utf-8")
     questions = (run.run_dir / "questions.csv").read_bytes()
     assert questions.decode("utf-8-sig").splitlines() == [

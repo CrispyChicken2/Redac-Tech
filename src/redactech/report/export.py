@@ -3,7 +3,8 @@
 * ``write_report(run_dir, report)``: ``report.json`` (the pydantic model) and ``report.html``.
 * ``export_questions(state, path)``: the open questions as CSV (UTF-8 with a BOM so that
   spreadsheet tools detect the encoding, ``;`` separator) or XLSX, chosen by the extension.
-  Columns: id, document, element, question/comment, status, rule.
+  Columns: id, document, element, question/comment, status, rule. A cell that starts with
+  ``=``, ``+``, ``-`` or ``@`` is prefixed with ``'`` (no formula injection), in both formats.
 * ``export_decisions(state, path)``: one JSON object per line, one line per decision taken.
 """
 
@@ -30,8 +31,17 @@ def write_report(run_dir: Path | str, report: Report) -> tuple[Path, Path]:
     return json_path, html_path
 
 
+FORMULA_STARTS = ("=", "+", "-", "@")
+
+
+def safe_cell(value: str) -> str:
+    """A text that a spreadsheet would read as a formula gets a leading apostrophe."""
+    return "'" + value if value.startswith(FORMULA_STARTS) else value
+
+
 def _row(entry: QuestionEntry) -> list[str]:
-    return [entry.id, entry.document, entry.element, entry.text, entry.status, entry.rule]
+    values = [entry.id, entry.document, entry.element, entry.text, entry.status, entry.rule]
+    return [safe_cell(value) for value in values]
 
 
 def export_questions(state: RunState, path: Path | str) -> Path:
@@ -54,10 +64,6 @@ def export_questions(state: RunState, path: Path | str) -> Path:
         sheet.append(COLUMNS)
         for row in rows:
             sheet.append(row)
-        for cells in sheet.iter_rows():
-            for cell in cells:  # a text starting with "=" is text, never a formula
-                if isinstance(cell.value, str) and cell.value.startswith("="):
-                    cell.data_type = "s"
         workbook.save(target)
     else:
         raise ValueError(f"unsupported questions file type {target.suffix!r} (use .csv or .xlsx)")

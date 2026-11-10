@@ -16,7 +16,17 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from redactech.models import CheckResult, Operation, Proposal, RunState, VersionPolicy, Zone
+from redactech.agents import a7_checker
+from redactech.models import (
+    CheckResult,
+    Operation,
+    Proposal,
+    RunState,
+    SourceRef,
+    VersionPolicy,
+    Zone,
+)
+from redactech.s1000d import io as xio
 from redactech.s1000d.index import CorpusIndex, ref_key
 
 EXCERPT = 600  # characters kept of a before / after XML excerpt
@@ -81,6 +91,17 @@ class QuestionEntry(BaseModel):
     rule: str = ""
 
 
+class OutputCheck(BaseModel):
+    """The A7 check of one delivered file, as ``redactech check`` does (REQ-11)."""
+
+    file: str
+    document: str  # reference key of the source document
+    introduced_errors: int = 0
+    introduced_warnings: int = 0
+    pre_existing: int = 0
+    error: str | None = None  # the file could not be checked
+
+
 class Counts(BaseModel):
     accepted: int = 0
     edited: int = 0
@@ -90,6 +111,7 @@ class Counts(BaseModel):
     proposed: int = 0  # still undecided (flag-only illustrations excluded)
     pre_existing: int = 0
     introduced: int = 0
+    delivered_introduced_errors: int | None = None  # None: delivered files not checked
 
 
 class Report(BaseModel):
@@ -101,6 +123,7 @@ class Report(BaseModel):
     illustrations: list[IllustrationEntry] = Field(default_factory=list)
     questions: list[QuestionEntry] = Field(default_factory=list)
     skipped: list[dict[str, str]] = Field(default_factory=list)  # read-only documents
+    outputs: list[OutputCheck] = Field(default_factory=list)  # check of each delivered file
     counts: Counts = Field(default_factory=Counts)
 
 
@@ -284,6 +307,9 @@ def build_report(state: RunState, index: CorpusIndex, write_result: Any = None) 
         pre_existing=sum(len(d.pre_existing) for d in documents),
         introduced=sum(len(d.introduced) for d in documents),
     )
+    outputs = check_outputs(state, index, write_result)
+    if getattr(write_result, "written", None):
+        counts.delivered_introduced_errors = sum(o.introduced_errors for o in outputs)
     return Report(
         run_id=state.run_id,
         workspace=state.workspace,
@@ -294,7 +320,38 @@ def build_report(state: RunState, index: CorpusIndex, write_result: Any = None) 
         questions=question_entries(state),
         skipped=skipped,
         counts=counts,
+        outputs=outputs,
     )
+
+
+def check_outputs(state: RunState, index: CorpusIndex, write_result: Any) -> list[OutputCheck]:
+    """Check every delivered file (A7 ``check_doc``): introduced vs pre-existing counts."""
+    written = list(getattr(write_result, "written", []) or [])
+    originals = {
+        entry["new_name"]: entry["doc"] for entry in getattr(write_result, "log", []) or []
+    }
+    results: list[OutputCheck] = []
+    for path in written:
+        key = originals.get(Path(path).name, "")
+        doc = index.docs.get(key)
+        item = OutputCheck(file=Path(path).name, document=key)
+        if doc is None:
+            item.error = "not produced from a known document"
+        else:
+            try:
+                ref = SourceRef(source_id=doc.ref.source_id, doc_key=Path(path).stem)
+                failures = a7_checker.check_doc(
+                    xio.load(path), index, state.baseline, original=doc.ref, ref=ref
+                )
+            except Exception as exc:  # a file that cannot be read or checked is reported
+                item.error = str(exc)
+            else:
+                introduced = [f for f in failures if f.origin == "introduced"]
+                item.introduced_errors = sum(1 for f in introduced if f.severity == "error")
+                item.introduced_warnings = len(introduced) - item.introduced_errors
+                item.pre_existing = len(failures) - len(introduced)
+        results.append(item)
+    return results
 
 
 def _is_flag(proposal: Proposal, zones: dict[str, Zone]) -> bool:

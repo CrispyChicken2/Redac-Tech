@@ -15,10 +15,18 @@ def test_the_page_is_self_contained(state, index, write_result):
     text = page(state, index, write_result)
     assert text.startswith("<!DOCTYPE html>") and "<style>" in text
     lowered = text.lower()
-    assert "<script" not in lowered and "http" not in lowered and "://" not in text
-    assert "<link" not in lowered and "<img" not in lowered and "<iframe" not in lowered
+    assert "<script" not in lowered and "<a " not in lowered and "<link" not in lowered
+    assert "<img" not in lowered and "<iframe" not in lowered and "<object" not in lowered
     assert " href=" not in lowered and " src=" not in lowered and "@import" not in lowered
-    assert "javascript:" not in lowered and " onclick" not in lowered
+    assert "javascript:" not in lowered and " onclick" not in lowered and "url(" not in lowered
+
+
+def test_xml_namespaces_in_an_excerpt_stay_text(state, index, write_result):
+    xml = '<dmRef xmlns:xlink="http://www.w3.org/1999/xlink"/>'
+    state.proposals[0] = state.proposals[0].model_copy(update={"before_xml": xml})
+    text = page(state, index, write_result)
+    assert "xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;" in text
+    assert "<a " not in text and " href=" not in text.lower()
 
 
 def test_every_value_is_escaped(state, index, write_result):
@@ -44,7 +52,8 @@ def test_the_sections_are_there_in_order(state, index, write_result):
     titles = re.findall(r"<h2>(.*?)</h2>", text)
     assert titles == [
         "Summary", "Versioning", "Changes per document",
-        "Pre-existing and introduced issues", "Blocked requests",
+        "Pre-existing and introduced issues", "Check of the delivered files",
+        "Blocked requests",
         "Illustrations to check", "Pending questions",
     ]
 
@@ -73,3 +82,18 @@ def test_empty_sections_say_so(state, index):
 def test_the_values_of_any_type_are_escaped_by_e():
     assert html.e(None) == "" and html.e(3) == "3"
     assert html.e('<a href="x">&</a>') == "&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;"
+
+
+def test_the_delivered_files_check_states_the_number_of_introduced_errors(
+    state, index, write_result, tmp_path, monkeypatch
+):
+    report = build.build_report(state, index, write_result)
+    report.outputs = [
+        build.OutputCheck(file="a.XML", document="d", introduced_errors=0, pre_existing=2),
+        build.OutputCheck(file="b<1>.XML", document="d", introduced_errors=1, error="bad <x>"),
+    ]
+    report.counts.delivered_introduced_errors = 1
+    text = html.render_html(report)
+    assert "<b>1 introduced error(s)</b> in the 2 delivered file(s)." in text
+    assert "b&lt;1&gt;.XML" in text and "bad &lt;x&gt;" in text and "<x>" not in text
+    assert "no file written" in page(state, index, write_result)

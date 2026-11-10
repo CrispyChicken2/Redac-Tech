@@ -131,3 +131,91 @@ def test_rule_text():
 def test_the_report_round_trips_through_json(state, index, write_result):
     report = report_of(state, index, write_result)
     assert build.Report.model_validate_json(report.model_dump_json()) == report
+
+
+# --- check of the delivered files (REQ-11) -------------------------------------------------
+
+
+def delivered(state, consts, monkeypatch, failures, tmp_path):
+    """A write result with two delivered files and a fake A7 returning ``failures`` per file."""
+    from types import SimpleNamespace
+
+    from redactech.models import SourceRef
+
+    ref_a = SourceRef(source_id="s", doc_key="DMC-A-520A-A_001-00_EN-US")
+    ref_b = SourceRef(source_id="s", doc_key="DMC-B-0A3A-D_001-00_EN-US")
+    index = SimpleNamespace(docs={
+        consts.key_a: SimpleNamespace(path="a.XML", ref=ref_a),
+        consts.key_b: SimpleNamespace(path="b.XML", ref=ref_b),
+    })
+    files = [tmp_path / "DMC-A-520A-A_001-01_EN-US.XML", tmp_path / "DMC-B-0A3A-D_001-00_EN-US.XML"]
+    log = [
+        {"doc": consts.key_a, "new_name": files[0].name, "proposals": ["p1"], "policy": "in_work"},
+        {"doc": consts.key_b, "new_name": files[1].name, "proposals": ["p6"], "policy": "none"},
+    ]
+    calls = []
+
+    def fake_check(xdoc, idx, baseline, *, original, ref=None):
+        calls.append((xdoc, original.doc_key, ref.doc_key))
+        return failures[original.doc_key]
+
+    monkeypatch.setattr(build.a7_checker, "check_doc", fake_check)
+    monkeypatch.setattr(build.xio, "load", lambda path: f"doc:{path.name}")
+    return index, SimpleNamespace(written=files, log=log, skipped=[]), calls
+
+
+def test_each_delivered_file_is_checked_and_the_errors_counted(
+    state, consts, monkeypatch, tmp_path
+):
+    from redactech.models import CheckResult
+
+    new_error = CheckResult(name="brex", ok=False, details="x", origin="introduced")
+    new_warning = CheckResult(name="icn", ok=False, severity="warning", details="y")
+    old = CheckResult(name="xsd", ok=False, details="z", origin="pre_existing")
+    failures = {
+        "DMC-A-520A-A_001-00_EN-US": [new_error, new_warning, old, old],
+        "DMC-B-0A3A-D_001-00_EN-US": [],
+    }
+    index, result, calls = delivered(state, consts, monkeypatch, failures, tmp_path)
+    report = build.build_report(state, index, result)
+    first, second = report.outputs
+    assert (first.file, first.document) == ("DMC-A-520A-A_001-01_EN-US.XML", consts.key_a)
+    assert (first.introduced_errors, first.introduced_warnings, first.pre_existing) == (1, 1, 2)
+    assert (second.introduced_errors, second.introduced_warnings, second.pre_existing) == (0, 0, 0)
+    assert report.counts.delivered_introduced_errors == 1
+    # the file is checked against the baseline of its SOURCE document, under its new name
+    assert calls[0] == ("doc:DMC-A-520A-A_001-01_EN-US.XML", "DMC-A-520A-A_001-00_EN-US",
+                        "DMC-A-520A-A_001-01_EN-US")
+
+
+def test_zero_introduced_errors_in_the_delivered_files_is_stated(
+    state, consts, monkeypatch, tmp_path
+):
+    failures = {"DMC-A-520A-A_001-00_EN-US": [], "DMC-B-0A3A-D_001-00_EN-US": []}
+    index, result, _ = delivered(state, consts, monkeypatch, failures, tmp_path)
+    report = build.build_report(state, index, result)
+    assert report.counts.delivered_introduced_errors == 0
+    from redactech.report import html
+
+    assert "<b>0 introduced error(s)</b> in the 2 delivered file(s)." in html.render_html(report)
+
+
+def test_a_file_that_cannot_be_checked_is_reported_not_hidden(
+    state, consts, monkeypatch, tmp_path
+):
+    failures = {"DMC-A-520A-A_001-00_EN-US": [], "DMC-B-0A3A-D_001-00_EN-US": []}
+    index, result, _ = delivered(state, consts, monkeypatch, failures, tmp_path)
+
+    def broken(path):
+        raise OSError("unreadable")
+
+    monkeypatch.setattr(build.xio, "load", broken)
+    first, _ = build.build_report(state, index, result).outputs
+    assert first.error == "unreadable"
+    index.docs.pop(consts.key_b)
+    assert build.build_report(state, index, result).outputs[1].error.startswith("not produced")
+
+
+def test_nothing_is_checked_without_a_write(state, index):
+    report = build.build_report(state, index, None)
+    assert report.outputs == [] and report.counts.delivered_introduced_errors is None

@@ -469,3 +469,24 @@ def test_resolve_chain_uses_the_cache(fixtures_dir: Path):
     first = brex.resolve_chain(proced, index)
     second = brex.resolve_chain(proced, index)
     assert first and all(a is b for a, b in zip(first, second, strict=True))
+
+
+def test_the_cache_keeps_only_the_most_recent_files(fixtures_dir: Path, tmp_path: Path):
+    brex.clear_cache()
+    paths = []
+    for number in range(brex.CACHE_SIZE + 1):
+        path = tmp_path / f"b{number}.xml"
+        source = (fixtures_dir / PROJECT_NAME).read_bytes()
+        path.write_bytes(source + b"<!-- " + b"x" * number + b" -->")
+        paths.append(path)
+    first = brex.load_brex(paths[0])
+    brex.load_rules(first)
+    for path in paths[1 : brex.CACHE_SIZE]:
+        brex.load_brex(path)
+    assert len(brex._DOCS) == brex.CACHE_SIZE
+    assert brex.load_brex(paths[0]) is first  # used again: now the most recent
+    brex.load_brex(paths[-1])  # one more than the size: the least recent (paths[1]) goes
+    assert len(brex._DOCS) == brex.CACHE_SIZE and len(brex._RULES) <= brex.CACHE_SIZE
+    assert brex.load_brex(paths[0]) is first
+    names = [Path(key[0]).name for key in brex._DOCS]
+    assert "b1.xml" not in names and "b0.xml" in names and f"b{brex.CACHE_SIZE}.xml" in names

@@ -320,3 +320,16 @@ def test_a_read_only_document_gives_no_figure_zone(tmp_path: Path):
     op = other_op("delete_step", {"step_id": "s1"}, Target(ref=ref, element_id="s1"))
     result = a4.locate(op, index)
     assert result.zones == [] and len(result.skipped_readonly) == 1
+
+
+def test_the_documents_parsed_by_the_index_are_not_parsed_again(tmp_path: Path, monkeypatch):
+    write_dm(tmp_path, STEPS_BODY)
+    index = ix.build_index(workspace_for(tmp_path), keep_docs=True)
+    assert index.loaded  # kept by the index
+    loads = []
+    real = a4.xio.load
+    monkeypatch.setattr(a4.xio, "load", lambda path, *a, **k: loads.append(path) or real(path))
+    op = other_op("delete_step", {"step_id": "s1"}, steps_target(index, element_id="s1"))
+    assert flagged(a4.locate(op, index)) == ["fig-1"] and loads == []
+    index.loaded.clear()  # without the kept document the file is read
+    assert flagged(a4.locate(op, index)) == ["fig-1"] and len(loads) == 1

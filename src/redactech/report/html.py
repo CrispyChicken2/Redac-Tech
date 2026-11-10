@@ -81,6 +81,24 @@ def _issues(report: Report) -> str:
     return "".join(parts) or _none("no document")
 
 
+def _delivered(report: Report) -> str:
+    """The check of the written files: the REQ-11 statement and one row per file."""
+    if not report.outputs:
+        return _none("no file written")
+    total = report.counts.delivered_introduced_errors or 0
+    rows = [
+        [e(o.file), e(o.introduced_errors), e(o.introduced_warnings), e(o.pre_existing),
+         e(o.error)]
+        for o in report.outputs
+    ]
+    return (
+        f"<p><b>{e(total)} introduced error(s)</b> in the {e(len(report.outputs))} "
+        "delivered file(s).</p>"
+        + _table(["file", "introduced errors", "introduced warnings", "pre-existing", "problem"],
+                 rows)
+    )
+
+
 def render_html(report: Report) -> str:
     """The report as one HTML page."""
     c = report.counts
@@ -139,6 +157,7 @@ def render_html(report: Report) -> str:
         f"<h2>Versioning</h2>{versioning}"
         f"<h2>Changes per document</h2>{documents}"
         f"<h2>Pre-existing and introduced issues</h2>{_issues(report)}"
+        f"<h2>Check of the delivered files</h2>{_delivered(report)}"
         f"<h2>Blocked requests</h2>{blocked}"
         f"<h2>Illustrations to check</h2>{illustrations}"
         f"<h2>Pending questions</h2>{questions}"
