@@ -1,0 +1,29 @@
+# The same harmless change twice: with the project BREX as it is, then after swapping in a modified
+# copy of that BREX (made in the work folder, the fixture is never touched) that forbids an element
+# which the procedure already holds. The chains are resolved again at each run: the violation then
+# belongs to the baseline (pre-existing) and the change introduces nothing.
+description: Swapping the project BREX changes the baseline, not the verdict on the change.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  form:
+    kind: replace_text
+    target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML, element_id: stp-0003}
+    params: {old: by hand, new: with a wrench}
+    reason: Wording
+version_policy: in_work
+decisions:
+  auto_accept: true
+max_seconds: 60
+variants:
+  - {id: project}
+  - id: swapped
+    brex_patch:
+      doc: DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+      old: //proceduralStep/note
+      new: //closeRqmts/reqCondGroup

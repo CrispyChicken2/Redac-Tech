@@ -1,0 +1,30 @@
+# Input: the project BREX (chained from the procedure) forbids //proceduralStep/note. Operation
+# op-0001 can only be expressed with such a note, whatever the position (3 attempts: the requested
+# place and the 2 code alternatives), so it is blocked and nothing is written for it. Operation
+# op-0002 only changes the wording of stp-0003.
+outputs:
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-01_EN-US.XML
+unchanged:
+  - "DMC-RTDEFLT-*"
+  - "DMC-RTPROTO-*-022A-D_*"
+changes:
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML
+    before_xpath: "//proceduralStep[@id='stp-0003']"
+    scope_xpath: "//proceduralStep[@id='stp-0003']"
+    change_type: modify
+    before_contains: ["Tighten the fasteners by hand."]
+    after_contains: ["Tighten the fasteners with a wrench."]
+    after_absent: ["by hand"]
+    marks: {changeMark: "1", changeType: modify}
+output_counts:
+  DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML:
+    "//proceduralStep": 5
+    "//note": 0
+blocked: 1
+blocked_details:
+  - operation: op-0001
+    attempts: 3
+    rule_xpath: "//proceduralStep/note"
+    question_contains: ["conflicts with business rule", "How should we proceed?"]
+checks:
+  introduced_errors: 0

@@ -1,0 +1,71 @@
+# Input (procedure 523A): steps stp-0001 .. stp-0005; tool-0001, sup-0001 and spr-0001 in the
+# preliminary requirements; stp-0004 refers to sup-0001; stp-0005 mentions FAKE-PN-050 and refers
+# to the figure fig-0001. Seven changes, marks add / modify / delete, one figure to flag.
+outputs:
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-01_EN-US.XML
+unchanged:
+  - "DMC-RTDEFLT-*"
+  - "DMC-RTPROTO-*-022A-D_*"
+changes:
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    scope_xpath: "//proceduralStep[para='Wear protective gloves.']"
+    change_type: add
+    after_contains: ["Wear protective gloves."]
+    marks: {changeMark: "1", changeType: add}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    before_xpath: "//proceduralStep[@id='stp-0004']"
+    scope_xpath: "//proceduralStep[@id='stp-0004']"
+    change_type: modify
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    before_xpath: "//proceduralStep[@id='stp-0003']"
+    scope_xpath: "//proceduralStep[@id='stp-0003']"
+    change_type: delete
+    before_contains: ["Tighten the fasteners by hand."]
+    after_contains: ["Tighten the fasteners by hand."]
+    marks: {changeMark: "1", changeType: delete}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    scope_xpath: "//spareDescr[identNumber/partAndSerialNumber/partNumber='FAKE-PN-060']"
+    change_type: add
+    after_contains: ["Spare gasket", "FAKE-PN-060"]
+    marks: {changeMark: "1", changeType: add}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    before_xpath: "//supportEquipDescr[@id='tool-0001']"
+    scope_xpath: "//supportEquipDescr[@id='tool-0001']"
+    change_type: delete
+    before_contains: ["Torque wrench"]
+    after_contains: ["Torque wrench"]
+    marks: {changeMark: "1", changeType: delete}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    before_xpath: "//proceduralStep[@id='stp-0004']"
+    scope_xpath: "//proceduralStep[@id='stp-0004']"
+    change_type: modify
+    before_contains: ['internalRefId="sup-0001"']
+    after_contains: ['internalRefId="spr-0001"', 'internalRefTargetType="irtt06"']
+    after_absent: ['internalRefId="sup-0001"']
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML
+    before_xpath: "//para[contains(., 'FAKE-PN-050')]"
+    scope_xpath: "//para[contains(., 'FAKE-PN-250')]"
+    change_type: modify
+    before_contains: ["check part FAKE-PN-050"]
+    after_contains: ["check part FAKE-PN-250"]
+    after_absent: ["FAKE-PN-050"]
+    marks: {changeMark: "1", changeType: modify}
+# Containers whose children moved or were added: only themselves may differ (layout, order).
+also_allowed:
+  DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML:
+    - {xpath: "//mainProcedure", side: after, exact: true}
+    - {xpath: "//spareDescrGroup", side: after, exact: true}
+output_counts:
+  DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML:
+    "//proceduralStep": 6
+    "//proceduralStep[@id='stp-0006']": 1
+    "//proceduralStep[@id='stp-0003'][@changeType='delete']": 1
+    "//supportEquipDescr[@id='tool-0001'][@changeType='delete']": 1
+    "//*[@id='fig-0001']": 1
+illustrations:
+  - {figure_id: fig-0001, doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML}
+checks:
+  introduced_errors: 0
+blocked: 0

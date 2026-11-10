@@ -1,0 +1,286 @@
+# Written from the real Bike 4.1 files (see scenario.yaml): 14 parts declared in the lighting
+# common repository and referenced in the lighting catalogue, 6 referenced in the bicycle
+# catalogue; 34 changes in 3 data modules, nothing else.
+xsd: real
+outputs:
+  - DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-01_EN-US.XML
+  - DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-01_EN-US.XML
+  - DMC-S1000DBIKE-AAA-D00-00-00-01AA-941A-D_007-01_EN-US.XML
+unchanged:
+  - "UPF-*"
+changes:
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU-B001']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-301']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B001"']
+    after_contains: ['partNumberValue="FAKE-PN-301"']
+    after_absent: ["LRU-B001"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU-B003']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-302']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B003"']
+    after_contains: ['partNumberValue="FAKE-PN-302"']
+    after_absent: ["LRU-B003"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU-B124']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-303']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B124"']
+    after_contains: ['partNumberValue="FAKE-PN-303"']
+    after_absent: ["LRU-B124"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU-B556']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-304']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B556"']
+    after_contains: ['partNumberValue="FAKE-PN-304"']
+    after_absent: ["LRU-B556"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU-B789']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-305']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B789"']
+    after_contains: ['partNumberValue="FAKE-PN-305"']
+    after_absent: ["LRU-B789"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU1012']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-306']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1012"']
+    after_contains: ['partNumberValue="FAKE-PN-306"']
+    after_absent: ["LRU1012"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU1013']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-307']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1013"']
+    after_contains: ['partNumberValue="FAKE-PN-307"']
+    after_absent: ["LRU1013"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU1018']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-308']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1018"']
+    after_contains: ['partNumberValue="FAKE-PN-308"']
+    after_absent: ["LRU1018"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU1019']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-309']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1019"']
+    after_contains: ['partNumberValue="FAKE-PN-309"']
+    after_absent: ["LRU1019"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU1022']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-310']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1022"']
+    after_contains: ['partNumberValue="FAKE-PN-310"']
+    after_absent: ["LRU1022"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU1026']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-311']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1026"']
+    after_contains: ['partNumberValue="FAKE-PN-311"']
+    after_absent: ["LRU1026"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU2010']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-312']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU2010"']
+    after_contains: ['partNumberValue="FAKE-PN-312"']
+    after_absent: ["LRU2010"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU2018']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-313']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU2018"']
+    after_contains: ['partNumberValue="FAKE-PN-313"']
+    after_absent: ["LRU2018"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LIRUS-L1-10']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='FAKE-PN-314']"
+    change_type: modify
+    before_contains: ['partNumberValue="LIRUS-L1-10"']
+    after_contains: ['partNumberValue="FAKE-PN-314"']
+    after_absent: ["LIRUS-L1-10"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU-B001']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-301']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B001"']
+    after_contains: ['partNumberValue="FAKE-PN-301"']
+    after_absent: ["LRU-B001"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU-B003']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-302']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B003"']
+    after_contains: ['partNumberValue="FAKE-PN-302"']
+    after_absent: ["LRU-B003"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU-B124']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-303']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B124"']
+    after_contains: ['partNumberValue="FAKE-PN-303"']
+    after_absent: ["LRU-B124"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU-B556']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-304']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B556"']
+    after_contains: ['partNumberValue="FAKE-PN-304"']
+    after_absent: ["LRU-B556"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU-B789']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-305']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU-B789"']
+    after_contains: ['partNumberValue="FAKE-PN-305"']
+    after_absent: ["LRU-B789"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1012']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-306']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1012"']
+    after_contains: ['partNumberValue="FAKE-PN-306"']
+    after_absent: ["LRU1012"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1013']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-307']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1013"']
+    after_contains: ['partNumberValue="FAKE-PN-307"']
+    after_absent: ["LRU1013"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1018']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-308']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1018"']
+    after_contains: ['partNumberValue="FAKE-PN-308"']
+    after_absent: ["LRU1018"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1019']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-309']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1019"']
+    after_contains: ['partNumberValue="FAKE-PN-309"']
+    after_absent: ["LRU1019"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1022']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-310']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1022"']
+    after_contains: ['partNumberValue="FAKE-PN-310"']
+    after_absent: ["LRU1022"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1026']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-311']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1026"']
+    after_contains: ['partNumberValue="FAKE-PN-311"']
+    after_absent: ["LRU1026"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU2010']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-312']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU2010"']
+    after_contains: ['partNumberValue="FAKE-PN-312"']
+    after_absent: ["LRU2010"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU2018']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-313']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU2018"']
+    after_contains: ['partNumberValue="FAKE-PN-313"']
+    after_absent: ["LRU2018"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LIRUS-L1-10']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-314']"
+    change_type: modify
+    before_contains: ['partNumberValue="LIRUS-L1-10"']
+    after_contains: ['partNumberValue="FAKE-PN-314"']
+    after_absent: ["LIRUS-L1-10"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DBIKE-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='BICYCLE-001/1']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-315']"
+    change_type: modify
+    before_contains: ['partNumberValue="BICYCLE-001/1"']
+    after_contains: ['partNumberValue="FAKE-PN-315"']
+    after_absent: ["BICYCLE-001/1"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DBIKE-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='BICYCLE-001/2A']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-316']"
+    change_type: modify
+    before_contains: ['partNumberValue="BICYCLE-001/2A"']
+    after_contains: ['partNumberValue="FAKE-PN-316"']
+    after_absent: ["BICYCLE-001/2A"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DBIKE-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='BICYCLE-001/2B']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-317']"
+    change_type: modify
+    before_contains: ['partNumberValue="BICYCLE-001/2B"']
+    after_contains: ['partNumberValue="FAKE-PN-317"']
+    after_absent: ["BICYCLE-001/2B"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DBIKE-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='BICYCLE-001/3']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-318']"
+    change_type: modify
+    before_contains: ['partNumberValue="BICYCLE-001/3"']
+    after_contains: ['partNumberValue="FAKE-PN-318"']
+    after_absent: ["BICYCLE-001/3"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DBIKE-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='BICYCLE-001/4']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-319']"
+    change_type: modify
+    before_contains: ['partNumberValue="BICYCLE-001/4"']
+    after_contains: ['partNumberValue="FAKE-PN-319"']
+    after_absent: ["BICYCLE-001/4"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DBIKE-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='BICYCLE-001/5']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='FAKE-PN-320']"
+    change_type: modify
+    before_contains: ['partNumberValue="BICYCLE-001/5"']
+    after_contains: ['partNumberValue="FAKE-PN-320"']
+    after_absent: ["BICYCLE-001/5"]
+    marks: {changeMark: "1", changeType: modify}
+checks:
+  introduced_errors: 0
+blocked: 0

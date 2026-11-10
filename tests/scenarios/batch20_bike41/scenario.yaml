@@ -1,0 +1,36 @@
+# OBJ-10 on the real Bike 4.1 data (marker data41, skipped without it): 20 real part numbers
+# mapped to fictitious ones, exhaustive, under 10 seconds.
+description: Batch of 20 real Bike 4.1 part numbers -> FAKE-PN-301..320.
+markers: [data41]
+source:
+  kind: bike41
+  path: data/s1000d-4.1/bike
+  brex_dirs: [data/s1000d-4.1/brex]
+  schemas_dir: data/s1000d-4.1/schemas
+  issue: "4.1"
+request:
+  mapping:
+    - {old: LRU-B001, new: FAKE-PN-301, reason: Batch replacement}
+    - {old: LRU-B003, new: FAKE-PN-302, reason: Batch replacement}
+    - {old: LRU-B124, new: FAKE-PN-303, reason: Batch replacement}
+    - {old: LRU-B556, new: FAKE-PN-304, reason: Batch replacement}
+    - {old: LRU-B789, new: FAKE-PN-305, reason: Batch replacement}
+    - {old: LRU1012, new: FAKE-PN-306, reason: Batch replacement}
+    - {old: LRU1013, new: FAKE-PN-307, reason: Batch replacement}
+    - {old: LRU1018, new: FAKE-PN-308, reason: Batch replacement}
+    - {old: LRU1019, new: FAKE-PN-309, reason: Batch replacement}
+    - {old: LRU1022, new: FAKE-PN-310, reason: Batch replacement}
+    - {old: LRU1026, new: FAKE-PN-311, reason: Batch replacement}
+    - {old: LRU2010, new: FAKE-PN-312, reason: Batch replacement}
+    - {old: LRU2018, new: FAKE-PN-313, reason: Batch replacement}
+    - {old: LIRUS-L1-10, new: FAKE-PN-314, reason: Batch replacement}
+    - {old: BICYCLE-001/1, new: FAKE-PN-315, reason: Batch replacement}
+    - {old: BICYCLE-001/2A, new: FAKE-PN-316, reason: Batch replacement}
+    - {old: BICYCLE-001/2B, new: FAKE-PN-317, reason: Batch replacement}
+    - {old: BICYCLE-001/3, new: FAKE-PN-318, reason: Batch replacement}
+    - {old: BICYCLE-001/4, new: FAKE-PN-319, reason: Batch replacement}
+    - {old: BICYCLE-001/5, new: FAKE-PN-320, reason: Batch replacement}
+version_policy: in_work
+decisions:
+  auto_accept: true
+max_seconds: 10

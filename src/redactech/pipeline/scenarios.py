@@ -36,9 +36,8 @@ import yaml
 from redactech.agents import a7_checker
 from redactech.models import SourceRef
 from redactech.pipeline import orchestrator as orch
-from redactech.s1000d import diff
+from redactech.s1000d import diff, validate
 from redactech.s1000d import io as xio
-from redactech.s1000d import validate
 from redactech.s1000d.ops._common import xml_of
 from redactech.sources import workspace as wsmod
 
@@ -131,7 +130,14 @@ def _prepare_source(scenario: dict, directory: Path, work: Path, repo_root: Path
         folder = work / "src"
         folder.mkdir(parents=True)
         for name in spec["files"]:
-            shutil.copy(fixtures / name, folder / name)
+            shutil.copy(fixtures / name, folder / Path(name).name)  # name may be in a subfolder
+        patch = scenario.get("brex_patch")
+        if patch:  # a modified copy of a BREX: the original fixture is never touched
+            target = folder / patch["doc"]
+            text = target.read_text(encoding="utf-8")
+            if patch["old"] not in text:
+                raise ValueError(f"brex_patch: {patch['old']!r} not found in {patch['doc']}")
+            target.write_text(text.replace(patch["old"], patch["new"]), encoding="utf-8")
         brex, schemas = [folder.resolve()], None
     else:  # the real Bike data: read in place, never modified (checked by digest)
         data = repo_root / spec["path"]
@@ -155,10 +161,11 @@ def _request(scenario: dict, work: Path) -> orch.RunRequest:
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return orch.RunRequest(mapping=str(path), auto_accept=auto)
     form = copy.deepcopy(spec["form"])
-    target = form.get("target") or {}
-    if "doc" in target:  # a file name is easier to write than a reference
-        name = target.pop("doc")
-        target["ref"] = {"source_id": "scenario", "doc_key": name.removesuffix(".XML")}
+    for item in form if isinstance(form, list) else [form]:
+        target = item.get("target") or {}
+        if "doc" in target:  # a file name is easier to write than a reference
+            name = target.pop("doc")
+            target["ref"] = {"source_id": "scenario", "doc_key": name.removesuffix(".XML")}
     return orch.RunRequest(form=form, auto_accept=auto)
 
 
@@ -185,7 +192,11 @@ def run_scenario(
         return result
     started = time.perf_counter()
     work_dir.mkdir(parents=True, exist_ok=True)
-    ws_file, source_dir = _prepare_source(scenario, folder, work_dir, root)
+    try:
+        ws_file, source_dir = _prepare_source(scenario, folder, work_dir, root)
+    except (KeyError, ValueError, OSError) as exc:
+        result.failures.append(f"the source could not be prepared: {exc}")
+        return result
     before_files = _digest(source_dir)
     try:
         run = orch.start(_request(scenario, work_dir), ws_file, work_dir / "runs", token="e000")
@@ -265,6 +276,7 @@ def _compare(
     found = total_expected = 0
     in_scope = all_changed = 0
     valid = traced = changed_outputs = 0
+    pairs: dict[str, tuple[Any, Any]] = {}
     for path in sorted(written):
         key = origin.get(path.name)
         doc = run.index.docs.get(key) if key else None
@@ -273,6 +285,7 @@ def _compare(
             continue
         original, output = xio.load(doc.path), xio.load(path)
         name = Path(doc.path).name
+        pairs[name] = (original, output)
         changed = [
             p for p in diff.changed_elements(original, output) if not p.startswith(IDENT_PREFIX)
         ]
@@ -282,13 +295,18 @@ def _compare(
             ok, scope_paths = _check_change(expected, original, output, fail, name)
             found += ok
             scopes += scope_paths
+        exact: set[str] = set()  # containers whose layout changes: only themselves, not below
         for extra in attendu.get("also_allowed", {}).get(name, []):
             side = original if extra.get("side") == "before" else output
-            scopes += [_path(e) for e in xio.xpath(side.tree, extra["xpath"])]
+            paths = [_path(e) for e in xio.xpath(side.tree, extra["xpath"])]
+            if extra.get("exact"):
+                exact.update(paths)
+            else:
+                scopes += paths
         all_changed += len(changed)
-        in_scope += sum(1 for p in changed if _inside(p, scopes))
+        in_scope += sum(1 for p in changed if _inside(p, scopes) or p in exact)
         for p in changed:
-            if not _inside(p, scopes):
+            if not _inside(p, scopes) and p not in exact:
                 fail(f"{path.name}: unexpected change at {p}")
         for expr, count in attendu.get("output_counts", {}).get(name, {}).items():
             got = len(xio.xpath(output.tree, expr))
@@ -323,6 +341,9 @@ def _compare(
     blocked = sum(1 for p in run.state.proposals if p.status == "blocked_by_rule")
     if blocked != attendu.get("blocked", 0):
         fail(f"{blocked} blocked proposal(s), expected {attendu.get('blocked', 0)}")
+    _check_blocked(attendu, run, fail)
+    _check_baseline(attendu, run, fail)
+    _check_illustrations(attendu, run, pairs, fail)
 
 
 def _check_change(
@@ -434,6 +455,63 @@ def _preservation(
         if now.get(name) != before_files[name] and not any(fnmatch(name, p) for p in patterns):
             fail(f"{name}: a source file was modified")
     return _ratio(kept, total)
+
+
+def _check_blocked(attendu: dict, run: orch.Run, fail) -> None:
+    """Blocked proposals: attempts, the rule shown, the question pre-filled on the operation."""
+    for spec in attendu.get("blocked_details", []):
+        wanted = spec["operation"]
+        found = [p for p in run.state.proposals
+                 if p.status == "blocked_by_rule" and p.operation_id == wanted]
+        if not found:
+            fail(f"{wanted}: no blocked proposal")
+            continue
+        proposal = found[0]
+        if "attempts" in spec and proposal.attempt != spec["attempts"]:
+            fail(f"{wanted}: {proposal.attempt} attempt(s), expected {spec['attempts']}")
+        rules = [c.rule for c in proposal.checks if c.rule and not c.ok]
+        if "rule_xpath" in spec and not any(r.get("xpath") == spec["rule_xpath"] for r in rules):
+            fail(f"{wanted}: the rule {spec['rule_xpath']} is not shown in the checks")
+        questions = [q for o in run.state.operations if o.id == wanted for q in o.questions]
+        for needle in spec.get("question_contains", []):
+            if not any(needle in q for q in questions):
+                fail(f"{wanted}: no question contains {needle!r}")
+
+
+def _check_baseline(attendu: dict, run: orch.Run, fail) -> None:
+    """Number of BREX failures found before any change (the chains were re-resolved)."""
+    spec = attendu.get("baseline_brex")
+    if not spec:
+        return
+    count = sum(1 for r in run.state.baseline if r.name == "brex" and not r.ok)
+    if "min" in spec and count < spec["min"]:
+        fail(f"{count} BREX failure(s) in the baseline, at least {spec['min']} expected")
+    if "max" in spec and count > spec["max"]:
+        fail(f"{count} BREX failure(s) in the baseline, at most {spec['max']} expected")
+
+
+def _check_illustrations(attendu: dict, run: orch.Run, pairs: dict, fail) -> None:
+    """A figure linked to a modified element is flagged 'to check' and left unchanged."""
+    for spec in attendu.get("illustrations", []):
+        figure = spec["figure_id"]
+        zone = next((z for z in run.state.zones
+                     if z.kind == "illustration" and z.element_id == figure), None)
+        if zone is None:
+            fail(f"{figure}: no illustration zone")
+            continue
+        proposal = next((p for p in run.state.proposals if p.zone_id == zone.id), None)
+        flagged = proposal is not None and any(
+            c.name == "illustration" and c.severity == "warning" for c in proposal.checks
+        )
+        if zone.certainty != "to_check" or not flagged:
+            fail(f"{figure}: not flagged as 'to check'")
+        before, after = pairs.get(spec["doc"], (None, None))
+        if before is None:
+            fail(f"{figure}: no output for {spec['doc']}")
+            continue
+        old, new = (xio.xpath(d.tree, f"//*[@id='{figure}']") for d in (before, after))
+        if not old or not new or xml_of(old[0]) != xml_of(new[0]):
+            fail(f"{figure}: the figure changed")
 
 
 # --- report -------------------------------------------------------------------

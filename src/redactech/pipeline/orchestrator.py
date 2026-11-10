@@ -54,7 +54,7 @@ class RunRequest(BaseModel):
     """What the writer asked for: a mapping file OR a form, and optionally a policy."""
 
     mapping: str | None = None
-    form: dict[str, Any] | None = None
+    form: dict[str, Any] | list[dict[str, Any]] | None = None  # one form or several
     version_policy: Mode | None = None
     auto_accept: bool = False  # tests and the hidden CLI option only
 
@@ -106,7 +106,7 @@ class Run:
         if request.mapping is not None:
             operations = a2_mapping.mapping_operations(request.mapping)
         else:
-            operations = a2_mapping.from_form(request.form or {})
+            operations = a2_mapping.from_form(request.form)
         run_dir.mkdir(parents=True, exist_ok=False)
         workspace_file = Path(workspace_path).resolve()
         index, baseline = a1_indexer.run(wsmod.load_workspace(workspace_file))

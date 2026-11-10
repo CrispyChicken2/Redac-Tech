@@ -1,0 +1,26 @@
+# OBJ-23: the first operation asks for a step with a note inside it, which the project BREX forbids
+# (the data module is chained to it). It must end blocked_by_rule after 3 attempts, with the rule
+# shown and the customer question pre-filled; the second operation of the same request is fine and
+# must still be written.
+description: A request the BREX forbids is blocked; the rest of the request is written.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  form:
+    - kind: insert_step
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML, element_id: stp-0002}
+      params: {after_id: stp-0002, para: Check the gauge., note: Hot surface}
+      reason: Warn about the hot surface
+    - kind: replace_text
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML, element_id: stp-0003}
+      params: {old: by hand, new: with a wrench}
+      reason: Wording
+version_policy: in_work
+decisions:
+  auto_accept: true
+max_seconds: 60

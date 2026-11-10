@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_4-1/xml_schema_flat/comrep.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="0B5" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="US"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2024" month="01" day="15"/>
+        <dmTitle>
+          <techName>Prototype unit</techName>
+          <infoName>Batch repository 5 - parts</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="new">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="FAKE1">
+        <enterpriseName>Example Org</enterpriseName>
+      </originator>
+      <applic><displayText><simplePara>All</simplePara></displayText></applic>
+      <brexDmRef><dmRef xlink:type="simple" xlink:actuate="onRequest" xlink:show="replace"><dmRefIdent><dmCode modelIdentCode="RTPROTO" systemDiffCode="AAA" systemCode="D00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="AA" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/><issueInfo issueNumber="001" inWork="00"/></dmRefIdent></dmRef></brexDmRef>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <commonRepository>
+      <partRepository>
+        <partSpec>
+          <partIdent manufacturerCodeValue="FAKE1" partNumberValue="FAKE-PN-117"/>
+          <itemIdentData>
+            <descrForPart>Fictitious part 117</descrForPart>
+          </itemIdentData>
+        </partSpec>
+        <partSpec>
+          <partIdent manufacturerCodeValue="FAKE1" partNumberValue="FAKE-PN-118"/>
+          <itemIdentData>
+            <descrForPart>Fictitious part 118</descrForPart>
+          </itemIdentData>
+        </partSpec>
+        <partSpec>
+          <partIdent manufacturerCodeValue="FAKE1" partNumberValue="FAKE-PN-119"/>
+          <itemIdentData>
+            <descrForPart>Fictitious part 119</descrForPart>
+          </itemIdentData>
+        </partSpec>
+        <partSpec>
+          <partIdent manufacturerCodeValue="FAKE1" partNumberValue="FAKE-PN-120"/>
+          <itemIdentData>
+            <descrForPart>Fictitious part 120</descrForPart>
+          </itemIdentData>
+        </partSpec>
+      </partRepository>
+    </commonRepository>
+  </content>
+</dmodule>

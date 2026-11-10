@@ -1,0 +1,26 @@
+# Input: the procedure holds no note (the project rule is satisfied) and one closeRqmts/reqCondGroup.
+# Variant "project": no BREX failure before the change. Variant "swapped": the rule now forbids
+# //closeRqmts/reqCondGroup, so the baseline holds that violation; the change (wording of stp-0003)
+# neither adds nor removes it. In both cases the change is delivered.
+outputs:
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-01_EN-US.XML
+unchanged:
+  - "DMC-RTDEFLT-*"
+changes:
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML
+    before_xpath: "//proceduralStep[@id='stp-0003']"
+    scope_xpath: "//proceduralStep[@id='stp-0003']"
+    change_type: modify
+    before_contains: ["Tighten the fasteners by hand."]
+    after_contains: ["Tighten the fasteners with a wrench."]
+    after_absent: ["by hand"]
+    marks: {changeMark: "1", changeType: modify}
+checks:
+  introduced_errors: 0
+blocked: 0
+variants:
+  project:
+    baseline_brex: {max: 0}
+  swapped:
+    baseline_brex: {min: 1}
+    checks: {introduced_errors: 0, pre_existing_min: 1}

@@ -1,0 +1,40 @@
+# OBJ-10: 20 part replacements over 5 synthetic common repositories (4 parts each),
+# accepted automatically; the whole run (index -> write) must stay under 10 seconds.
+description: Batch of 20 part numbers, FAKE-PN-101..120 -> FAKE-PN-201..220.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - batch/DMC-RTPROTO-AAA-D00-00-00-00AA-0B1A-D_001-00_EN-US.XML
+    - batch/DMC-RTPROTO-AAA-D00-00-00-00AA-0B2A-D_001-00_EN-US.XML
+    - batch/DMC-RTPROTO-AAA-D00-00-00-00AA-0B3A-D_001-00_EN-US.XML
+    - batch/DMC-RTPROTO-AAA-D00-00-00-00AA-0B4A-D_001-00_EN-US.XML
+    - batch/DMC-RTPROTO-AAA-D00-00-00-00AA-0B5A-D_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  mapping:
+    - {old: FAKE-PN-101, new: FAKE-PN-201, reason: Batch replacement 1}
+    - {old: FAKE-PN-102, new: FAKE-PN-202, reason: Batch replacement 2}
+    - {old: FAKE-PN-103, new: FAKE-PN-203, reason: Batch replacement 3}
+    - {old: FAKE-PN-104, new: FAKE-PN-204, reason: Batch replacement 4}
+    - {old: FAKE-PN-105, new: FAKE-PN-205, reason: Batch replacement 5}
+    - {old: FAKE-PN-106, new: FAKE-PN-206, reason: Batch replacement 6}
+    - {old: FAKE-PN-107, new: FAKE-PN-207, reason: Batch replacement 7}
+    - {old: FAKE-PN-108, new: FAKE-PN-208, reason: Batch replacement 8}
+    - {old: FAKE-PN-109, new: FAKE-PN-209, reason: Batch replacement 9}
+    - {old: FAKE-PN-110, new: FAKE-PN-210, reason: Batch replacement 10}
+    - {old: FAKE-PN-111, new: FAKE-PN-211, reason: Batch replacement 11}
+    - {old: FAKE-PN-112, new: FAKE-PN-212, reason: Batch replacement 12}
+    - {old: FAKE-PN-113, new: FAKE-PN-213, reason: Batch replacement 13}
+    - {old: FAKE-PN-114, new: FAKE-PN-214, reason: Batch replacement 14}
+    - {old: FAKE-PN-115, new: FAKE-PN-215, reason: Batch replacement 15}
+    - {old: FAKE-PN-116, new: FAKE-PN-216, reason: Batch replacement 16}
+    - {old: FAKE-PN-117, new: FAKE-PN-217, reason: Batch replacement 17}
+    - {old: FAKE-PN-118, new: FAKE-PN-218, reason: Batch replacement 18}
+    - {old: FAKE-PN-119, new: FAKE-PN-219, reason: Batch replacement 19}
+    - {old: FAKE-PN-120, new: FAKE-PN-220, reason: Batch replacement 20}
+version_policy: in_work
+decisions:
+  auto_accept: true
+max_seconds: 10
