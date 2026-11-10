@@ -45,6 +45,17 @@ class WriteResult:
     written: list[Path] = field(default_factory=list)
     log: list[dict[str, Any]] = field(default_factory=list)
     skipped: list[dict[str, str]] = field(default_factory=list)
+    open_questions: list[str] = field(default_factory=list)  # set by the Run (customer on hold)
+
+    @property
+    def warning(self) -> str:
+        """A warning about the open customer questions ("" when there is none)."""
+        return open_questions_warning(self.open_questions)
+
+
+def open_questions_warning(questions: list[str]) -> str:
+    n = len(questions)
+    return f"{n} questions client ouvertes (en attente)" if n else ""
 
 
 def _policy_mode(policy: VersionPolicy, key: str, doc_key: str) -> str:
@@ -221,6 +232,15 @@ def write(
             )
             continue
         groups.setdefault(ref_key(proposal.ref), []).append(proposal)
+
+    applied = {p.id for group in groups.values() for p in group}
+    for group in groups.values():
+        for proposal in group:
+            if proposal.replaces in applied:
+                raise WriteRefused(
+                    f"{proposal.id} and {proposal.replaces} are mutually exclusive "
+                    "(one replaces the other): keep only one of them"
+                )
 
     out_dir = Path(run_dir) / "out"
     jobs = []

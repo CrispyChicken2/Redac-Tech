@@ -506,3 +506,19 @@ def test_real_bike_41_lru1010_is_written_and_sources_untouched(repo_root: Path, 
         assert "LRU2020" in text and "LRU1010" not in text and "changeMark" in text
         assert not path.name.startswith("UPF")
     assert {p.name: p.read_bytes() for p in (data / "bike").iterdir() if p.is_file()} == sources
+
+
+def test_a_proposal_and_the_one_that_replaces_it_are_never_written_together(tmp_path: Path):
+    plan = Plan(tmp_path)
+    plan.add(replace_x2())
+    original = plan.proposals[0]
+    variant = original.model_copy(update={"id": f"{original.id}-a2", "replaces": original.id})
+    plan.proposals = decide([*plan.proposals, variant], "accepted")
+    with pytest.raises(WriteRefused, match="mutually exclusive"):
+        plan.write()
+    assert not (plan.run_dir / "out").exists()  # nothing was written
+    plan.proposals = [
+        p.model_copy(update={"status": "rejected"}) if p.id == original.id else p
+        for p in plan.proposals
+    ]
+    assert plan.write().written  # the variant alone is fine

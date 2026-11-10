@@ -625,3 +625,41 @@ def test_the_assistant_never_decides(tmp_path: Path, monkeypatch):
     say(at, FREE_TEXT_TRAP)
     after = {p.id: p.status for p in run_of(at).state.proposals}
     assert after == before  # asking never changes a status
+
+
+# --- 7. reopening a decision, open customer questions ----------------------------------------
+
+
+def test_a_decided_proposal_shows_reopen_instead_of_the_decision_buttons(
+    tmp_path: Path, monkeypatch
+):
+    at = prepared(tmp_path, monkeypatch)
+    certain, _ = kinds_of(run_of(at))
+    target = certain[0].id
+    assert has(at, "button", f"accept_{target}") and not has(at, "button", f"reopen_{target}")
+    widget(at, "button", f"accept_{target}").click()
+    at.run()
+    assert not at.exception
+    assert not has(at, "button", f"accept_{target}")
+    widget(at, "button", f"reopen_{target}").click()
+    at.run()
+    assert not at.exception
+    run = run_of(at)
+    assert status_of(run, target) == "proposed"
+    assert has(at, "button", f"accept_{target}") and not has(at, "button", f"reopen_{target}")
+    assert any(e.get("event") == "reopen" and e["proposal"] == target
+               for e in run.state.decisions_log)
+
+
+def test_the_delivery_tab_warns_about_the_open_customer_questions(tmp_path: Path, monkeypatch):
+    at = prepared(tmp_path, monkeypatch)
+    assert not any("questions client" in w.value for w in at.warning)
+    run = run_of(at)
+    _, probable = kinds_of(run)
+    run.decide(probable[0].id, "pending_client", "Ask the customer about the wording")
+    at.run()
+    assert not at.exception
+    warnings = [w.value for w in at.warning if "questions client ouvertes" in w.value]
+    assert len(warnings) == 1
+    assert "1 questions client ouvertes (en attente)" in warnings[0]
+    assert "Ask the customer about the wording" in warnings[0]
