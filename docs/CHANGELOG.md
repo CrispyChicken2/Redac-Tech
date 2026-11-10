@@ -1,5 +1,27 @@
 # Journal des modifications
 
+## 016 — Interface Streamlit
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/ui/app.py` : interface Streamlit, mode Document : barre latérale **Projet** (sources, téléversement de fichiers, remplacement de BREX, problèmes préexistants) et trois onglets **Demande**, **Document et propositions**, **Livraison**. Aucune acceptation automatique ; **Tout accepter** est limité aux propositions certaines et sans problème.
+- `src/redactech/ui/state.py` : projet et session (`runs/_ui/`), téléversements dans une source `uploads`, remplacement de BREX, confirmation de la politique.
+- `src/redactech/ui/components.py` : libellés, badges de contrôle, formulaire de demande, téléchargements. Fonctions pures, sans import de Streamlit.
+- `tests/ui/` : tests de l'état du projet et de l'import de l'application, sans démarrer Streamlit.
+- `docs/DEMO.md` : section 10, « Parcours dans l'interface », avec les libellés exacts de l'application.
+- `docs/ARCHITECTURE.md` : section « Interface » ; tableau des modules : `ui/` passe à « implémenté ».
+
+### Tests écrits, non exécutés
+
+Les tests de l'interface ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. L'application n'a pas été lancée (`streamlit run`). Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- Le versionnement est un panneau de l'onglet **Demande**, pas une fenêtre modale.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 015 — Vues XML et publiée
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**

@@ -23,7 +23,7 @@ Racine : `src/redactech/`. Chaque sous-paquet porte un rôle défini par la sect
 | `pipeline/` | orchestrateur A0 : machine à états, points d'arrêt, reprise, journal des décisions | implémenté |
 | `render/` | rendu : vue XML, vue publiée (XSLT 1.0), vue côte à côte | implémenté |
 | `report/` | rapport de livraison (`build`), page HTML (`html`), exports (`export`) | implémenté |
-| `ui/` | interface Streamlit | squelette |
+| `ui/` | interface Streamlit, mode Document (`app`, `state`, `components`) | implémenté |
 | `llm/` | accès au LLM local (Ollama) ; tous les appels LLM passent ici (M3) | squelette |
 
 Le détail de chaque module est donné dans les sections suivantes : « Lecture et identification S1000D », « Contrôles », « Workspace, index et baseline », « Demande, localisation et propositions », « Traçabilité, versioning et écriture », « Vérification des propositions et règles bloquantes », et « Orchestrateur ».
@@ -503,6 +503,45 @@ La fonction `export_questions` accepte aussi `.xlsx` ; la commande `write` produ
 ### `decisions.jsonl`
 
 Une ligne JSON par événement `decision` du journal, clés triées, UTF-8 sans échappement des caractères accentués. Chaque ligne porte `event`, `proposal`, `status`, `comment`, `actor` et `time`. Les autres événements du journal (alternatives, politique, écriture) ne figurent pas dans ce fichier : ils restent dans `state.json`.
+
+## Interface
+
+Modules : `ui/app.py` (page Streamlit), `ui/state.py` (projet et session), `ui/components.py` (libellés, badges, formulaire, fichiers de livraison). Parcours pas à pas : `docs/DEMO.md`, section 10.
+
+### Principes
+
+- **Aucune logique métier dans l'interface.** Elle appelle l'orchestrateur (`pipeline/orchestrator.py`), les vues (`render/`) et les fichiers de livraison (`report/`), par `ui/state.py` et `ui/components.py`.
+- **Pas d'acceptation automatique.** `auto_accept` n'est jamais activé. **Tout accepter** n'accepte que ce que le pipeline juge certain et sans problème.
+- **Clés stables.** Chaque widget a une clé fixe, pour que les tests de `streamlit.testing` le retrouvent.
+- **Import sans effet.** Importer `app.py` ne lance rien ; la page est construite par `main()`.
+- **`components.py` ne dépend pas de Streamlit** : ses fonctions pures peuvent être testées sans le démarrer.
+- Les libellés sont en français ; les identifiants du code sont en anglais.
+
+### Session et projet (`ui/state.py`)
+
+- Le fichier workspace est choisi dans la barre latérale. Par défaut : `workspace.toml` s'il existe, sinon `workspace.example.toml`.
+- Les fichiers téléversés sont rangés dans une session sous `runs/_ui/`, dans une source `uploads`. Un fichier refusé donne sa raison.
+- Le remplacement de BREX ne modifie jamais le fichier d'origine de la source : les chaînes sont résolues à nouveau et la baseline est recalculée.
+- La politique est confirmée par `confirm_policy`, qui enregistre la politique puis appelle `run_to_review` : c'est le seul point où les propositions sont calculées depuis l'interface.
+
+### Onglets
+
+L'écran comporte une barre latérale **Projet** et trois onglets :
+
+| Onglet | Contenu |
+|---|---|
+| **Demande** | choix du mode (tableau ou formulaire), préparation du run, tableau des opérations, choix de la politique |
+| **Document et propositions** | choix du document et de la vue, masquage des suppressions, propositions avec badges et décisions, panneau des demandes bloquées, **Tout accepter** |
+| **Livraison** | compteurs par statut, écriture des DM, téléchargements |
+
+### Vues
+
+- **XML**, **Publiée (IETP)** et **Côte à côte** : les mêmes vues que `render/` (voir « Vues »).
+- Dans le volet de chaque proposition, l'extrait avant / après est affiché dans la vue choisie. Une proposition `edited` montre le XML saisi.
+
+### Décisions
+
+Les boutons de décision suivent les règles de l'orchestrateur (voir « Orchestrateur ») : un refus du pipeline est affiché tel quel, sans traitement particulier. Pour une illustration signalée, seuls **Accepter** et **En attente** sont offerts.
 
 ## Configuration (`config.toml`)
 

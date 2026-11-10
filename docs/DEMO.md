@@ -173,3 +173,64 @@ Produit une page HTML autonome, lisible dans un navigateur, avec la vue XML et l
 - `--show-deleted` (défaut) affiche les éléments supprimés, barrés.
 
 Aucune image n'est chargée : une figure apparaît comme une case portant son nom ICN. Détail : `docs/ARCHITECTURE.md`, section « Vues ».
+
+## 10. Parcours dans l'interface
+
+Ce parcours reprend le scénario de la section 4 à 6, sur le workspace des fixtures, mais dans l'interface graphique. Les libellés ci-dessous sont ceux de `src/redactech/ui/`. Ne pas le lancer depuis un poste sans les dépendances installées.
+
+### Lancer
+
+Depuis la racine du dépôt :
+
+```bash
+streamlit run src/redactech/ui/app.py
+```
+
+L'interface s'ouvre dans le navigateur. Elle n'a aucune logique métier : elle appelle l'orchestrateur, les vues et les fichiers de livraison. Une session de téléversement est créée sous `runs/_ui/`.
+
+### Panneau « Projet » (barre latérale)
+
+1. Le champ **Fichier workspace** est prérempli avec `workspace.toml` s'il existe, sinon `workspace.example.toml`. Cliquer sur **Charger le projet**. Choisir le workspace des fixtures, comme dans la section 1 de ce guide.
+2. **Sources** : pour chaque source, son identifiant, son mode (`modifiable` ou `lecture seule`), son dossier et le nombre de fichiers par rôle.
+3. **Ajouter des fichiers** : déposer des DM, des BREX ou des ICN dans **Déposer des DM, BREX ou ICN**, puis cliquer sur **Importer**. Chaque fichier est affiché avec son rôle, ou refusé avec sa raison.
+4. **Changer de BREX** : déposer un fichier de BREX (022) dans **Déposer un BREX (022)**, puis cliquer sur **Remplacer le BREX**. Les chaînes de BREX sont résolues à nouveau, et l'état initial est recalculé. Le fichier de BREX d'origine n'est pas modifié.
+5. **Problèmes préexistants** : une ligne par DM, avec le nombre d'erreurs et d'avertissements. Un clic ouvre le détail.
+
+### Onglet « Demande »
+
+1. Choisir le mode **Tableau CSV/XLSX** (ou **Formulaire** pour une opération unique). Avec le tableau, déposer le fichier dans **Tableau de correspondance (colonnes old, new, kind, reason)**. Avec `lots.csv` de la section 4, c'est la ligne `LRU1010;LRU2020`.
+2. Cliquer sur **Préparer**. Si la demande est refusée, le message donne la raison ; aucun run n'est créé.
+3. Le run apparaît avec son tableau d'opérations. Le panneau **Politique de versionnement** affiche la **Suggestion** et ses motifs, un par ligne.
+4. Choisir la politique parmi les trois options libellées (**Aucune (le fichier garde son numéro)**, **Travail en cours (inWork + 1)**, **Nouvelle issue (consolidation)**), puis cliquer sur **Confirmer et préparer les propositions**. Cette étape calcule les zones, les propositions et les contrôles, et ouvre les décisions.
+
+Le choix de la politique est un panneau de l'onglet, pas une fenêtre modale. Aucune proposition n'existe avant ce choix.
+
+Cliquer sur **Nouvelle demande** pour quitter le run en cours et revenir au formulaire. Le dossier du run reste sur le disque, dans `runs/`.
+
+### Onglet « Document et propositions »
+
+1. Choisir le **Document** dans la liste, puis une **Vue** parmi **XML**, **Publiée (IETP)** et **Côte à côte**.
+2. Cocher **Masquer les suppressions** pour ne pas afficher les éléments marqués supprimés dans la vue publiée.
+3. La colonne de droite liste les propositions. Par défaut, seules celles du document choisi apparaissent (case **Seulement ce document**, cochée).
+4. Chaque proposition est un volet titré `<identifiant> — <statut>`, avec les badges de contrôle (**Préexistant : …** en gris, **Introduit : …** en rouge, **À vérifier (illustration)**), l'extrait avant / après, et les boutons de décision :
+   - **Accepter** ;
+   - **Éditer** : modifie le texte **Édition du XML** puis valide ; le XML est revérifié, et refusé s'il introduit une erreur ;
+   - **Rejeter** : exige un **Motif du rejet**. L'interface affiche alors `alternative <id> proposée` ou `édition manuelle nécessaire` ;
+   - **En attente** : exige un **Commentaire pour le client** ; la proposition passe **En attente du client**.
+5. **Bloquées par une règle (n)** : panneau replié, ouvert s'il y a des demandes bloquées. Chaque demande montre la règle et la question pré-remplie. **Poser la question au client** la met en attente.
+6. **Tout accepter** n'accepte que les propositions que le pipeline juge certaines et sans problème. Il ne décide rien d'autre. Le message indique combien ont été acceptées et combien restent à décider.
+
+Pour une illustration signalée, l'interface n'offre ni édition ni rejet : seulement **Accepter** (acquittement) et **En attente**.
+
+### Onglet « Livraison »
+
+1. Six compteurs, un par statut : **À décider**, **Acceptée**, **Éditée**, **Rejetée**, **En attente du client**, **Bloquée par une règle**.
+2. La politique choisie est affichée. Tant qu'une proposition reste à décider, un avertissement l'indique.
+3. **Écrire les DM** n'est actif que si une politique est choisie et qu'aucune décision n'est en attente. Un message de succès indique le dossier `out/`.
+4. Une fois écrit, le panneau **Téléchargements** propose :
+   - **DM écrits (zip)** ;
+   - **Rapport (HTML)** et **Rapport (JSON)** ;
+   - **Questions (CSV)** et **Questions (XLSX)** ;
+   - **Décisions (JSONL)**.
+
+Les rapports et exports sont ceux décrits dans « Livrables d'un run » de `docs/ARCHITECTURE.md`. Le fichier XLSX des questions est régénéré à chaque affichage de la page, à partir de l'état du run.
