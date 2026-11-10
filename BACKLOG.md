@@ -6,7 +6,6 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 014 M2 RunState persisté, journal des décisions, rapport HTML/JSON, export questions CSV/XLSX
 - [ ] 015 M2 Rendu : vue XML, vue Publiée (IETP) XSLT 1.0, côte à côte, masquer les suppressions
 - [ ] 016 M2 Interface Streamlit mode Document (§12)
 - [ ] 017 M2 Tests UI (AppTest) : modale versioning, accepter/rejeter/en attente, alternative, accept-all limité, vues
@@ -17,11 +16,12 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 023 M1 A4 : figures signalées aussi pour les opérations sur les étapes (OBJ-19), fixture ICN déclarée, cache des contrôles pour batch20
+- [~] 014 M2 RunState persisté, journal des décisions, rapport HTML/JSON, export questions CSV/XLSX
 
 ## Fait
 
-- [x] 013 M1 Scénarios batch20, ops_steps, forbidden_request, brex_swap (merge en cours de CI)
+- [x] 023 M1 Figures signalées pour les opérations sur étapes, fixture ICN, cache BREX (0cbb303) — jalon M1 clos (tag m1)
+- [x] 013 M1 Scénarios batch20, ops_steps, forbidden_request, brex_swap (17fe7f8)
 - [x] 012 M1 Scénarios lru1010 (fixtures + Bike 4.1), delete_mark, versioning, preexisting_brex + redactech eval (1075732)
 - [x] 011 M1 Orchestrateur A0 (points d'arrêt, state.json, reprise) + CLI request/review/write/check (1c358e9)
 - [x] 010 M1 A7 checker introduced/pre_existing + blocked_by_rule ≤ 3 essais + alternatives (3a14461)
