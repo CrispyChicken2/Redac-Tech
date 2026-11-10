@@ -1,5 +1,28 @@
 # Journal des modifications
 
+## 020 — Texte libre
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/agents/a2_freetext.py` : demande en français ou en anglais. Le modèle propose des opérations au format JSON, avec des citations exactes de la demande. Le code vérifie chaque citation, chaque valeur nouvelle (elle doit figurer dans la demande), chaque ancienne valeur (elle doit exister dans la documentation), le document visé et le motif. Une vérification échouée devient une question, jamais une opération.
+- Journal des appels au modèle dans `runs/<id>/llm_calls.jsonl` (sans prompt, empreinte seulement).
+- CLI : `redactech request --text "…"` (exclusif de `--mapping`). Interface : panneau **Texte libre** dans l'onglet **Demande**, affiché seulement si `[llm] provider` n'est pas `none`.
+- Scénarios `free_text_fr`, `free_text_en` (même résultat que `lru1010`, réponse enregistrée) et `hallucination_trap` (valeur inventée refusée, aucun document écrit).
+- `docs/DEMO.md` : section 11, « Demande en texte libre (modèle local) », optionnelle.
+- `docs/SCENARIOS.md` : trois scénarios ajoutés à la liste, avec leur exigence proposée.
+
+### Tests écrits, non exécutés
+
+Les tests et les trois scénarios ont été écrits, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils rejouent des réponses enregistrées : ils ne demandent pas Ollama. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- Aucun essai avec un modèle local réel : Ollama n'est pas installé sur le poste de build.
+- Le rattachement des trois scénarios aux exigences (REQ-5, REQ-8, OBJ-3) est une proposition, à confirmer. OBJ-3 n'a pas de ligne dans la section 2 de `QUALITY.md`.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 019 — Couche LLM
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**

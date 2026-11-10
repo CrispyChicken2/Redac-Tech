@@ -236,3 +236,49 @@ Pour une illustration signalée, l'interface n'offre ni édition ni rejet : seul
    - **Décisions (JSONL)**.
 
 Les rapports et exports sont ceux décrits dans « Livrables d'un run » de `docs/ARCHITECTURE.md`. Le fichier XLSX des questions (`questions.xlsx`) est écrit une fois, à l'écriture des DM, dans le dossier du run. La page ne le régénère que s'il manque, par exemple pour un run repris depuis une écriture plus ancienne.
+
+## 11. Demande en texte libre (modèle local)
+
+Cette section est optionnelle. Elle demande un modèle local : Ollama doit tourner sur ce poste, et le modèle indiqué dans `config.toml` doit être disponible. Les tests n'ont pas besoin d'Ollama : ils rejouent des réponses enregistrées.
+
+### Prérequis
+
+Dans `config.toml`, section `[llm]` :
+
+```toml
+[llm]
+provider = "ollama"
+model = "ministral-3:8b"
+```
+
+Sans ce réglage (`provider = "none"`, valeur par défaut), la demande en texte libre n'est pas disponible. La commande le signale, et l'interface affiche : « Le texte libre nécessite le modèle local ([llm] provider dans config.toml). »
+
+### Ligne de commande
+
+```bash
+redactech request --text "Remplacer la pièce LRU1010 par LRU2020 dans toute la documentation." --version-policy in_work
+```
+
+L'option `--text` remplace `--mapping` : il faut l'une ou l'autre, pas les deux. Le reste est identique à la section 4 : la commande s'arrête au point de décision, puis `review`, `write` et `check`. Les questions soulevées par la lecture de la demande sont affichées avec le préfixe `question (free text)`.
+
+### Interface
+
+Dans l'onglet **Demande**, un panneau **Texte libre** apparaît seulement si `[llm] provider` n'est pas `none`. Il contient la zone **Décrivez la modification (français ou anglais)** et le bouton **Préparer (texte libre)**.
+
+### Ce qui se passe
+
+1. Le modèle propose des opérations au format JSON, avec pour chacune la citation exacte de la demande qui la justifie.
+2. Le code vérifie chaque proposition, et rien de ce que dit le modèle n'est cru sur parole :
+   - chaque citation doit être un passage exact de la demande ;
+   - chaque valeur écrite (numéro de pièce, texte, identifiant, quantité) doit figurer dans la demande ;
+   - l'ancienne valeur d'un remplacement doit exister dans la documentation ;
+   - le document visé doit appartenir au projet ;
+   - le motif écrit dans le module livré est construit par le code à partir de la demande.
+3. Une opération qui échoue à une vérification n'est pas appliquée : elle devient une **question**. Par exemple, si le modèle invente `LRU9999` alors que la demande ne contient que `LRU1010`, l'opération est refusée et la question demande la valeur exacte.
+4. Les opérations qui passent sont traitées comme celles d'une table de correspondances : localisation, propositions, décisions du rédacteur, écriture.
+
+### Journal des appels
+
+Chaque appel au modèle est journalisé, sans le texte du prompt (seulement son empreinte). Pendant la demande, le journal s'écrit dans `runs/<id>.llm_calls.jsonl`, à côté des runs. Une fois le run créé, il est déplacé dans `runs/<id>/llm_calls.jsonl`. Si l'appel échoue, le journal reste à côté des runs, et l'erreur est affichée.
+
+Voir `docs/ARCHITECTURE.md`, sections « Couche IA locale » et « Demande, localisation et propositions ».
