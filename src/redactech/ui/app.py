@@ -10,7 +10,6 @@ nothing: the page is built by ``main()`` only.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import streamlit as st
@@ -335,8 +334,7 @@ def blocked_panel(run: orch.Run) -> None:
             if comp.can_decide(run) and st.button(
                 "Poser la question au client", key=f"ask_{row.id}"
             ):
-                run.decide(row.id, "pending_client", row.text)
-                st.rerun()
+                apply_decision(run, lambda row=row: run.decide(row.id, "pending_client", row.text))
 
 
 def proposal_card(run: orch.Run, proposal: Any, zone: Any, view: str) -> None:
@@ -354,7 +352,7 @@ def proposal_card(run: orch.Run, proposal: Any, zone: Any, view: str) -> None:
         if proposal.reviewer_comment:
             st.caption(f"Commentaire : {proposal.reviewer_comment}")
         if comp.can_decide(run):
-            decision_controls(run, proposal, flag_only=zone is not None and zone.kind != "content")
+            decision_controls(run, proposal, flag_only=run.is_flag(proposal))
 
 
 def decision_controls(run: orch.Run, proposal: Any, flag_only: bool = False) -> None:
@@ -454,9 +452,11 @@ def downloads(run: orch.Run) -> None:
         path = folder / name
         if path.is_file():
             st.download_button(label, path.read_bytes(), file_name=name, mime=mime, key=key)
-    xlsx = export_questions(run.state, folder / "questions.xlsx")
+    xlsx = folder / "questions.xlsx"
+    if not xlsx.is_file():  # a run resumed from an older write
+        export_questions(run.state, xlsx)
     st.download_button(
-        "Questions (XLSX)", Path(xlsx).read_bytes(), file_name="questions.xlsx",
+        "Questions (XLSX)", xlsx.read_bytes(), file_name="questions.xlsx",
         mime=XLSX_MIME, key="dl_questions_xlsx",
     )
 

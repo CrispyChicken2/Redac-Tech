@@ -307,6 +307,18 @@ class Run:
         zone = self._zone_of(proposal)
         return zone is not None and zone.kind == "illustration"
 
+    def is_flag(self, proposal: Proposal) -> bool:
+        """Is this a flag-only proposal (a figure to check)? It changes nothing when written."""
+        return self._is_flag(proposal)
+
+    def counts(self) -> dict[str, int]:
+        """Number of proposals per status (flag-only illustrations excluded)."""
+        found: dict[str, int] = {}
+        for proposal in self.state.proposals:
+            if not self._is_flag(proposal):
+                found[proposal.status] = found.get(proposal.status, 0) + 1
+        return found
+
     def _refresh_stage(self) -> None:
         pending = [
             p for p in self.state.proposals if p.status == "proposed" and not self._is_flag(p)
@@ -499,6 +511,7 @@ class Run:
         report = build_report(self.state, self.index, result)
         json_path, html_path = write_report(self.run_dir, report)
         questions = export_questions(self.state, self.run_dir / "questions.csv")
+        export_questions(self.state, self.run_dir / "questions.xlsx")  # for the UI download
         decisions = export_decisions(self.state, self.run_dir / "decisions.jsonl")
         return [json_path, html_path, questions, decisions]
 

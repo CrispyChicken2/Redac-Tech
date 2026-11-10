@@ -59,13 +59,24 @@ def _stylesheet() -> etree.XSLT:
     return _compiled
 
 
+def _copy_of(doc: Any) -> Any:
+    """An independent tree of the document that keeps its DOCTYPE and internal subset.
+
+    A deep copy of an lxml tree drops the internal subset, so a loaded document is serialised
+    again (``xio.dumps``: the exact prolog is kept) and parsed with the hardened parser; entity
+    references stay unexpanded. An element is copied and wrapped in a new tree.
+    """
+    if isinstance(doc, xio.XmlDoc):
+        return etree.parse(BytesIO(xio.dumps(doc)), xio.make_parser())
+    target = xio.tree_of(doc)
+    if hasattr(target, "getroot"):
+        return etree.parse(BytesIO(etree.tostring(target)), xio.make_parser())
+    return etree.ElementTree(copy.deepcopy(target))
+
+
 def render_published(doc: Any, show_deleted: bool = True) -> str:
     """HTML fragment of the published view of a document, tree or element."""
-    target = xio.tree_of(doc)
-    if hasattr(target, "getroot"):  # a whole tree: copy it all, DOCTYPE and internal subset too
-        source = copy.deepcopy(target)
-    else:
-        source = etree.ElementTree(copy.deepcopy(target))
+    source = _copy_of(doc)
     flag = etree.XSLT.strparam("1" if show_deleted else "0")
     result = _stylesheet()(source, **{"show-deleted": flag})
     return str(result)

@@ -505,3 +505,28 @@ def test_the_blocked_request_reaches_the_report_and_the_questions(tmp_path: Path
         rows = list(csv.reader(handle, delimiter=";"))
     assert rows[1][4] == "blocked_by_rule" and "business rule" in rows[1][3]
     assert rows[1][5].startswith(blocked["rule"]["id"])
+
+
+def test_the_flag_rule_and_the_status_counts_come_from_the_run(tmp_path: Path):
+    env = Env(tmp_path, LRU_FILES)
+    run = env.lru_run()
+    run.run_to_review()
+    flags = [p for p in run.state.proposals if run.is_flag(p)]
+    zones = {z.id: z for z in run.state.zones}
+    assert all(zones[p.zone_id].kind == "illustration" for p in flags)
+    content = [p for p in run.state.proposals if not run.is_flag(p)]
+    assert run.counts() == {"proposed": len(content)}  # the flags are not counted
+    run.decide(content[0].id, "accepted")
+    assert run.counts() == {"proposed": len(content) - 1, "accepted": 1}
+    assert len(run.pending_ids()) == len(content) - 1
+
+
+def test_write_also_makes_the_xlsx_of_the_questions(tmp_path: Path):
+    env = Env(tmp_path, LRU_FILES)
+    run = env.lru_run(version_policy="in_work", auto_accept=True)
+    run.run_to_review()
+    run.auto_accept()
+    run.decide(by_kind(run)[1][0].id, "accepted")
+    run.write(today=TODAY)
+    assert (run.run_dir / "questions.xlsx").is_file()
+    assert "questions.xlsx" not in [p.name for p in run.delivery_files]  # still the four files
