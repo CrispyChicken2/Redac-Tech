@@ -32,7 +32,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from lxml import etree
 
 from redactech.agents import a7_checker
 from redactech.models import SourceRef
@@ -40,6 +39,7 @@ from redactech.pipeline import orchestrator as orch
 from redactech.s1000d import diff
 from redactech.s1000d import io as xio
 from redactech.s1000d import validate
+from redactech.s1000d.ops._common import xml_of
 from redactech.sources import workspace as wsmod
 
 DAY = datetime.date(2025, 3, 7)  # fixed "today": the issue dates must not depend on the clock
@@ -227,7 +227,7 @@ def _inside(path: str, scopes: list[str]) -> bool:
 
 
 def _text(el: Any) -> str:
-    return etree.tostring(el, encoding="unicode")
+    return xml_of(el)
 
 
 def _ratio(done: int, total: int) -> float:
@@ -305,7 +305,7 @@ def _compare(
             total_expected += len(expected)
             fail(f"{name}: expected changes but no output was written for it")
 
-    preserved = _preservation(attendu, written, source_dir, before_files, fail)
+    preserved = _preservation(attendu, run, source_dir, before_files, fail)
     result.metrics.update(
         exhaustiveness=_ratio(found, total_expected),
         precision=_ratio(in_scope, all_changed),
@@ -367,7 +367,7 @@ def _valid(
 ) -> int:
     mode = attendu.get("xsd", "minimal")
     if mode == "minimal":
-        schema = etree.XMLSchema(etree.parse(str(folder.parent / "_schemas" / "dmodule.xsd")))
+        schema = validate.load_schema(folder.parent / "_schemas" / "dmodule.xsd")
         if schema.validate(xio.tree_of(output)):
             return 1
         fail(f"{name}: not valid against the minimal schema: {schema.error_log.last_error}")
@@ -409,12 +409,13 @@ def _count_checks(result: Result, run: orch.Run, doc: Any, output: Any, path: Pa
             result.pre_existing += 1
 
 
-def _preservation(attendu: dict, written: list[Path], source_dir: Path,
-                  before_files: dict[str, str], fail) -> float:
+def _preservation(
+    attendu: dict, run: orch.Run, source_dir: Path, before_files: dict[str, str], fail
+) -> float:
     """Sources never change; the documents listed in ``unchanged`` are not produced either."""
     patterns = attendu.get("unchanged", [])
     now = _digest(source_dir)
-    names = {p.name for p in written}
+    produced = {Path(run.index.docs[k].path).name for k in _original_of(run).values()}
     kept = total = 0
     for name in sorted(before_files):
         if not any(fnmatch(name, pattern) for pattern in patterns):
@@ -423,7 +424,7 @@ def _preservation(attendu: dict, written: list[Path], source_dir: Path,
         problems = []
         if now.get(name) != before_files[name]:
             problems.append("its source file changed")
-        if names & {name}:
+        if name in produced:  # compare SOURCE names: outputs may be renamed
             problems.append("an output was produced for it")
         if problems:
             fail(f"{name} must stay untouched: {', '.join(problems)}")

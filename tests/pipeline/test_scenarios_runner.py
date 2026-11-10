@@ -151,7 +151,10 @@ def test_a_scenario_without_its_data_is_skipped(tmp_path: Path):
 
 
 def test_a_pending_scenario_is_skipped_even_with_data(tmp_path: Path):
-    directory = clone(tmp_path, "lru1010_bike41", scenario=lambda d: d.update(markers=[]))
+    def pending(data):
+        data.update(markers=[], pending="to write")
+
+    directory = clone(tmp_path, "lru1010_bike41", scenario=pending)
     result = run(directory, tmp_path)
     assert result.skipped and "still to write" in result.skipped
 

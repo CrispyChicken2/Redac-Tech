@@ -1,9 +1,8 @@
 # Same replacement on the real Bike 4.1 data (marker data41; skipped without the data).
-# PENDING: the part numbers and the expected elements must be written from the real files by
-# someone who has the data (see data/README.md); the structure below is final.
+# LRU1010 is declared once in a common repository and referenced once in a parts catalogue;
+# LRU2020 exists nowhere in the data set. Two UPF traces mention LRU1010 and must stay untouched.
 description: LRU replacement on Bike 4.1 - common repository declaration and parts reference.
 markers: [data41]
-pending: part numbers and attendu.yaml to be written from the real Bike 4.1 files
 source:
   kind: bike41
   path: data/s1000d-4.1/bike
@@ -12,7 +11,7 @@ source:
   issue: "4.1"
 request:
   mapping:
-    - {old: TO-FILL, new: TO-FILL, reason: Part replaced}
+    - {old: LRU1010, new: LRU2020, reason: Part replaced by its successor}
 version_policy: in_work
 decisions:
   auto_accept: true
