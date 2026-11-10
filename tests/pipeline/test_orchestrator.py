@@ -908,7 +908,7 @@ def test_the_write_reports_the_open_customer_questions(tmp_path: Path):
     result = run.write(today=TODAY)  # writing stays allowed
     assert result.written and len(result.open_questions) == 1
     assert "ask the customer about the wording" in result.open_questions[0]
-    assert result.warning == "1 questions client ouvertes (en attente)"
+    assert result.warning == "1 question client ouverte (en attente)"
 
 
 def test_no_open_question_no_warning(tmp_path: Path):
@@ -918,3 +918,53 @@ def test_no_open_question_no_warning(tmp_path: Path):
     run.set_policy(run.suggestion())
     result = run.write(today=TODAY)
     assert result.open_questions == [] and result.warning == ""
+
+
+# --- fix 1: chains, blocked requests, accepted alternatives ----------------------------
+
+
+def test_reopen_supersedes_the_whole_chain_of_alternatives(tmp_path: Path):
+    run = one_step_run(tmp_path)
+    (first,) = run.state.proposals
+    second = run.reject(first.id, "wrong place")
+    third = run.reject(second.id, "wrong again")
+    assert third is not None and third.replaces == second.id
+    run.reopen(first.id)
+    by_id = {p.id: p for p in run.state.proposals}
+    assert by_id[first.id].status == "proposed"
+    assert by_id[second.id].status == "rejected"
+    assert by_id[third.id].status == "rejected"
+    assert by_id[third.id].reviewer_comment == SUPERSEDED
+    run.decide(first.id, "accepted")
+    run.set_policy(run.suggestion().model_copy(update={"mode": "none"}))
+    assert len(run.write(today=TODAY).written) == 1  # one new step, not two
+
+
+def test_reopen_is_refused_while_an_alternative_is_accepted(tmp_path: Path):
+    run = one_step_run(tmp_path)
+    (first,) = run.state.proposals
+    second = run.reject(first.id, "wrong place")
+    run.decide(second.id, "accepted")
+    with pytest.raises(orch.PipelineError, match="alternative already accepted"):
+        run.reopen(first.id)
+    assert {p.id: p.status for p in run.state.proposals} == {
+        first.id: "rejected", second.id: "accepted"}
+    run.reopen(second.id)  # take the alternative back first,
+    run.reopen(first.id)  # then the original
+    assert {p.id: p.status for p in run.state.proposals}[first.id] == "proposed"
+
+
+def test_a_blocked_request_put_to_the_customer_reopens_as_blocked(tmp_path: Path):
+    env = Env(tmp_path, (PROCED, PROJECT, DEFAULT))
+    run = env.insert_run({"after_id": "stp-0002", "para": "Check.", "note": "Hot surface"})
+    run.run_to_review()
+    (blocked,) = run.state.proposals
+    run.decide(blocked.id, "pending_client", "ask about the note rule")
+    reopened = run.reopen(blocked.id)
+    assert reopened.status == "blocked_by_rule"  # never an ordinary proposal again
+    assert run.pending_ids() == []
+    with pytest.raises(orch.PipelineError, match="blocked"):
+        run.decide(blocked.id, "rejected", "try again")  # no fourth attempt
+    assert len(run.state.proposals) == 1
+    run.decide(blocked.id, "pending_client", "ask again")  # the only way out is still the customer
+    assert run.state.proposals[0].status == "pending_client"

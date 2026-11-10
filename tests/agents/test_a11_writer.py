@@ -522,3 +522,27 @@ def test_a_proposal_and_the_one_that_replaces_it_are_never_written_together(tmp_
         for p in plan.proposals
     ]
     assert plan.write().written  # the variant alone is fine
+
+
+def test_two_variants_of_the_same_request_are_refused_even_down_a_chain(tmp_path: Path):
+    plan = Plan(tmp_path)
+    plan.add(replace_x2())
+    original = plan.proposals[0]
+    second = original.model_copy(update={"id": f"{original.id}-a2", "replaces": original.id})
+    third = original.model_copy(update={"id": f"{original.id}-a2-a3", "replaces": second.id})
+    plan.proposals = decide([original, second, third], "accepted")
+    plan.proposals = [
+        p.model_copy(update={"status": "rejected"}) if p.id == second.id else p
+        for p in plan.proposals
+    ]  # the link between the two accepted ones is a rejected proposal
+    with pytest.raises(WriteRefused, match="mutually exclusive"):
+        plan.write()
+    assert not (plan.run_dir / "out").exists()
+
+
+def test_the_warning_is_worded_for_one_or_many_questions():
+    from redactech.agents.a11_writer import open_questions_warning
+
+    assert open_questions_warning([]) == ""
+    assert open_questions_warning(["a"]) == "1 question client ouverte (en attente)"
+    assert open_questions_warning(["a", "b"]) == "2 questions client ouvertes (en attente)"

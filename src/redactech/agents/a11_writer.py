@@ -53,8 +53,16 @@ class WriteResult:
         return open_questions_warning(self.open_questions)
 
 
+def _base_id(operation_id: str, ids: list[str]) -> str:
+    """The request an operation belongs to (a variant's id is ``<base id>-a<n>-...``)."""
+    owners = [i for i in ids if operation_id == i or operation_id.startswith(i + "-a")]
+    return min(owners, key=len) if owners else operation_id
+
+
 def open_questions_warning(questions: list[str]) -> str:
     n = len(questions)
+    if n == 1:
+        return "1 question client ouverte (en attente)"
     return f"{n} questions client ouvertes (en attente)" if n else ""
 
 
@@ -233,14 +241,17 @@ def write(
             continue
         groups.setdefault(ref_key(proposal.ref), []).append(proposal)
 
-    applied = {p.id for group in groups.values() for p in group}
+    ids = [o.id for o in operations]
     for group in groups.values():
+        families: dict[tuple[str, str], str] = {}
         for proposal in group:
-            if proposal.replaces in applied:
+            family = (proposal.zone_id, _base_id(proposal.operation_id, ids))
+            if family in families:
                 raise WriteRefused(
-                    f"{proposal.id} and {proposal.replaces} are mutually exclusive "
-                    "(one replaces the other): keep only one of them"
+                    f"{proposal.id} and {families[family]} are mutually exclusive "
+                    "(same zone, same request: one is a variant of the other): keep only one"
                 )
+            families[family] = proposal.id
 
     out_dir = Path(run_dir) / "out"
     jobs = []

@@ -452,22 +452,50 @@ class Run:
             update.update({"edited_xml": edited_xml, "checks": checks})
         updated = proposal.model_copy(update=update)
         self._replace(updated)
+        extra = {"was": "blocked_by_rule"} if proposal.status == "blocked_by_rule" else {}
         self._log(
             event="decision",
             proposal=proposal_id,
             status=status,
             comment=comment,
             actor=actor,
+            **extra,
         )
         self._refresh_stage()
         self._save()
         return updated
 
-    def reopen(self, proposal_id: str, actor: str = "user") -> Proposal:
-        """Take a decision back: the proposal returns to ``proposed`` (refused after the write).
+    def _descendants(self, proposal_id: str) -> list[Proposal]:
+        """Every proposal whose ``replaces`` chain reaches ``proposal_id``."""
+        family = {proposal_id}
+        found: list[Proposal] = []
+        grew = True
+        while grew:
+            grew = False
+            for other in self.state.proposals:
+                if other.replaces in family and other.id not in family:
+                    family.add(other.id)
+                    found.append(other)
+                    grew = True
+        return found
 
-        The open alternatives of the proposal (``replaces == proposal_id``) are rejected as
-        superseded, so that a proposal and its replacement are never both live.
+    def _was_blocked(self, proposal_id: str) -> bool:
+        """Was this proposal blocked by a rule before the writer put it to the customer?"""
+        return any(
+            e.get("event") == "decision"
+            and e.get("proposal") == proposal_id
+            and e.get("was") == "blocked_by_rule"
+            for e in self.state.decisions_log
+        )
+
+    def reopen(self, proposal_id: str, actor: str = "user") -> Proposal:
+        """Take a decision back: the proposal is open again (refused after the write).
+
+        It returns to ``proposed``, except a request blocked by a rule and then put to the
+        customer, which returns to ``blocked_by_rule`` (it never gets another attempt). The
+        whole chain of alternatives that replaced it and is still open is rejected as superseded,
+        so that a proposal and its replacement are never both live; the reopening is refused
+        while one of them is accepted or edited.
         """
         self._need(*STAGES_FOR_REVIEW)
         proposal = self._proposal(proposal_id)
@@ -475,8 +503,15 @@ class Run:
             raise PipelineError(f"{proposal_id} is not decided yet")
         if proposal.status == "blocked_by_rule":
             raise PipelineError(f"{proposal_id} is blocked by a business rule: ask the customer")
-        for other in list(self.state.proposals):
-            if other.replaces == proposal_id and other.status == "proposed":
+        descendants = self._descendants(proposal_id)
+        for other in descendants:
+            if other.status in ("accepted", "edited"):
+                raise PipelineError(
+                    f"{proposal_id} has an alternative already {other.status} ({other.id}): "
+                    "reopen that one first"
+                )
+        for other in descendants:
+            if other.status == "proposed":
                 self._replace(
                     other.model_copy(
                         update={"status": "rejected", "reviewer_comment": SUPERSEDED}
@@ -489,8 +524,9 @@ class Run:
                     comment=SUPERSEDED,
                     actor=actor,
                 )
+        target = "blocked_by_rule" if self._was_blocked(proposal_id) else "proposed"
         reopened = proposal.model_copy(
-            update={"status": "proposed", "reviewer_comment": None, "edited_xml": None}
+            update={"status": target, "reviewer_comment": None, "edited_xml": None}
         )
         self._replace(reopened)
         self._log(event="reopen", proposal=proposal_id, was=proposal.status, actor=actor)

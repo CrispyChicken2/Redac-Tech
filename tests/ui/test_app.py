@@ -659,7 +659,7 @@ def test_the_delivery_tab_warns_about_the_open_customer_questions(tmp_path: Path
     run.decide(probable[0].id, "pending_client", "Ask the customer about the wording")
     at.run()
     assert not at.exception
-    warnings = [w.value for w in at.warning if "questions client ouvertes" in w.value]
+    warnings = [w.value for w in at.warning if "question client ouverte" in w.value]
     assert len(warnings) == 1
-    assert "1 questions client ouvertes (en attente)" in warnings[0]
+    assert "1 question client ouverte (en attente)" in warnings[0]
     assert "Ask the customer about the wording" in warnings[0]

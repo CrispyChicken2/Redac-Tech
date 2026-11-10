@@ -272,12 +272,18 @@ def review(
     accept_all: Annotated[
         bool, typer.Option("--accept-all", help="Accept the certain and clean proposals.")
     ] = False,
+    reopen: Annotated[
+        list[str] | None, typer.Option("--reopen", help="Take a decision back: proposal id.")
+    ] = None,
 ) -> None:
     """List the proposals of a run, or record decisions."""
     from redactech.pipeline import orchestrator
 
     run = _open_run(run_dir)
     try:
+        for proposal_id in reopen or []:
+            reopened = run.reopen(proposal_id)
+            typer.echo(f"reopened {proposal_id}: {reopened.status}")
         for proposal_id in accept or []:
             run.decide(proposal_id, "accepted")
             typer.echo(f"accepted {proposal_id}")
