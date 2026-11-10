@@ -59,10 +59,9 @@ def has(at: AppTest, kind: str, key: str) -> bool:
     return True
 
 
-def pick(item, raw: str, label: str | None = None) -> None:
-    """Choose an option of a radio / selectbox given as shown (label) or as stored (raw)."""
-    options = list(item.options)
-    item.set_value(label if label in options else raw)
+def pick(item, raw: str) -> None:
+    """Choose an option of a radio / selectbox: AppTest takes the STORED value, never the label."""
+    item.set_value(raw)
 
 
 def texts(at: AppTest) -> str:
@@ -121,7 +120,7 @@ def replace_part(at: AppTest, old: str = "LRU1010", new: str = "LRU2020") -> Non
 
 
 def confirm_policy(at: AppTest, mode: str = "in_work") -> None:
-    pick(widget(at, "radio", "policy_radio"), mode, comp.MODE_LABELS[mode])
+    pick(widget(at, "radio", "policy_radio"), mode)
     widget(at, "button", "policy_confirm").click()
     at.run()
     assert not at.exception
@@ -174,7 +173,7 @@ def test_no_proposal_is_listed_until_the_policy_is_confirmed(tmp_path: Path, mon
     page = texts(at)
     assert "Suggestion" in page and "op-0001" in page  # the suggestion and its reasons
     suggested = run.suggestion().suggested
-    assert widget(at, "radio", "policy_radio").value == comp.MODE_LABELS[suggested]
+    assert widget(at, "radio", "policy_radio").value == suggested  # the stored value
     assert not has(at, "button", "write")  # nothing to deliver before the proposals exist
 
 
@@ -243,9 +242,9 @@ def test_a_rejection_with_an_alternative_adds_a_proposal(tmp_path: Path, monkeyp
     key = next(k for k, name in ui_state.document_choices(project) if name == PROCED)
     pick(widget(at, "radio", "request_mode"), "Formulaire")
     at.run()
-    pick(widget(at, "selectbox", "form_kind"), "insert_step", comp.KIND_LABELS["insert_step"])
+    pick(widget(at, "selectbox", "form_kind"), "insert_step")
     at.run()
-    pick(widget(at, "selectbox", "form_doc"), key, PROCED)
+    pick(widget(at, "selectbox", "form_doc"), key)
     fill_form(at, {"form_target": "stp-0002", "form_insert_step_para": "Check.",
                    "form_insert_step_after_id": "stp-0002"})
     add_operation(at)
@@ -375,7 +374,7 @@ def marked_app(tmp_path: Path, monkeypatch) -> AppTest:
     at = open_project(tmp_path, monkeypatch, (MARKED, PROJECT, DEFAULT))
     project = at.session_state[PROJECT_KEY]
     key = next(k for k, name in ui_state.document_choices(project) if name == MARKED)
-    pick(widget(at, "selectbox", "doc_select"), key, MARKED)
+    pick(widget(at, "selectbox", "doc_select"), key)
     at.run()
     assert not at.exception
     return at
@@ -455,9 +454,9 @@ def test_a_forbidden_request_is_listed_in_the_blocked_panel(tmp_path: Path, monk
     key = next(k for k, name in ui_state.document_choices(project) if name == PROCED)
     pick(widget(at, "radio", "request_mode"), "Formulaire")
     at.run()
-    pick(widget(at, "selectbox", "form_kind"), "insert_step", comp.KIND_LABELS["insert_step"])
+    pick(widget(at, "selectbox", "form_kind"), "insert_step")
     at.run()
-    pick(widget(at, "selectbox", "form_doc"), key, PROCED)
+    pick(widget(at, "selectbox", "form_doc"), key)
     fill_form(at, {"form_target": "stp-0002", "form_insert_step_para": "Check the gauge.",
                    "form_insert_step_after_id": "stp-0002",
                    "form_insert_step_note": "Hot surface"})
