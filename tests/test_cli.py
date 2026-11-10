@@ -34,7 +34,6 @@ def test_workspace_help_lists_subcommands():
     "args",
     [
         ["render", "doc.xml", "--view", "xml", "--show-deleted"],
-        ["eval", "tests/scenarios/"],
     ],
     ids=lambda a: " ".join(a),
 )

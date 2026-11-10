@@ -1,0 +1,23 @@
+# The same change under the three policies on a document at issue 007-00 that carries three
+# marks from a previous cycle (added, modified, deleted step).
+description: none / in_work / new_issue; consolidation only for a new issue.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-520B-A_007-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  form:
+    kind: replace_text
+    target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520B-A_007-00_EN-US.XML, element_id: stp-0001}
+    params: {old: Unchanged, new: Reviewed}
+    reason: Wording
+decisions:
+  auto_accept: true
+max_seconds: 60
+variants:
+  - {id: none, version_policy: none}
+  - {id: in_work, version_policy: in_work}
+  - {id: new_issue, version_policy: new_issue}

@@ -1,0 +1,20 @@
+# The procedure already breaks the project rule (a note directly in a step) and holds an unknown
+# element. A change elsewhere must report these as pre-existing, introduce nothing, and deliver.
+description: A change on a document that already violates its BREX.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-521A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  form:
+    kind: replace_text
+    target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-521A-A_001-00_EN-US.XML, element_id: stp-0001}
+    params: {old: first thing, new: initial task}
+    reason: Wording
+version_policy: in_work
+decisions:
+  auto_accept: true
+max_seconds: 60

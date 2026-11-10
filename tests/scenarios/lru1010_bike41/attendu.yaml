@@ -1,0 +1,10 @@
+# Target (REQ-5, REQ-6, REQ-10, REQ-11): 2/2 changes (common repository declaration and parts
+# reference), 0 outside, the 2 traces held by the UPF files untouched, outputs valid against the
+# real 4.1 schemas. To be completed from the real files (see scenario.yaml).
+xsd: real
+unchanged:
+  - "UPF-*"
+changes: []
+checks:
+  introduced_errors: 0
+blocked: 0
