@@ -10,10 +10,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 024 Prototype logique (skill prototype) : fichier HTML unique pilotant le cycle de vie d'une demande (propositions, décisions, alternative, blocked_by_rule, delete, versioning), branche jetable prototype/024-review-logic
+- [~] 026 Correctif issu du prototype 024 : une proposition ne se décide qu'une fois (double rejet = id dupliqué), proposition rejetée puis éditée + alternative acceptée écrites deux fois, avertissement questions client ouvertes
 
 ## Fait
 
+- [x] 024 Prototype logique du cycle de revue (branche jetable prototype/024-review-logic, aa36955, non fusionnée) — a révélé 2 bugs produit → tâche 026
 - [x] 021 M3 Assistant de chat A10 (récap calculé par le code), panneau, docs/MODELS.md (a6e0765) — jalon M3 clos (tag m3)
 - [x] 020 M3 Texte libre FR/EN → opérations vérifiées par le code, piège à hallucination (ff2f39c) — FakeLLM uniquement
 - [x] 019 M3 Couche LLM locale : Ollama (localhost), FakeLLM + cassettes, NoLLM, garde réseau (dfbf9bb) — testée sans vrai modèle
