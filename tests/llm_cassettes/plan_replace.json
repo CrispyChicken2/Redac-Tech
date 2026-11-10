@@ -1,0 +1,6 @@
+{
+  "system": "You plan changes to technical documentation.",
+  "prompt": "Replace LRU1010 by LRU2020",
+  "schema": "Plan",
+  "responses": [{"kind": "replace_part", "old": "LRU1010", "new": "LRU2020"}]
+}
