@@ -1,0 +1,49 @@
+# Written from the input files. Accepted: the two structured LRU1010 changes (common repository,
+# parts catalogue). On hold: the sentence of the description (a mention in a text, not certain),
+# with the comment of the scenario. Blocked: the step with a note (the project BREX forbids a note
+# directly in a step), after 3 attempts. No error is introduced and none was there before.
+outputs:
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-0A3A-D_001-01_EN-US.XML
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-941A-D_001-01_EN-US.XML
+unchanged:
+  - "DMC-RTPROTO-*-040A-*"
+  - "DMC-RTPROTO-*-520A-*"
+  - "DMC-RTPROTO-*-022A-D_*"
+  - "DMC-RTDEFLT-*"
+changes:
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0A3A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU1010']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='LRU2020']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1010"']
+    after_contains: ['partNumberValue="LRU2020"']
+    after_absent: ["LRU1010"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-941A-D_001-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1010']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU2020']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1010"']
+    after_contains: ['partNumberValue="LRU2020"']
+    after_absent: ["LRU1010"]
+    marks: {changeMark: "1", changeType: modify}
+checks:
+  introduced_errors: 0
+blocked: 1
+blocked_details:
+  - operation: op-0002
+    attempts: 3
+    rule_xpath: "//proceduralStep/note"
+    question_contains: ["conflicts with business rule"]
+# The reply is made of exactly these lines: no error, one point on hold, nothing about the
+# blocked request (it was not asked for) and nothing about the changes.
+chat:
+  - message: "Fais-moi un récap des erreurs et des points en attente"
+    providers: [fake, none]
+    expect_lines:
+      - "Erreurs introduites (0):"
+      - "- aucune"
+      - "Erreurs préexistantes (0):"
+      - "- aucune"
+      - "En attente du client (1):"
+      - "- DMC-RTPROTO-AAA-D00-00-00-00AA-040A-A_001-00_EN-US.XML: Ask the customer about the wording"

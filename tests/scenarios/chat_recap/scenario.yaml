@@ -1,0 +1,32 @@
+# The lru1010 change plus a step that the project BREX forbids (a note inside a step): after the
+# decisions the run holds two changes accepted, one proposal put on hold for the customer, one
+# request blocked by a rule. The writer then asks the assistant for a recap of the errors and of the
+# pending points: the reply must hold exactly what the code computes, with a recorded model and
+# with no model at all.
+description: The assistant answers a recap from code queries on the run.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-040A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-0A3A-D_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-941A-D_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  form:
+    - kind: replace_part
+      old: LRU1010
+      new: LRU2020
+      reason: Part replaced by its successor
+    - kind: insert_step
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML, element_id: stp-0002}
+      params: {after_id: stp-0002, para: Check the gauge., note: Hot surface}
+      reason: Warn about the hot surface
+version_policy: in_work
+decisions:
+  auto_accept: true
+  pending_certainty: [probable]
+  pending_comment: Ask the customer about the wording
+max_seconds: 60

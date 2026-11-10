@@ -128,7 +128,8 @@ class LLMProvider(abc.ABC):
         return int(self.config.max_retries)
 
     def close(self) -> None:
-        """Release what the provider holds (a connection pool, ...). Nothing by default."""
+        """Release what the provider holds (a connection pool, ...). Default: nothing to close."""
+        return None
 
     def __enter__(self) -> LLMProvider:
         return self

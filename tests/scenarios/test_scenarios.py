@@ -29,6 +29,7 @@ def test_the_expected_scenarios_exist():
     expected = {"lru1010", "lru1010_bike41", "delete_mark", "versioning", "preexisting_brex"}
     expected |= {"batch20", "batch20_bike41", "ops_steps", "forbidden_request", "brex_swap"}
     expected |= {"free_text_fr", "free_text_en", "hallucination_trap"}
+    expected |= {"chat_recap"}
     assert expected <= names
     assert [d.name for d in scenarios.discover(HERE) if d.name.startswith("_")] == []
     versioning = HERE / "versioning"

@@ -717,3 +717,78 @@ def test_the_reason_for_update_comes_from_the_request_not_from_the_model(tmp_pat
         text = path.read_text(encoding="utf-8")
         assert "Free-text request" in text and "LRU1010 par LRU2020" in text
         assert "Remplacement de la pièce" not in text  # the model's own wording
+
+
+# --- operations added during the review ----------------------------------------------
+
+
+def reviewed_run(tmp_path: Path) -> orch.Run:
+    env = Env(tmp_path, LRU_FILES)
+    run = env.lru_run(version_policy="in_work")
+    run.run_to_review()
+    return run
+
+
+def extra_operation(old: str = "X2", new: str = "X3"):
+    from redactech.agents.a2_mapping import from_form
+
+    (operation,) = from_form({"kind": "replace_part", "old": old, "new": new})
+    return operation
+
+
+def test_added_operations_get_the_next_ids_and_their_own_proposals(tmp_path: Path):
+    run = reviewed_run(tmp_path)
+    before = {p.id: p.status for p in run.state.proposals}
+    run.decide(by_kind(run)[0][0].id, "accepted")
+    other = extra_operation("LRU1010", "LRU3030")
+    added, proposals = run.add_operations([extra_operation(), other])
+    assert [o.id for o in added] == ["op-0002", "op-0003"]
+    assert proposals and {p.operation_id for p in proposals} == {"op-0002", "op-0003"}
+    assert all(p.id.startswith(("prop-op-0002", "prop-op-0003")) for p in proposals)
+    assert {p.status for p in proposals} == {"proposed"}  # nothing is accepted by adding
+    zones = {z.id for z in run.state.zones}
+    assert len(zones) == len(run.state.zones) and all(p.zone_id in zones for p in proposals)
+    kept = {p.id: p.status for p in run.state.proposals if p.id in before}
+    assert kept[by_kind(run)[0][0].id] == "accepted"  # the earlier decision stays
+    assert run.state.stage == "proposals_ready"
+    assert any(e["event"] == "operations_added" for e in run.state.decisions_log)
+    assert orch.load(run.run_dir).state == run.state  # saved
+
+
+def test_the_new_proposals_are_checked_like_the_first_ones(tmp_path: Path):
+    run = reviewed_run(tmp_path)
+    _, proposals = run.add_operations([extra_operation("X2", "X3")])
+    assert all(p.checks is not None for p in proposals)
+    run.decide(proposals[0].id, "accepted")
+    run.set_policy(run.suggestion().model_copy(update={"mode": "in_work"}))
+    for proposal_id in run.pending_ids():
+        run.decide(proposal_id, "accepted")
+    assert run.write(today=TODAY).written  # and written through the same writer
+
+
+def test_an_operation_that_cannot_be_located_is_logged_and_left_out(tmp_path: Path):
+    from redactech.agents.a2_mapping import from_form
+
+    run = reviewed_run(tmp_path)
+    form = {"kind": "delete_step", "params": {"step_id": "stp-0001"}}  # no target document
+    (operation,) = from_form(form)
+    added, proposals = run.add_operations([operation])
+    assert added == [] and proposals == []
+    assert any(e["event"] == "locate_error" for e in run.state.decisions_log)
+    assert run.add_operations([]) == ([], [])
+
+
+def test_nothing_can_be_added_once_the_run_is_written(tmp_path: Path):
+    run = reviewed_run(tmp_path)
+    for proposal_id in run.pending_ids():
+        run.decide(proposal_id, "accepted")
+    run.write(today=TODAY)
+    with pytest.raises(orch.PipelineError):
+        run.add_operations([extra_operation()])
+
+
+def test_a_question_noted_by_the_chat_reaches_the_free_text_questions(tmp_path: Path):
+    run = reviewed_run(tmp_path)
+    run.note_question("Which successor?")
+    assert run.free_text_questions() == ["Which successor?"]
+    assert orch.load(run.run_dir).free_text_questions() == ["Which successor?"]

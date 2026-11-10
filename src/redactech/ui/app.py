@@ -15,7 +15,9 @@ from typing import Any
 import streamlit as st
 from lxml import etree
 
+from redactech.agents.a10_chat import answer
 from redactech.config import load_config
+from redactech.llm import get_provider
 from redactech.pipeline import orchestrator as orch
 from redactech.render.published import PUBLISHED_CSS, render_published
 from redactech.render.side_by_side import SIDE_CSS, render_before_after, render_side_by_side
@@ -29,6 +31,7 @@ from redactech.ui import state as ui_state
 PAGE_CSS = XML_CSS + PUBLISHED_CSS + SIDE_CSS + comp.BADGE_CSS
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 PROJECT, RUN, FORM_OPS, FLASH = "rt_project", "rt_run", "rt_form_ops", "rt_flash"
+CHAT = "rt_chat"
 
 
 # --- session ---------------------------------------------------------------------------------
@@ -56,6 +59,7 @@ def show_flash() -> None:
 
 def reset_run() -> None:
     st.session_state.pop(RUN, None)
+    st.session_state.pop(CHAT, None)
     st.session_state[FORM_OPS] = []
 
 
@@ -482,6 +486,39 @@ def downloads(run: orch.Run) -> None:
     )
 
 
+# --- assistant -------------------------------------------------------------------------------
+
+
+def send_message() -> None:
+    """Callback of "Envoyer": the reply is built by the assistant (code, or the checked A2)."""
+    message = str(st.session_state.get("chat_message", "")).strip()
+    if not message:
+        return
+    history = st.session_state.setdefault(CHAT, [])
+    with get_provider(load_config()) as provider:
+        reply = answer(message, current_run(), provider)
+    history.append(("Vous", message))
+    history.append(("Assistant", reply.text))
+    st.session_state["chat_message"] = ""
+
+
+def show_all_proposals() -> None:
+    """Callback of "Voir les propositions": list the proposals of every document."""
+    st.session_state["only_this_doc"] = False
+
+
+def assistant_panel() -> None:
+    """The right-hand panel: questions about the run, and requests in plain language."""
+    st.subheader("Assistant")
+    for who, text in st.session_state.get(CHAT, []):
+        st.markdown(f"**{who}**\n\n{text}")
+    st.text_input("Votre message", key="chat_message")
+    typed = str(st.session_state.get("chat_message", "")).strip()
+    st.button("Envoyer", key="chat_send", on_click=send_message, disabled=not typed)
+    st.button("Voir les propositions", key="chat_see_proposals", on_click=show_all_proposals)
+    st.caption("Onglet « Document et propositions » : les propositions à décider.")
+
+
 # --- page ------------------------------------------------------------------------------------
 
 
@@ -493,13 +530,17 @@ def main() -> None:
     current = project()
     if current is None:
         return
-    request, document, delivery = st.tabs(["Demande", "Document et propositions", "Livraison"])
-    with request:
-        request_tab(current)
-    with document:
-        document_tab(current)
-    with delivery:
-        delivery_tab(current)
+    main_area, assistant = st.columns([3, 1])
+    with main_area:
+        request, document, delivery = st.tabs(["Demande", "Document et propositions", "Livraison"])
+        with request:
+            request_tab(current)
+        with document:
+            document_tab(current)
+        with delivery:
+            delivery_tab(current)
+    with assistant:
+        assistant_panel()
 
 
 if __name__ == "__main__":
