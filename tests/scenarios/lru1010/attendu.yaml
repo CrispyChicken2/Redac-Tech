@@ -1,0 +1,39 @@
+# Written from the input files: LRU1010 appears in the common repository (partSpec/partIdent),
+# the parts catalogue (partRef) and one sentence of the description; the UPF only mentions it
+# as read-only history.
+outputs:
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-040A-A_001-01_EN-US.XML
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-0A3A-D_001-01_EN-US.XML
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-941A-D_001-01_EN-US.XML
+unchanged:
+  - "UPF-*"
+  - "DMC-RTDEFLT-*"
+  - "DMC-RTPROTO-*-022A-D_*"
+changes:
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-0A3A-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[partIdent/@partNumberValue='LRU1010']"
+    scope_xpath: "//partSpec[partIdent/@partNumberValue='LRU2020']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1010"']
+    after_contains: ['partNumberValue="LRU2020"', "Line replaceable unit"]
+    after_absent: ["LRU1010"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-941A-D_001-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1010']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU2020']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1010"']
+    after_contains: ['partNumberValue="LRU2020"', "Line replaceable unit"]
+    after_absent: ["LRU1010"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-040A-A_001-00_EN-US.XML
+    before_xpath: "//para[contains(., 'LRU1010')]"
+    scope_xpath: "//para[contains(., 'LRU2020')]"
+    change_type: modify
+    before_contains: ["The LRU1010 housing is common to product A and product B."]
+    after_contains: ["The LRU2020 housing is common to product A and product B."]
+    after_absent: ["LRU1010"]
+    marks: {changeMark: "1", changeType: modify}
+checks:
+  introduced_errors: 0
+blocked: 0

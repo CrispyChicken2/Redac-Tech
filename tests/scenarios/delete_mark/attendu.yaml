@@ -1,0 +1,22 @@
+# The procedure has five steps (stp-0001 .. stp-0005); stp-0003 is deleted: it must stay, with
+# changeMark="1" and changeType="delete", and nothing else changes.
+outputs:
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-01_EN-US.XML
+unchanged:
+  - "DMC-RTDEFLT-*"
+  - "DMC-RTPROTO-*-022A-D_*"
+changes:
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML
+    before_xpath: "//proceduralStep[@id='stp-0003']"
+    scope_xpath: "//proceduralStep[@id='stp-0003']"
+    change_type: delete
+    before_contains: ["Tighten the fasteners by hand."]
+    after_contains: ["Tighten the fasteners by hand."]
+    marks: {changeMark: "1", changeType: delete}
+output_counts:
+  DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML:
+    "//proceduralStep": 5
+    "//proceduralStep[@id='stp-0003'][@changeType='delete']": 1
+checks:
+  introduced_errors: 0
+blocked: 0

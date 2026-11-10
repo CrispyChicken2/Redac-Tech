@@ -1,0 +1,18 @@
+# Same replacement on the real Bike 4.1 data (marker data41; skipped without the data).
+# LRU1010 is declared once in a common repository and referenced once in a parts catalogue;
+# LRU2020 exists nowhere in the data set. Two UPF traces mention LRU1010 and must stay untouched.
+description: LRU replacement on Bike 4.1 - common repository declaration and parts reference.
+markers: [data41]
+source:
+  kind: bike41
+  path: data/s1000d-4.1/bike
+  brex_dirs: [data/s1000d-4.1/brex]
+  schemas_dir: data/s1000d-4.1/schemas
+  issue: "4.1"
+request:
+  mapping:
+    - {old: LRU1010, new: LRU2020, reason: Part replaced by its successor}
+version_policy: in_work
+decisions:
+  auto_accept: true
+max_seconds: 120

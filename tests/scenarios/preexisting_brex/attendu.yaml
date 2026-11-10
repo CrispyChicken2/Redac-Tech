@@ -1,0 +1,20 @@
+# Input: stp-0001 holds a forbidden note and the text "Do the first thing."; the main procedure
+# holds an element that is not in the schema. Only the wording changes.
+outputs:
+  - DMC-RTPROTO-AAA-D00-00-00-00AA-521A-A_001-01_EN-US.XML
+unchanged:
+  - "DMC-RTDEFLT-*"
+  - "DMC-RTPROTO-*-022A-D_*"
+changes:
+  - doc: DMC-RTPROTO-AAA-D00-00-00-00AA-521A-A_001-00_EN-US.XML
+    before_xpath: "//proceduralStep[@id='stp-0001']"
+    scope_xpath: "//proceduralStep[@id='stp-0001']"
+    change_type: modify
+    before_contains: ["Do the first thing.", "This note breaks the project rule."]
+    after_contains: ["Do the initial task.", "This note breaks the project rule."]
+    after_absent: ["first thing"]
+    marks: {changeMark: "1", changeType: modify}
+checks:
+  introduced_errors: 0
+  pre_existing_min: 1
+blocked: 0

@@ -1,7 +1,7 @@
 """Command line interface (SPEC section 13).
 
 Implemented: ``workspace``, ``index``, ``baseline``, ``request``, ``review``, ``write`` and
-``check``. ``render`` and ``eval`` are still stubs (``not implemented yet``, exit code 2).
+``check`` and ``eval``. ``render`` is still a stub (``not implemented yet``, exit code 2).
 """
 
 from __future__ import annotations
@@ -366,9 +366,41 @@ def render(
 
 
 @app.command("eval")
-def eval_(scenarios: Annotated[Path, typer.Argument(help="tests/scenarios/")]) -> None:
-    """Evaluate the scenarios."""
-    _stub()
+def eval_(
+    scenarios: Annotated[Path, typer.Argument(help="tests/scenarios/")],
+    out: Annotated[Path | None, typer.Option("--out", help="Folder of the report.")] = None,
+) -> None:
+    """Run every available scenario and write runs/eval_<date>.md; exit 1 if one fails."""
+    import datetime
+    import tempfile
+
+    from redactech.pipeline import scenarios as sc
+
+    if not scenarios.is_dir():
+        _fail(f"no scenarios folder {scenarios}")
+    root = scenarios.resolve().parents[1]
+    results = []
+    for directory in sc.discover(scenarios):
+        for variant in sc.variants_of(directory):
+            with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+                result = sc.run_scenario(directory, Path(tmp) / "work", variant, repo_root=root)
+            results.append(result)
+            if result.skipped:
+                typer.echo(f"SKIP {result.label}: {result.skipped}")
+            else:
+                typer.echo(f"{'PASS' if result.passed else 'FAIL'} {result.label}")
+                for message in result.failures:
+                    typer.echo(f"  - {message}")
+    folder = out or Path("runs")
+    folder.mkdir(parents=True, exist_ok=True)
+    today = datetime.date.today()
+    report = folder / f"eval_{today.isoformat()}.md"
+    report.write_text(sc.report_markdown(results, today), encoding="utf-8")
+    ran = [r for r in results if not r.skipped]
+    failed = [r for r in ran if not r.passed]
+    typer.echo(f"{len(ran)} scenario(s) run, {len(failed)} failed, report: {report}")
+    if failed:
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,19 @@
+# Deleting a step keeps it in the document, marked for deletion; only a new issue removes it.
+description: delete_step marks the step instead of removing it.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  form:
+    kind: delete_step
+    target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML, element_id: stp-0003}
+    params: {step_id: stp-0003}
+    reason: Step no longer applicable
+version_policy: in_work
+decisions:
+  auto_accept: true
+max_seconds: 60

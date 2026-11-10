@@ -1,0 +1,32 @@
+# Written from the real Bike 4.1 files (REQ-5, REQ-6, REQ-10, REQ-11): 2/2 changes, 0 outside,
+# the UPF traces untouched, outputs valid against the real 4.1 schemas.
+# Input: the common repository (issue 001-00) declares partSpec id="part-0002" with
+# partIdent partNumberValue="LRU1010" manufacturerCodeValue="KZ777"; the parts catalogue
+# (issue 007-00) has one catalogSeqNumber whose partRef is LRU1010; the UPF holds two traces
+# (a reasonForUpdate "The part LRU1010 deleted from the repository." and a deleteObject/partIdent).
+xsd: real
+outputs:
+  - DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-01_EN-US.XML
+  - DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-01_EN-US.XML
+unchanged:
+  - "UPF-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML"
+changes:
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-00AA-00GA-D_001-00_EN-US.XML
+    before_xpath: "//partSpec[@id='part-0002']"
+    scope_xpath: "//partSpec[@id='part-0002']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1010"']
+    after_contains: ['partNumberValue="LRU2020"']
+    after_absent: ["LRU1010"]
+    marks: {changeMark: "1", changeType: modify}
+  - doc: DMC-S1000DLIGHTING-AAA-D00-00-00-01AA-941A-D_007-00_EN-US.XML
+    before_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU1010']"
+    scope_xpath: "//catalogSeqNumber[itemSeqNumber/partRef/@partNumberValue='LRU2020']"
+    change_type: modify
+    before_contains: ['partNumberValue="LRU1010"']
+    after_contains: ['partNumberValue="LRU2020"']
+    after_absent: ["LRU1010"]
+    marks: {changeMark: "1", changeType: modify}
+checks:
+  introduced_errors: 0
+blocked: 0
