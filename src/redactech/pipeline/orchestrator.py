@@ -17,8 +17,10 @@ the hidden CLI option only. This module never imports streamlit.
 
 Alternatives found after a rejection (or by the BREX retry loop) have DERIVED operations
 (own id, merged parameters); they are appended to ``state.operations`` so that the checker and
-the writer apply the variant. ``decisions_log`` also receives events (``skipped_readonly``,
-``alternative``, ``needs_manual_edit``, ``written`` ...), each with a timestamp.
+the writer apply the variant. ``write`` also delivers ``report.json``, ``report.html``,
+``questions.csv`` and ``decisions.jsonl`` (package ``redactech.report``) into the run folder.
+``decisions_log`` also receives events (``skipped_readonly``, ``alternative``,
+``needs_manual_edit``, ``written`` ...), each with a timestamp.
 """
 
 from __future__ import annotations
@@ -35,6 +37,8 @@ from redactech.agents import a1_indexer, a2_mapping, a4_locator, a5_preparer, a7
 from redactech.agents.a11_writer import WriteRefused, WriteResult, write
 from redactech.config import load_config
 from redactech.models import CheckResult, Operation, Proposal, RunState, VersionPolicy, Zone
+from redactech.report.build import build_report
+from redactech.report.export import export_decisions, export_questions, write_report
 from redactech.s1000d import versioning
 from redactech.s1000d.index import CorpusIndex, build_index, ref_key
 from redactech.sources import workspace as wsmod
@@ -85,6 +89,7 @@ class Run:
         self.request = request
         self._clock = clock or datetime.datetime.now
         self._index: CorpusIndex | None = None
+        self.delivery_files: list[Path] = []  # set by ``write``
         self._trace = load_config().trace
 
     # --- creation, persistence --------------------------------------------------------------------
@@ -474,7 +479,16 @@ class Run:
             skipped=result.skipped,
         )
         self._save()
+        self.delivery_files = self._deliver(result)
         return result
+
+    def _deliver(self, result: WriteResult) -> list[Path]:
+        """Write the delivery files next to the state: report, questions, decisions."""
+        report = build_report(self.state, self.index, result)
+        json_path, html_path = write_report(self.run_dir, report)
+        questions = export_questions(self.state, self.run_dir / "questions.csv")
+        decisions = export_decisions(self.state, self.run_dir / "decisions.jsonl")
+        return [json_path, html_path, questions, decisions]
 
 
 def start(
