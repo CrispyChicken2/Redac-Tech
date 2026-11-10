@@ -9,10 +9,10 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 021 M3 (stretch) A10 chat (ops + récap calculé par le code) + panneau assistant + chat_recap + docs/MODELS.md
 
 ## Fait
 
+- [x] 021 M3 Assistant de chat A10 (récap calculé par le code), panneau, docs/MODELS.md (a6e0765) — jalon M3 clos (tag m3)
 - [x] 020 M3 Texte libre FR/EN → opérations vérifiées par le code, piège à hallucination (ff2f39c) — FakeLLM uniquement
 - [x] 019 M3 Couche LLM locale : Ollama (localhost), FakeLLM + cassettes, NoLLM, garde réseau (dfbf9bb) — testée sans vrai modèle
 - [x] 018 M2 README (3 commandes), DEMO, ROADMAP_NEXT (2bcda92 + correctif 1478166) — jalon M2 clos (tag m2), prototype terminé
