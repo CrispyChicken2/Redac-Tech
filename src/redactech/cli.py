@@ -243,6 +243,8 @@ def request(
         except orchestrator.PipelineError as exc:
             _fail(f"cannot write: {exc}")
         typer.echo(f"written: {', '.join(p.name for p in result.written) or 'nothing'}")
+        for path in run.delivery_files:
+            typer.echo(f"delivery {path}")
     elif left:
         typer.echo(f"{len(left)} proposal(s) to decide: redactech review {run.run_dir}")
 
@@ -316,6 +318,8 @@ def write(
     for entry in result.skipped:
         typer.echo(f"skipped {entry['proposal']}: {entry['reason']}")
     typer.echo(f"{len(result.written)} file(s) written to {run.run_dir / 'out'}")
+    for path in run.delivery_files:
+        typer.echo(f"delivery {path}")
 
 
 @app.command()

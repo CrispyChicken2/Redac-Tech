@@ -252,6 +252,9 @@ def test_end_to_end_with_auto_accept_and_check(project: dict):
     assert run("review", folder, "--accept", free).exit_code == 0
     written = run("write", folder)  # the policy was given to `request`
     assert written.exit_code == 0 and "3 file(s) written" in written.output
+    for name in ("report.json", "report.html", "questions.csv", "decisions.jsonl"):
+        assert f"delivery {the_run_dir(project) / name}" in written.output
+        assert (the_run_dir(project) / name).is_file()
     checked = run("check", str(the_run_dir(project) / "out"))
     assert checked.exit_code == 0, checked.output
     assert "checked 3 file(s), 0 introduced error(s)" in checked.output

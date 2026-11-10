@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import datetime
+import json
 import re
 import shutil
 from pathlib import Path
@@ -445,3 +447,58 @@ def test_the_free_text_change_is_written_only_if_accepted(tmp_path: Path):
 def test_the_orchestrator_does_not_import_streamlit():
     text = Path(orch.__file__).read_text(encoding="utf-8")
     assert "import streamlit" not in text and "from streamlit" not in text
+
+
+# --- delivery files ------------------------------------------------------------------------
+
+
+def test_write_delivers_the_report_the_questions_and_the_decisions(tmp_path: Path):
+    env = Env(tmp_path, LRU_FILES)
+    run = env.lru_run(version_policy="in_work", auto_accept=True)
+    run.run_to_review()
+    run.auto_accept()
+    run.decide(by_kind(run)[1][0].id, "accepted", "the wording is fine")
+    assert run.delivery_files == []  # nothing before the write
+    run.write(today=TODAY)
+    assert [p.name for p in run.delivery_files] == [
+        "report.json", "report.html", "questions.csv", "decisions.jsonl"]
+    assert all(p.parent == run.run_dir and p.is_file() for p in run.delivery_files)
+    report = json.loads((run.run_dir / "report.json").read_text(encoding="utf-8"))
+    assert report["run_id"] == run.state.run_id
+    assert report["counts"]["accepted"] == 3 and report["counts"]["blocked"] == 0
+    assert len(report["documents"]) == 3
+    assert all(d["new_name"].endswith("_001-01_EN-US.XML") for d in report["documents"])
+    assert report["version_policy"]["mode"] == "in_work"
+    assert "<!DOCTYPE html>" in (run.run_dir / "report.html").read_text(encoding="utf-8")
+    questions = (run.run_dir / "questions.csv").read_bytes()
+    assert questions.decode("utf-8-sig").splitlines() == [
+        "id;document;element;question/comment;status;rule"]
+    lines = (run.run_dir / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 3 and json.loads(lines[-1])["comment"] == "the wording is fine"
+
+
+def test_a_refused_write_delivers_nothing(tmp_path: Path):
+    env = Env(tmp_path, LRU_FILES)
+    run = env.lru_run(version_policy="in_work")
+    run.run_to_review()
+    with pytest.raises(orch.PipelineError):
+        run.write()
+    assert run.delivery_files == []
+    assert not [f for f in run.run_dir.iterdir() if f.name.startswith(("report", "questions"))]
+
+
+def test_the_blocked_request_reaches_the_report_and_the_questions(tmp_path: Path):
+    env = Env(tmp_path, (PROCED, PROJECT, DEFAULT))
+    run = env.insert_run({"after_id": "stp-0002", "para": "Check.", "note": "Hot surface"})
+    run.run_to_review()
+    run.set_policy(run.suggestion())
+    run.write(today=TODAY)
+    report = json.loads((run.run_dir / "report.json").read_text(encoding="utf-8"))
+    (blocked,) = report["blocked"]
+    assert blocked["attempts"] == 3 and blocked["rule"]["xpath"] == "//proceduralStep/note"
+    assert "conflicts with business rule" in blocked["question"]
+    assert report["counts"]["blocked"] == 1 and report["documents"] == []
+    with (run.run_dir / "questions.csv").open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.reader(handle, delimiter=";"))
+    assert rows[1][4] == "blocked_by_rule" and "business rule" in rows[1][3]
+    assert rows[1][5].startswith(blocked["rule"]["id"])
