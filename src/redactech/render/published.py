@@ -61,8 +61,11 @@ def _stylesheet() -> etree.XSLT:
 
 def render_published(doc: Any, show_deleted: bool = True) -> str:
     """HTML fragment of the published view of a document, tree or element."""
-    root = copy.deepcopy(xio.root_of(doc))
-    source = etree.ElementTree(root)
+    target = xio.tree_of(doc)
+    if hasattr(target, "getroot"):  # a whole tree: copy it all, DOCTYPE and internal subset too
+        source = copy.deepcopy(target)
+    else:
+        source = etree.ElementTree(copy.deepcopy(target))
     flag = etree.XSLT.strparam("1" if show_deleted else "0")
     result = _stylesheet()(source, **{"show-deleted": flag})
     return str(result)

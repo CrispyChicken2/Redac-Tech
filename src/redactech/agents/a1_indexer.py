@@ -33,12 +33,19 @@ def _problem(doc: SourceDoc, details: str) -> CheckResult:
 
 
 def _brex_chain(
-    idx: index.CorpusIndex, doc: SourceDoc, xdoc: object, cache: dict[str, object]
+    idx: index.CorpusIndex,
+    doc: SourceDoc,
+    xdoc: object,
+    cache: dict[str, object],
+    resolve: bool = False,
 ) -> tuple[list[object], list[CheckResult]]:
-    """BREX documents of ``doc`` from the chain stored by ``build_index`` (loaded once each)."""
+    """BREX documents of ``doc`` from the chain stored by ``build_index`` (loaded once each).
+
+    With ``resolve`` the chain is resolved again from the BREX index (after a BREX swap).
+    """
     key = index.ref_key(doc.ref)
     entries = [idx.docs.get(index.ref_key(r)) for r in doc.brex_chain]
-    if any(e is None for e in entries):  # a BREX that was not scanned: resolve it the long way
+    if resolve or any(e is None for e in entries):  # not scanned or swapped: the long way
         notes: list[CheckResult] = []
         index_for_source = idx.brex_index.get(doc.ref.source_id, {})
         return brex.resolve_chain(xdoc, index_for_source, notes), notes
@@ -52,7 +59,11 @@ def _brex_chain(
 
 
 def _check_one(
-    ws: wsmod.Workspace, idx: index.CorpusIndex, doc: SourceDoc, cache: dict[str, object]
+    ws: wsmod.Workspace,
+    idx: index.CorpusIndex,
+    doc: SourceDoc,
+    cache: dict[str, object],
+    resolve: bool = False,
 ) -> list[CheckResult]:
     source = ws.source(doc.ref.source_id)
     key = index.ref_key(doc.ref)
@@ -74,15 +85,16 @@ def _check_one(
     results += validate.check_ids(xdoc, doc.ref)
     results += validate.check_links(xdoc, ref=doc.ref)
     results += validate.check_icn(xdoc, source.path, doc.ref)
-    chain, notes = _brex_chain(idx, doc, xdoc, cache)
+    chain, notes = _brex_chain(idx, doc, xdoc, cache, resolve)
     results += [n.model_copy(update={"ref": doc.ref}) for n in notes]
     results += brex.check_brex(xdoc, chain, doc.ref)
     return results
 
 
-def run(ws: wsmod.Workspace) -> tuple[index.CorpusIndex, list[CheckResult]]:
-    """Index the workspace and compute the baseline. One bad file never stops the run."""
-    idx = index.build_index(ws, keep_docs=True)
+def _baseline(
+    ws: wsmod.Workspace, idx: index.CorpusIndex, resolve: bool = False
+) -> list[CheckResult]:
+    """The baseline of an index: every data module checked, one bad file never stops it."""
     cache: dict[str, object] = {}
     baseline: list[CheckResult] = []
     for key in sorted(idx.docs):
@@ -90,11 +102,37 @@ def run(ws: wsmod.Workspace) -> tuple[index.CorpusIndex, list[CheckResult]]:
         if doc.role != "dm":
             continue
         try:
-            baseline += _mark(_check_one(ws, idx, doc, cache))
+            baseline += _mark(_check_one(ws, idx, doc, cache, resolve))
         except Exception as exc:  # parse failure or unexpected error: report it, go on
             baseline.append(_problem(doc, f"{Path(doc.path).name} could not be checked: {exc}"))
+    return baseline
+
+
+def run(ws: wsmod.Workspace) -> tuple[index.CorpusIndex, list[CheckResult]]:
+    """Index the workspace and compute the baseline. One bad file never stops the run."""
+    idx = index.build_index(ws, keep_docs=True)
+    baseline = _baseline(ws, idx)
     idx.loaded.clear()  # the parsed documents are only needed during the run
     return idx, baseline
+
+
+def apply_swap(idx: index.CorpusIndex, new_brex_path: Path | str) -> None:
+    """Replace (or add) the BREX of the same DMC in the BREX index of every source.
+
+    The original file is not touched. Raises ``ValueError`` if the name is not a BREX.
+    """
+    for source_id, mapping in list(idx.brex_index.items()):
+        idx.brex_index[source_id] = brex.swap_brex(mapping, new_brex_path)
+    if not idx.brex_index:
+        raise ValueError("no source to swap the BREX in")
+
+
+def swap_brex(
+    ws: wsmod.Workspace, idx: index.CorpusIndex, new_brex_path: Path | str
+) -> list[CheckResult]:
+    """Swap a BREX in the index, resolve every chain again, and return the new baseline."""
+    apply_swap(idx, new_brex_path)
+    return _baseline(ws, idx, resolve=True)
 
 
 def problems(results: list[CheckResult]) -> list[CheckResult]:
