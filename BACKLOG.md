@@ -6,7 +6,6 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
-- [ ] 015 M2 Rendu : vue XML, vue Publiée (IETP) XSLT 1.0, côte à côte, masquer les suppressions
 - [ ] 016 M2 Interface Streamlit mode Document (§12)
 - [ ] 017 M2 Tests UI (AppTest) : modale versioning, accepter/rejeter/en attente, alternative, accept-all limité, vues
 - [ ] 018 M2 README (installation ≤ 3 commandes), docs/DEMO.md parcours UI, docs/ROADMAP_NEXT.md
@@ -16,10 +15,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 014 M2 RunState persisté, journal des décisions, rapport HTML/JSON, export questions CSV/XLSX
+- [~] 015 M2 Rendu : vue XML, vue Publiée (IETP) XSLT 1.0, côte à côte, masquer les suppressions
 
 ## Fait
 
+- [x] 014 M2 Rapport HTML/JSON, export questions CSV/XLSX, journal des décisions (69cb752)
 - [x] 023 M1 Figures signalées pour les opérations sur étapes, fixture ICN, cache BREX (0cbb303) — jalon M1 clos (tag m1)
 - [x] 013 M1 Scénarios batch20, ops_steps, forbidden_request, brex_swap (17fe7f8)
 - [x] 012 M1 Scénarios lru1010 (fixtures + Bike 4.1), delete_mark, versioning, preexisting_brex + redactech eval (1075732)
