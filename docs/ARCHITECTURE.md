@@ -15,20 +15,18 @@ Racine : `src/redactech/`. Chaque sous-paquet porte un rôle défini par la sect
 | `__init__.py` | version du paquet (`__version__`) | implémenté |
 | `models.py` | contrats de données partagés (voir ci-dessous) | implémenté |
 | `config.py` | chargement de `config.toml`, valeurs par défaut si absent | implémenté |
-| `cli.py` | interface en ligne de commande (Typer), point d'entrée `redactech` | squelette |
-| `s1000d/` | traitement S1000D : lecture XML sûre, identification, index, opérations, traçabilité, validation, diff | squelette |
-| `s1000d/ops/` | une fonction pure par type d'opération | squelette |
-| `sources/` | description du workspace et classification des documents | squelette |
+| `cli.py` | interface en ligne de commande (Typer), point d'entrée `redactech` : `workspace`, `index`, `baseline`, `request`, `review`, `write`, `check` implémentées ; `render` et `eval` restent des squelettes | implémenté en partie |
+| `s1000d/` | lecture et identification (`io`, `ident`), contrôles (`validate`, `brex`, `diff`), index (`index`), traçabilité (`trace`), versioning (`versioning`), texte (`text`) | implémenté |
+| `s1000d/ops/` | 8 opérations, une fonction pure par type | implémenté |
+| `sources/` | workspace (`workspace`) et classification des documents (`classify`) | implémenté |
+| `agents/` | A1 indexation et baseline, A2 correspondances, A4 localisation, A5 propositions, A7 vérification, A11 écriture | implémenté (A10 assistant de discussion non commencé) |
+| `pipeline/` | orchestrateur A0 : machine à états, points d'arrêt, reprise, journal des décisions | implémenté |
 | `render/` | rendu : vue XML, vue publiée (XSLT), vue côte à côte | squelette |
-| `agents/` | agents de proposition et de critique | squelette |
-| `pipeline/` | enchaînement des étapes d'une demande | squelette |
 | `report/` | rapports de run | squelette |
 | `ui/` | interface Streamlit | squelette |
 | `llm/` | accès au LLM local (Ollama) ; tous les appels LLM passent ici (M3) | squelette |
 
-Implémentés depuis les tâches 005 et 006 : `s1000d/io.py`, `s1000d/ident.py` (voir « Lecture et identification S1000D »), `sources/classify.py`, `s1000d/validate.py`, `s1000d/brex.py` et `s1000d/diff.py` (voir « Contrôles »).
-
-Implémentés depuis les tâches 007 à 009 : `s1000d/index.py`, `s1000d/trace.py`, `s1000d/versioning.py` et `agents/a11_writer.py` (voir « Workspace, index et baseline » et « Traçabilité, versioning et écriture »). La distinction base de référence / introduit et `blocked_by_rule` restent à câbler : le paquet `pipeline/` est encore vide.
+Le détail de chaque module est donné dans les sections suivantes : « Lecture et identification S1000D », « Contrôles », « Workspace, index et baseline », « Demande, localisation et propositions », « Traçabilité, versioning et écriture », « Vérification des propositions et règles bloquantes », et « Orchestrateur ».
 
 ## Lecture et identification S1000D
 
@@ -397,6 +395,70 @@ Une zone que l'opération ne sait pas appliquer est rapportée dans `errors`, sa
 **Question pré-remplie** (`customer_question`) : le texte est en anglais dans le code : « The request '…' conflicts with business rule <id>: <message>. How should we proceed? ».
 
 L'écrivain ne traite jamais un statut `blocked_by_rule` : il le saute (voir « Écriture »).
+
+## Orchestrateur
+
+Module : `pipeline/orchestrator.py` (agent A0). Il enchaîne les agents A1, A2, A4, A5, A7 et A11 sous forme de machine à états explicite, avec des points d'arrêt où le rédacteur décide.
+
+### Étapes et points d'arrêt
+
+| Étape (`RunState.stage`) | Quand | Point d'arrêt |
+|---|---|---|
+| `indexed` | index et baseline faits (A1) | non |
+| `ops_proposed` | opérations lues (A2) | **oui** : `validate_ops` |
+| `ops_validated` | opérations confirmées | non |
+| `zones_proposed` | zones calculées (A4) | non |
+| `zones_validated` | zones confirmées | non |
+| `proposals_ready` | propositions calculées et vérifiées (A5, A7) | **oui** : décisions |
+| `reviewed` | plus aucune proposition `proposed` hors illustrations | décisions terminées |
+| `written` | propositions écrites (A11) | non |
+
+`run_to_review()` enchaîne `validate_ops` et `validate_zones` : la commande `request` s'arrête donc à `proposals_ready`.
+
+Chaque étape écrit `<runs>/<id>/state.json` (JSON UTF-8, modèle `RunState`). La demande est recopiée dans `request.json`. `Run.load(dossier)` reprend exactement là où le run s'était arrêté.
+
+### Démarrage (`Run.start`)
+
+1. La demande est lue **avant** la création du dossier : une table ou un formulaire invalide ne laisse aucun run à moitié créé.
+2. Le dossier `runs/<AAAAMMJJ-HHMMSS>-<jeton>/` est créé (le jeton est aléatoire, 4 caractères hexadécimaux).
+3. A1 calcule l'index et la baseline ; les opérations viennent de A2.
+4. Si une politique est demandée, la suggestion est calculée et la politique choisie est enregistrée.
+
+L'index n'est pas enregistré : `Run.index` le reconstruit à partir du fichier workspace noté dans le run.
+
+### Décisions (`decide`, `reject`, `accept_all`)
+
+Statuts possibles : `accepted`, `edited`, `rejected`, `pending_client` (`DECISIONS`).
+
+- Une proposition `blocked_by_rule` ne peut recevoir que `pending_client` : c'est une question au client.
+- `accepted` est refusé si la proposition porte une erreur **introduite** (`introduced`, gravité `error`).
+- `edited` exige un XML non vide. Ce XML est revérifié par A7 ; toute erreur introduite le refuse. Les contrôles de la proposition sont remplacés par ceux du XML du rédacteur.
+- **Rejet** (`reject`) : la proposition est rejetée, puis A5 calcule une alternative, dans la limite de `trace.max_alternatives`. Si elle existe, elle est vérifiée par A7, ajoutée aux propositions, et son opération dérivée est ajoutée aux opérations. Sinon, l'événement `needs_manual_edit` est journalisé.
+- **Accepter en lot** (`accept_all`) : n'accepte que les propositions `proposed`, de zone `content` et `certain`, sans aucun problème introduit (erreur ou avertissement). Les autres restent `proposed`.
+- **Accepter automatiquement** (`auto_accept`) : seulement si la demande a été créée avec `auto_accept`. Cette option est cachée dans la CLI et réservée aux tests.
+
+Chaque décision est journalisée, avec son auteur (`actor`).
+
+### Politique et écriture (`write`)
+
+- L'étape doit être `proposals_ready` ou `reviewed`.
+- La politique est celle passée à `write`, à défaut celle de la demande. Sans politique : `PipelineError`.
+- Les propositions d'illustration encore `proposed` sont exclues (elles ne changent rien). Toute autre proposition `proposed` bloque l'écriture (refus de A11).
+- La politique passée à `write` n'est enregistrée que si l'écriture réussit.
+- L'étape passe à `written`.
+
+### Dérivées et propositions
+
+Une alternative a un identifiant de la forme `<identifiant de base>-a<n>-…`, et son opération dérivée est reconnue de la même façon (`is_derived`). `base_operations` ne renvoie que les opérations de la demande, sans les dérivées.
+
+### Journal (`decisions_log`)
+
+Chaque événement porte un horodatage (`time`, au format ISO à la seconde, depuis l'horloge du run). Événements : `ops_proposed`, `operations_dropped`, `ops_validated`, `zones_proposed`, `locate_error`, `skipped_readonly`, `prepare_error`, `proposals_ready`, `decision`, `alternative`, `needs_manual_edit`, `policy`, `written`.
+
+### Remarques
+
+- La configuration `[trace]` est lue au moment où le run est ouvert (`config.toml` du dossier courant).
+- Le module n'importe jamais Streamlit : l'interface pourra s'appuyer sur le même orchestrateur.
 
 ## Configuration (`config.toml`)
 

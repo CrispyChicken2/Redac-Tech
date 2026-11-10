@@ -1,5 +1,28 @@
 # Journal des modifications
 
+## 011 — Orchestrateur et CLI
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/pipeline/orchestrator.py` (agent A0) : machine à états (`indexed` → `ops_proposed` → `ops_validated` → `zones_proposed` → `zones_validated` → `proposals_ready` → `reviewed` → `written`), points d'arrêt sur les opérations et les propositions, état sauvegardé dans `runs/<id>/state.json`, reprise avec `Run.load`, journal des décisions horodaté.
+- Garde-fous : aucune écriture sans décision ni politique de versioning ; `accepted` refusé si une erreur est introduite ; `edited` revérifié ; `blocked_by_rule` ne reçoit que `pending_client` ; l'acceptation en lot ne prend que les propositions certaines et sans problème.
+- CLI : `request`, `review` (`--accept`, `--reject`, `--reason`, `--pending`, `--comment`, `--accept-all`), `write` (`--version-policy`), `check` (code de sortie `1` si une erreur est introduite). `--auto-accept` est une option cachée, réservée aux tests.
+- `docs/DEMO.md` : démonstration pas à pas sur les fixtures (scénario `LRU1010` → `LRU2020`), à lancer une fois le paquet installé.
+- `docs/ARCHITECTURE.md` : section « Orchestrateur ». Tableau des modules mis à jour pour l'état réel.
+
+### Tests écrits, non exécutés
+
+Les tests de l'orchestrateur et de la CLI ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Les commandes de `docs/DEMO.md` n'ont pas été lancées non plus. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- `render` et `eval` restent des squelettes (« not implemented yet », code `2`).
+- L'assistant de discussion (A10) n'est pas commencé.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+- Le paquet `pipeline/` n'est plus vide : la mention « pipeline vide » des entrées 006 à 010 est antérieure à cette tâche.
+
 ## 010 — Checker et blocked_by_rule
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
