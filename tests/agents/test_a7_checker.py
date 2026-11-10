@@ -19,6 +19,7 @@ from redactech.models import (
     Target,
     VersionPolicy,
 )
+from redactech.s1000d import brex
 from redactech.s1000d import io as xio
 from redactech.sources import workspace as wsmod
 
@@ -306,3 +307,55 @@ def test_check_proposal_does_not_change_the_proposal(tmp_path: Path, status: str
     before = proposal.model_dump()
     a7.check_proposal(proposal, env.index, env.baseline, operation=op, zone=zones[0])
     assert proposal.model_dump() == before
+
+
+# --- BREX documents are read once per batch --------------------------------------------------
+
+
+def brex_loads(monkeypatch) -> list[str]:
+    """Names of the BREX files read from now on."""
+    loads: list[str] = []
+    real = xio.load
+
+    def counting(path, *args, **kwargs):
+        if "-022A-" in Path(path).name:
+            loads.append(Path(path).name)
+        return real(path, *args, **kwargs)
+
+    monkeypatch.setattr(brex.xio, "load", counting)
+    return loads
+
+
+def test_the_brex_chain_is_read_once_for_many_proposals_on_the_same_document(
+    tmp_path: Path, monkeypatch
+):
+    env = Env(tmp_path, PROCED, IPD, PROJECT, DEFAULT)
+    op = operation("replace_part", {"old": "X2", "new": "X3"})
+    zones, proposals = env.propose(op)
+    brex.clear_cache()
+    loads = brex_loads(monkeypatch)
+    first = a7.check_proposal(proposals[0], env.index, env.baseline, operation=op, zone=zones[0])
+    assert 1 <= len(loads) <= 2  # the project BREX and the one it is chained to
+    for _ in range(5):  # N more proposals: nothing is read again
+        again = a7.check_proposal(
+            proposals[0], env.index, env.baseline, operation=op, zone=zones[0]
+        )
+        assert [r.model_dump() for r in again] == [r.model_dump() for r in first]
+    assert 1 <= len(loads) <= 2
+    check = a7.check_doc(xio.load(env.src / PROCED), env.index, env.baseline,
+                         original=env.ref(PROCED))
+    assert len(loads) <= 2 and isinstance(check, list)
+
+
+def test_a_changed_brex_is_read_again(tmp_path: Path, monkeypatch):
+    env = Env(tmp_path, PROCED, PROJECT, DEFAULT)
+    op = operation("replace_text", {"old": "by hand", "new": "with a wrench"},
+                   Target(ref=env.ref(PROCED), element_id="stp-0003"))
+    zones, (proposal,) = env.propose(op)
+    assert a7.check_proposal(proposal, env.index, env.baseline, operation=op, zone=zones[0]) == []
+    path = env.src / PROJECT
+    forbidden = "//proceduralStep/para[1]"
+    text = path.read_text(encoding="utf-8").replace("//proceduralStep/note", forbidden)
+    path.write_text(text, encoding="utf-8")
+    results = a7.check_proposal(proposal, env.index, env.baseline, operation=op, zone=zones[0])
+    assert [r.origin for r in results if r.name == "brex"] != []  # the new rule is applied

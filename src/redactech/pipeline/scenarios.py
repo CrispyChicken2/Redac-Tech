@@ -494,11 +494,14 @@ def _check_illustrations(attendu: dict, run: orch.Run, pairs: dict, fail) -> Non
     """A figure linked to a modified element is flagged 'to check' and left unchanged."""
     for spec in attendu.get("illustrations", []):
         figure = spec["figure_id"]
-        zone = next((z for z in run.state.zones
-                     if z.kind == "illustration" and z.element_id == figure), None)
-        if zone is None:
+        zones = [z for z in run.state.zones if z.kind == "illustration" and z.element_id == figure]
+        if not zones:
             fail(f"{figure}: no illustration zone")
             continue
+        for wanted in spec.get("operations", []):
+            if not any(z.operation_id == wanted for z in zones):
+                fail(f"{figure}: not flagged through {wanted}")
+        zone = zones[0]
         proposal = next((p for p in run.state.proposals if p.zone_id == zone.id), None)
         flagged = proposal is not None and any(
             c.name == "illustration" and c.severity == "warning" for c in proposal.checks

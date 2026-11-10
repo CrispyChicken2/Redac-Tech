@@ -433,3 +433,39 @@ def test_real_bike_41_chains_end_at_the_default_brex(repo_root: Path):
 @pytest.mark.data42
 def test_real_bike_42_chains_end_at_the_default_brex(repo_root: Path):
     _check_real_chains(repo_root, "4.2", "S1000D-F-04-10-0301-00A-022A-D")
+
+
+# --- cache ---------------------------------------------------------------------------------
+
+
+def test_load_brex_reads_a_file_once_and_again_when_it_changes(fixtures_dir: Path, tmp_path: Path):
+    path = tmp_path / PROJECT_NAME
+    path.write_bytes((fixtures_dir / PROJECT_NAME).read_bytes())
+    brex.clear_cache()
+    first = brex.load_brex(path)
+    assert brex.load_brex(path) is first
+    rules = brex.load_rules(first)
+    assert brex.load_rules(first) == rules and brex.load_rules(first) is not rules
+    changed = path.read_bytes().replace(b"//proceduralStep/note", b"//proceduralStep/para[1]")
+    path.write_bytes(changed)
+    second = brex.load_brex(path)
+    assert second is not first
+    assert [r.xpath for r in brex.load_rules(second)] == ["//proceduralStep/para[1]"]
+    assert [r.xpath for r in brex.load_rules(first)] == ["//proceduralStep/note"]
+
+
+def test_load_rules_of_a_document_not_read_by_load_brex_is_not_cached(fixtures_dir: Path):
+    brex.clear_cache()
+    doc = xio.load(fixtures_dir / PROJECT_NAME)
+    assert len(brex.load_rules(doc)) == 1
+    assert brex._RULES == {} and brex._DOCS == {}
+
+
+def test_resolve_chain_uses_the_cache(fixtures_dir: Path):
+    brex.clear_cache()
+    index = brex.index_brex([fixtures_dir])
+    assert len(index) == 2
+    proced = xio.load(fixtures_dir / "DMC-RTPROTO-AAA-D00-00-00-00AA-520A-A_001-00_EN-US.XML")
+    first = brex.resolve_chain(proced, index)
+    second = brex.resolve_chain(proced, index)
+    assert first and all(a is b for a, b in zip(first, second, strict=True))

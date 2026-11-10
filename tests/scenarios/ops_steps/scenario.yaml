@@ -15,8 +15,8 @@ request:
       params: {after_id: stp-0001, para: Wear protective gloves.}
       reason: Safety
     - kind: move_step
-      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML, element_id: stp-0004}
-      params: {step_id: stp-0004, after_id: stp-0005}
+      target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML, element_id: stp-0005}
+      params: {step_id: stp-0005, before_id: stp-0001}
       reason: Order of the work
     - kind: delete_step
       target: {doc: DMC-RTPROTO-AAA-D00-00-00-00AA-523A-A_001-00_EN-US.XML, element_id: stp-0003}
