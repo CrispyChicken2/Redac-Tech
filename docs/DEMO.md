@@ -157,3 +157,19 @@ redactech eval tests/scenarios/
 ```
 
 Lance tous les scénarios de `tests/scenarios/` (et leurs variantes), affiche `PASS`, `FAIL` ou `SKIP` pour chacun, écrit le rapport `runs/eval_<date>.md` (option `--out` pour un autre dossier), et se termine avec le code `1` si un scénario échoue. Le scénario `lru1010_bike41` est sauté sans les données Bike. Le détail des scénarios, de leurs attendus et des colonnes du rapport est dans `docs/SCENARIOS.md`.
+
+## 9. Afficher un document
+
+```bash
+redactech render tests/fixtures/s1000d/DMC-RTPROTO-AAA-D00-00-00-00AA-520B-A_007-00_EN-US.XML --view both --hide-deleted --out runs/render-520B.html
+```
+
+Produit une page HTML autonome, lisible dans un navigateur, avec la vue XML et la vue publiée côte à côte. Le fichier `520B` porte des marques `add`, `modify` et `delete` : `--hide-deleted` omet les éléments supprimés dans la vue publiée. La vue XML les montre toujours, en rouge barré.
+
+- `--view xml` : seulement la vue XML, avec les marques de changement ;
+- `--view published` : seulement la vue publiée (étapes numérotées, encadrés, tableaux) ;
+- `--view both` (défaut) : les deux côte à côte ;
+- sans `--out`, la page est écrite sur la sortie standard ;
+- `--show-deleted` (défaut) affiche les éléments supprimés, barrés.
+
+Aucune image n'est chargée : une figure apparaît comme une case portant son nom ICN. Détail : `docs/ARCHITECTURE.md`, section « Vues ».

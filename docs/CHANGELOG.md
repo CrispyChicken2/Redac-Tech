@@ -1,5 +1,28 @@
 # Journal des modifications
 
+## 015 — Vues XML et publiée
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/render/xml_view.py` : vue XML échappée, une balise par ligne, numéros de ligne, marques de changement (`rt-add`, `rt-modify`, `rt-delete`) et mise en évidence d'identifiants. Mise en page normalisée, document non modifié.
+- `src/redactech/render/xslt/published.xsl` et `src/redactech/render/published.py` : vue publiée de type IETP (feuille XSLT 1.0 compilée une fois) : étapes numérotées, exigences, encadrés `WARNING` / `CAUTION` / `NOTE`, tableaux IPD et comrep, badges d'applicabilité, barre de changement, suppressions barrées ou masquées (`--hide-deleted`). Les figures sont des cases portant leur nom ICN ; aucune image n'est chargée. Rendu générique des éléments inconnus.
+- `src/redactech/render/side_by_side.py` : deux colonnes, avant / après d'une proposition (vue `xml` ou `published`) et page HTML autonome (`both` par défaut).
+- CLI : `redactech render DOC --view xml|published|both --show-deleted|--hide-deleted --out F`.
+- Tests : `tests/render/` (vue XML, vue publiée, côte à côte) ; ajouts dans `tests/agents/test_a4_locator.py`, `tests/s1000d/test_brex.py`, `tests/report/`, `tests/pipeline/test_orchestrator.py` et `tests/test_cli.py`.
+- `docs/ARCHITECTURE.md` : section « Vues ». La section CLI est remise à jour : toutes les commandes sont implémentées, et la liste des options est celle du code. La ligne `render/` du tableau des modules passe à « implémenté ».
+- `docs/DEMO.md` : étape 9, « Afficher un document ».
+
+### Tests écrits, non exécutés
+
+Les tests ci-dessus ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. L'exemple `render` de `docs/DEMO.md` n'a pas été lancé. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- La mise en page XML affichée est normalisée (une balise par ligne) : elle ne reproduit pas les octets du fichier.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 014 — Rapport et exports
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**

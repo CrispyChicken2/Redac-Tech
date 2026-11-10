@@ -1,6 +1,6 @@
 # Architecture
 
-Ce document décrit l'organisation du paquet `redactech`, les contrats de données partagés, les clés de configuration, la CLI et les marqueurs de tests. Il reflète l'état après la tâche 002 : les modules métier sont encore des squelettes, et la CLI renvoie « not implemented yet ».
+Ce document décrit l'organisation du paquet `redactech`, les contrats de données partagés, les clés de configuration, la CLI et les marqueurs de tests. Il reflète l'état courant du code ; chaque section indique la tâche qui l'a introduite.
 
 ## Principe directeur
 
@@ -15,13 +15,13 @@ Racine : `src/redactech/`. Chaque sous-paquet porte un rôle défini par la sect
 | `__init__.py` | version du paquet (`__version__`) | implémenté |
 | `models.py` | contrats de données partagés (voir ci-dessous) | implémenté |
 | `config.py` | chargement de `config.toml`, valeurs par défaut si absent | implémenté |
-| `cli.py` | interface en ligne de commande (Typer), point d'entrée `redactech` : `workspace`, `index`, `baseline`, `request`, `review`, `write`, `check` implémentées ; `render` et `eval` restent des squelettes | implémenté en partie |
+| `cli.py` | interface en ligne de commande (Typer), point d'entrée `redactech` : toutes les commandes sont implémentées | implémenté |
 | `s1000d/` | lecture et identification (`io`, `ident`), contrôles (`validate`, `brex`, `diff`), index (`index`), traçabilité (`trace`), versioning (`versioning`), texte (`text`) | implémenté |
 | `s1000d/ops/` | 8 opérations, une fonction pure par type | implémenté |
 | `sources/` | workspace (`workspace`) et classification des documents (`classify`) | implémenté |
 | `agents/` | A1 indexation et baseline, A2 correspondances, A4 localisation, A5 propositions, A7 vérification, A11 écriture | implémenté (A10 assistant de discussion non commencé) |
 | `pipeline/` | orchestrateur A0 : machine à états, points d'arrêt, reprise, journal des décisions | implémenté |
-| `render/` | rendu : vue XML, vue publiée (XSLT), vue côte à côte | squelette |
+| `render/` | rendu : vue XML, vue publiée (XSLT 1.0), vue côte à côte | implémenté |
 | `report/` | rapport de livraison (`build`), page HTML (`html`), exports (`export`) | implémenté |
 | `ui/` | interface Streamlit | squelette |
 | `llm/` | accès au LLM local (Ollama) ; tous les appels LLM passent ici (M3) | squelette |
@@ -167,7 +167,7 @@ Points à connaître :
 
 ### Commandes
 
-Commandes implémentées (les autres commandes de la CLI sont encore des squelettes) :
+Commandes de workspace et d'index (la liste complète est dans la section « CLI ») :
 
 ```bash
 redactech workspace init                 # crée workspace.toml depuis workspace.example.toml
@@ -536,21 +536,53 @@ Modèle à copier en `workspace.toml` (ignoré par git). Chaque `[[sources]]` d�
 
 ## CLI (`cli.py`)
 
-Point d'entrée : `redactech`. Toutes les commandes sont des squelettes qui affichent « not implemented yet » et quittent avec le code 2.
+Point d'entrée : `redactech`. Toutes les commandes sont implémentées. Options communes des commandes de run : `-w` / `--workspace FICHIER` (défaut : `config.toml`, section `[workspace]`).
 
-| Commande | Rôle prévu |
+| Commande | Rôle et options principales |
 |---|---|
-| `workspace init` | créer `workspace.toml` depuis l'exemple |
-| `workspace add PATH [--id ID]` | ajouter une source |
-| `workspace list` | lister les sources |
-| `index` | indexer le workspace |
-| `baseline` | lancer les contrôles de référence (problèmes préexistants) |
-| `request [--mapping F] [--version-policy P] [--out D]` | créer un run à partir d'une demande de changement |
-| `review RUN_DIR` | relire les propositions d'un run |
-| `write RUN_DIR` | écrire les changements acceptés |
-| `check OUT_DIR` | contrôler les documents produits |
-| `render DOC [--view xml\|published\|both] [--show-deleted]` | rendre un document |
-| `eval SCENARIOS` | évaluer les scénarios de `tests/scenarios/` |
+| `workspace init [--force]` | crée `workspace.toml` depuis l'exemple ; `--force` écrase un fichier existant |
+| `workspace add PATH [--id ID] [--brex-dir D]...` | ajoute une source ; `--brex-dir` est répétable |
+| `workspace list` | liste les sources, leur Issue et leur mode |
+| `index` | nombre de fichiers par source et par rôle, et total |
+| `baseline` | problèmes préexistants par DM |
+| `request [--mapping F] [--version-policy P] [--out D]` | crée un run et s'arrête au point de décision ; `--out` défaut `runs` ; l'option `--auto-accept` est cachée (tests) |
+| `review RUN_DIR [--accept ID]... [--reject ID]... [--reason T] [--pending ID]... [--comment T] [--accept-all]` | liste les propositions ou enregistre des décisions |
+| `write RUN_DIR [--version-policy P]` | écrit les propositions décidées dans `out/` et produit les fichiers de livraison |
+| `check OUT_DIR` | contrôle les documents produits ; code `1` si une erreur est introduite |
+| `render DOC [--view xml\|published\|both] [--show-deleted\|--hide-deleted] [--out F]` | rend un document en page HTML autonome ; sans `--out`, la page va sur la sortie standard |
+| `eval SCENARIOS [--out D]` | lance les scénarios et écrit `eval_<date>.md` ; code `1` si un scénario échoue |
+
+## Vues
+
+Modules : `render/xml_view.py`, `render/published.py`, `render/xslt/published.xsl`, `render/side_by_side.py`. Ils ne modifient jamais le document lu.
+
+### Vue XML (`render/xml_view.py`)
+
+- `render_xml(document_ou_élément, highlight_ids)` renvoie un fragment HTML : XML échappé, une balise par ligne, numéros de ligne.
+- Les éléments portant `changeMark="1"` reçoivent une classe d'après `changeType` : `rt-add`, `rt-modify` ou `rt-delete`. Le bloc entier de l'élément est coloré, enfants compris.
+- Les identifiants passés en `highlight_ids` reçoivent la classe `rt-hl`.
+- La mise en page est **normalisée** : l'arbre est parcouru, pas resérialisé. Ce n'est donc pas la mise en page exacte du fichier. Les espaces entre éléments sont perdus ; les déclarations d'espaces de noms sont affichées une fois, sur la racine.
+- Commentaires, instructions de traitement et références d'entité sont affichés tels quels, échappés.
+
+### Vue publiée (`render/published.py`, `render/xslt/published.xsl`)
+
+- Le document est transformé par une feuille XSLT 1.0, compilée une fois et réutilisée. La transformation porte sur une **copie** : le document d'origine n'est pas touché.
+- Présentation de type IETP : étapes numérotées ; exigences préliminaires (conditions, sécurité), avec des tableaux pour les équipements de soutien, les fournitures et les rechanges ; exigences de fin ; encadrés `WARNING`, `CAUTION` et `NOTE` ; tableaux des catalogues de pièces (IPD) et des dépôts communs (comrep) ; badges d'applicabilité ; barre latérale de changement.
+- Les éléments `changeType="delete"` sont barrés. Avec `show-deleted` à `0` (option `--hide-deleted`), ils sont omis.
+- Une figure (`graphic`) est affichée comme une case portant son nom ICN. **Aucune image n'est chargée.** Les références d'entité ICN restent telles quelles.
+- Les éléments inconnus de la feuille reçoivent un rendu générique (nom de l'élément, contenu), pour qu'aucun contenu ne disparaisse.
+- Un texte CSS (`PUBLISHED_CSS`) accompagne le fragment.
+
+### Vue côte à côte (`render/side_by_side.py`)
+
+- `render_side_by_side(gauche, droite, titres)` : deux colonnes HTML. Les titres sont échappés ; les fragments sont considérés comme du HTML de confiance, produit par les vues ci-dessus.
+- `render_before_after(proposition, view)` : l'extrait **avant** et l'extrait **après** d'une proposition, en vue `xml` ou `published`. Pour une proposition `edited`, le côté « après » montre le XML saisi par le rédacteur. Un extrait vide ou mal formé est signalé, sans faire échouer le rendu.
+- `render_page(document, view, show_deleted, title)` : page HTML complète et autonome. Pour `both`, la vue XML et la vue publiée sont côte à côte.
+- Une vue inconnue lève `ValueError`.
+
+### Commande `render`
+
+`redactech render DOC --view xml|published|both --show-deleted|--hide-deleted --out F`. Vue par défaut : `both` ; affichage des éléments supprimés par défaut. Un document absent, une vue inconnue ou un XML invalide donnent le code `1`.
 
 ## Marqueurs de tests
 
