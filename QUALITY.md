@@ -79,18 +79,21 @@ Ils décrivent la qualité attendue : **exhaustivité, intégrité, homogénéit
 |---|---|---|---|---|---|---|
 | REQ-1 | Checklist : tableau pistes × approches dans le document d'état de l'art | Chacune des 4 pistes a ≥ 1 approche sourcée | Avant la restitution | ✏️ | ✅ | ✏️ lien vers le document |
 | REQ-2 | Revue à la restitution orale | ≥ 2 orientations notées dans le compte rendu | Démo | ✏️ | ✅ | ✏️ lien vers le compte rendu |
-| REQ-3 | Audit : `git ls-files` + vérification du `.gitignore` + `py tools/privacy.py scan --tracked` | 0 fichier de données privées | Chaque étape + CI | ✏️ | ✅ | `git ls-files` = code et docs seulement ; `.gitignore` en place ; tests `tests/security/` |
+| REQ-3 | Audit : `git ls-files` + vérification du `.gitignore` + `py tools/privacy.py scan --tracked` | 0 fichier de données privées | Chaque étape + CI | ✏️ | ✅ | `git ls-files` = code et docs seulement ; `.gitignore` en place ; tests `tests/security/` (2 fichiers) ; hooks `pre-commit`, `commit-msg` et `pre-push` installés ; `py -3 tools/privacy.py scan --tracked` : exit 0 sur le poste de développement, le 2026-11-10 |
 | REQ-4 | Revue de la note d'orientation | Validation écrite | Avant le développement | ✏️ | ⏳ | |
-| REQ-5 | Test automatique (pytest) : modifications faites comparées au fichier `tests/scenarios/lru1010/attendu.yaml`, écrit avant le code (2 modifications attendues + 2 occurrences à ne pas toucher) | 2/2 modifications faites, 0 hors liste, 2/2 traces historiques identiques à l'original | À chaque commit (CI) + en direct à la démo | ✏️ | ⏳ | |
-| REQ-6 | Test automatique : diff XML canonique ancien / nouveau limité aux éléments attendus + validation XSD de chaque DM produit | 0 différence hors liste ; 100 % valides | À chaque commit (CI) + en direct à la démo | ✏️ | ⏳ | |
+| REQ-5 | Test automatique (pytest) : modifications faites comparées au fichier `tests/scenarios/lru1010/attendu.yaml`, écrit avant le code (2 modifications attendues + 2 occurrences à ne pas toucher) | 2/2 modifications faites, 0 hors liste, 2/2 traces historiques identiques à l'original | À chaque commit (CI) + en direct à la démo | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/lru1010`), à confirmer sur le Bike réel (tests data41 non exécutés) |
+| REQ-6 | Test automatique : diff XML canonique ancien / nouveau limité aux éléments attendus + validation XSD de chaque DM produit | 0 différence hors liste ; 100 % valides | À chaque commit (CI) + en direct à la démo | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/lru1010`), à confirmer sur le Bike réel (tests data41 non exécutés) |
 | REQ-7 | Test utilisateur : l'évaluateur déroule le scénario seul, puis note l'utilité ; tests d'interface automatiques | Scénario terminé sans aide ; note ≥ 3/5 ; journal des décisions complet | Démo | ✏️ | ⏳ | |
 | REQ-8 | Revue de code (recherche de tous les appels à l'IA) + test : le même scénario tourne avec le modèle changé dans la configuration | Tous les appels dans `src/redactech/llm/` ; changer de modèle = 1 ligne de configuration | Chaque étape | ✏️ | ⏳ | |
 | REQ-9 | Test interne : un membre qui n'a pas écrit le code suit le README sur une machine propre | ≤ 3 commandes, sans aide | Avant la démo | ✏️ | ⏳ | |
-| REQ-10 | Test automatique : relecture de chaque DM modifié (`issueInfo`, `@changeMark`, `@changeType`, `reasonForUpdate`) | 100 % des DM modifiés conformes | À chaque commit (CI) | ✏️ | ⏳ | |
-| REQ-11 | Test automatique : contrôle des DM produits contre la chaîne BREX (validateur BREX externe ou vérificateur XPath interne) | 0 violation introduite | À chaque commit (CI) | ✏️ | ⏳ | |
-| OBJ-21 | Test automatique : 3 politiques de versioning, renommage de fichier, journal | 100 % conformes | À chaque commit (CI) | ✏️ | ⏳ | |
-| OBJ-22 | Test automatique : DM déjà fautif en entrée | Erreurs classées `pre_existing`, 0 `introduced` | À chaque commit (CI) | ✏️ | ⏳ | |
-| OBJ-23 | Test automatique : scénario de demande interdite | `blocked_by_rule` en ≤ 3 essais, sans boucle | À chaque commit (CI) | ✏️ | ⏳ | |
+| REQ-10 | Test automatique : relecture de chaque DM modifié (`issueInfo`, `@changeMark`, `@changeType`, `reasonForUpdate`) | 100 % des DM modifiés conformes | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénarios `tests/scenarios/delete_mark`, `tests/scenarios/versioning`), à confirmer sur le Bike réel (tests data41 non exécutés) |
+| REQ-11 | Test automatique : contrôle des DM produits contre la chaîne BREX (validateur BREX externe ou vérificateur XPath interne) | 0 violation introduite | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénarios `tests/scenarios/preexisting_brex`, `tests/scenarios/lru1010`), à confirmer sur le Bike réel (tests data41 non exécutés) |
+| OBJ-21 | Test automatique : 3 politiques de versioning, renommage de fichier, journal | 100 % conformes | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/versioning`), à confirmer sur le Bike réel (tests data41 non exécutés) |
+| OBJ-22 | Test automatique : DM déjà fautif en entrée | Erreurs classées `pre_existing`, 0 `introduced` | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/preexisting_brex`), à confirmer sur le Bike réel (tests data41 non exécutés) |
+| OBJ-23 | Test automatique : scénario de demande interdite | `blocked_by_rule` en ≤ 3 essais, sans boucle | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/forbidden_request`), à confirmer sur le Bike réel (tests data41 non exécutés) |
+| OBJ-1 | Scénario `LRU1010`, puis scénarios variés | 100 % des modifications attendues faites, 0 hors liste | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénarios `tests/scenarios/lru1010`, `tests/scenarios/ops_steps`), à confirmer sur le Bike réel (tests data41 non exécutés) |
+| OBJ-10 | Sans LLM, puis avec LLM | Propagation de 20 modifications sur le manuel complet en < 10 s (sans LLM) ; une demande traitée en < 2 min avec le LLM local, sur un portable standard | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/batch20`, sans LLM), à confirmer sur le Bike réel (scénario `tests/scenarios/batch20_bike41`, tests data41 non exécutés) ; la partie avec LLM n'est pas couverte |
+| OBJ-19 | Revue avant / après | 100 % des illustrations (figures, légendes) liées à un élément modifié signalées au rédacteur comme « à vérifier » (l'outil ne modifie pas les images) | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/ops_steps`, figure `fig-0001`), à confirmer sur le Bike réel (tests data41 non exécutés) ; la revue humaine avant / après n'est pas faite |
 
 > Statut : ⏳ pas encore exécuté · ✅ réussi · ⚠️ partiel · ❌ échec (dire quoi faire dans le §3)
 
@@ -112,6 +115,14 @@ Ils décrivent la qualité attendue : **exhaustivité, intégrité, homogénéit
 - Ajouté : objectifs proposés OBJ-21 à OBJ-23 (versioning, erreurs préexistantes, demandes interdites par le BREX).
 - Vérifié : REQ-3 ✅ (audit du dépôt, tests de confidentialité). Autres résultats : à remplir quand les vérifications sont exécutées.
 - Suite : faire valider la note d'orientation et les seuils des OBJ ; revue avant / après, BREX, signalement des illustrations.
+
+### Étape M1 : clôture du premier jalon
+- Ajouté : chaîne de traitement de bout en bout sur les fixtures synthétiques : hygiène et confidentialité, contrats, CI, données Bike reconstruites localement, contrôles XSD / BREX, workspace et index, baseline, opérations, traçabilité et versioning, vérification des propositions, orchestrateur et CLI, scénarios de bout en bout.
+- Vérifié (rapporté, non vérifié sur ce poste) : run de CI GitHub `42757082793` sur la branche `prototype1`, indiqué comme : 690 tests réussis, lint propre. Ce poste n'a pas de dépôt distant configuré : le run n'a pas pu être consulté depuis ici.
+- Vérifié sur ce poste : `py -3 tools/privacy.py scan --tracked` sans terme interdit (exit 0) ; `tests/security/` présent ; hooks `pre-commit`, `commit-msg` et `pre-push` installés.
+- Non vérifié : tests `data41` et `data42`, et scénarios `lru1010_bike41` et `batch20_bike41` (données Bike absentes de ce poste) ; la partie « avec LLM » de OBJ-10 (aucun LLM branché) ; la revue humaine avant / après de OBJ-19.
+- Seuils inchangés. Cellules ✏️ non remplies.
+- Suite : confirmer les ⚠️ sur le Bike réel (tests `data41`), puis remplir les cellules ✏️.
 
 ## 4. Règles sur les données et la confidentialité
 

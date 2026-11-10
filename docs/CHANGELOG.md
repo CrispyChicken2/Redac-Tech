@@ -1,5 +1,28 @@
 # Journal des modifications
 
+## 023 — Clôture M1
+
+**Statut :** jalon M1 clos. **Tests : résultat de CI rapporté, non vérifié sur ce poste.**
+
+### Ajouté
+
+- `QUALITY.md`, section 2 :
+  - REQ-3 passe à ✅ avec des preuves complétées (`tests/security/`, hooks, scan local) ; REQ-5, REQ-6, REQ-10, REQ-11, OBJ-21, OBJ-22 et OBJ-23 passent à ⚠️, avec le scénario cité en preuve ;
+  - lignes OBJ-1, OBJ-10 et OBJ-19 ajoutées à la section 2 (elles n'y figuraient pas), avec le critère de la section 1 recopié tel quel (⚠️) ;
+  - les colonnes « Responsable » (✏️) et les seuils ne sont pas modifiés.
+- `QUALITY.md`, section 3 : entrée « Étape M1 », qui distingue ce qui est rapporté (run de CI `42757082793`, 690 tests réussis, lint propre) de ce qui est vérifié sur ce poste.
+
+### Tests : résultat rapporté
+
+- Run de CI `42757082793` sur `prototype1`, rapporté par le responsable du projet : 690 tests réussis, lint propre. **Non vérifié** : ce poste n'a pas de dépôt distant, et `gh` ne peut pas consulter le run.
+- Les tests `data41` et `data42` ne sont pas exécutés en CI ; les scénarios `lru1010_bike41` et `batch20_bike41` ne sont pas vérifiés sur le Bike réel.
+
+### Non couvert
+
+- Le chiffrage « avec LLM » de OBJ-10 : aucun LLM n'est branché.
+- La revue humaine avant / après de OBJ-19.
+- Les cellules ✏️ (responsables) restent à remplir.
+
 ## 013 — Scénarios part 2
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**
