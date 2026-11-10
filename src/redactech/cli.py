@@ -1,7 +1,7 @@
 """Command line interface (SPEC section 13).
 
-Implemented: ``workspace``, ``index``, ``baseline``, ``request``, ``review``, ``write`` and
-``check`` and ``eval``. ``render`` is still a stub (``not implemented yet``, exit code 2).
+Implemented: ``workspace``, ``index``, ``baseline``, ``request``, ``review``, ``write``,
+``check``, ``eval`` and ``render`` (no stub left).
 """
 
 from __future__ import annotations
@@ -363,10 +363,32 @@ def check(out_dir: Annotated[Path, typer.Argument(help="runs/<id>/out")]) -> Non
 def render(
     doc: Annotated[Path, typer.Argument(help="Document to render.")],
     view: Annotated[str, typer.Option("--view", help="xml | published | both")] = "both",
-    show_deleted: Annotated[bool, typer.Option("--show-deleted")] = False,
+    show_deleted: Annotated[
+        bool, typer.Option("--show-deleted/--hide-deleted", help="Show deleted elements struck.")
+    ] = True,
+    out: Annotated[Path | None, typer.Option("--out", help="Write the page here.")] = None,
 ) -> None:
-    """Render a document."""
-    _stub()
+    """Render a data module as a self-contained HTML page (stdout, or --out FILE)."""
+    from lxml import etree
+
+    from redactech.render.side_by_side import render_page
+    from redactech.s1000d import io as xio
+
+    if view not in ("xml", "published", "both"):
+        _fail(f"unknown view {view!r} (expected xml, published or both)")
+    if not doc.is_file():
+        _fail(f"no document {doc}")
+    try:
+        xdoc = xio.load(doc)
+        page = render_page(xdoc, view, show_deleted, title=doc.name)
+    except (etree.LxmlError, ValueError, OSError) as exc:
+        _fail(f"cannot render {doc}: {exc}")
+    if out is None:
+        typer.echo(page, nl=False)
+    else:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(page, encoding="utf-8")
+        typer.echo(f"written {out}")
 
 
 @app.command("eval")

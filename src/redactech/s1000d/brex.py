@@ -20,6 +20,7 @@ the VALUE string (full match). The value of a selected element is its stripped t
 from __future__ import annotations
 
 import re
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -76,7 +77,8 @@ def brex_key(doc: Any) -> str:
 # rules extracted once. An entry is valid for a file as long as its path, modification time and
 # size are the same, so a changed or swapped BREX is read again.
 
-_DOCS: dict[tuple[str, int, int], Any] = {}
+CACHE_SIZE = 16  # the UI is long-lived: only the most recently used BREX files are kept
+_DOCS: OrderedDict[tuple[str, int, int], Any] = OrderedDict()
 _RULES: dict[tuple[str, int, int], list[BrexRule]] = {}
 
 
@@ -104,6 +106,11 @@ def load_brex(path: Path | str) -> Any:
     if doc is None:
         doc = xio.load(path)
         _DOCS[key] = doc
+        while len(_DOCS) > CACHE_SIZE:  # least recently used first
+            old, _ = _DOCS.popitem(last=False)
+            _RULES.pop(old, None)
+    else:
+        _DOCS.move_to_end(key)
     return doc
 
 

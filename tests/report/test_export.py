@@ -64,11 +64,25 @@ def test_the_xlsx_reads_back_with_the_same_rows(tmp_path: Path, state, consts):
     assert values[2][3] == consts.question and values[2][5] == "R-1: No <note> here."
 
 
-def test_a_text_starting_with_equals_is_not_a_formula(tmp_path: Path, state):
-    state.proposals[1] = state.proposals[1].model_copy(update={"reviewer_comment": "=1+1"})
-    path = export.export_questions(state, tmp_path / "q.xlsx")
-    cell = load_workbook(path).active["D2"]
-    assert cell.value == "=1+1" and cell.data_type == "s"
+@pytest.mark.parametrize("start", ["=", "+", "-", "@"])
+@pytest.mark.parametrize("extension", [".csv", ".xlsx"])
+def test_a_text_that_looks_like_a_formula_gets_an_apostrophe(
+    tmp_path: Path, state, start: str, extension: str
+):
+    text = f"{start}1+1"
+    state.proposals[1] = state.proposals[1].model_copy(update={"reviewer_comment": text})
+    path = export.export_questions(state, tmp_path / f"q{extension}")
+    if extension == ".csv":
+        value = rows_of_csv(path)[1][3]
+    else:
+        value = load_workbook(path).active["D2"].value
+    assert value == "'" + text
+
+
+def test_ordinary_texts_are_left_alone(tmp_path: Path, state):
+    assert export.safe_cell("R-1: rule") == "R-1: rule" and export.safe_cell("") == ""
+    rows = rows_of_csv(export.export_questions(state, tmp_path / "q.csv"))
+    assert rows[2][0] == "p4" and rows[3][0] == "op-0003"  # an id with a hyphen inside is fine
 
 
 def test_no_question_gives_only_the_header(tmp_path: Path, state):

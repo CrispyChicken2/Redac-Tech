@@ -1,4 +1,4 @@
-"""Tests of the CLI: implemented commands and remaining stubs."""
+"""Tests of the CLI."""
 
 from __future__ import annotations
 
@@ -28,19 +28,6 @@ def test_workspace_help_lists_subcommands():
     assert result.exit_code == 0
     for name in ("init", "add", "list"):
         assert name in result.output
-
-
-@pytest.mark.parametrize(
-    "args",
-    [
-        ["render", "doc.xml", "--view", "xml", "--show-deleted"],
-    ],
-    ids=lambda a: " ".join(a),
-)
-def test_stub_exits_2(args):
-    result = runner.invoke(app, args)
-    assert result.exit_code == 2
-    assert "not implemented yet" in result.output
 
 
 # --- workspace init / add / list, index, baseline -----------------------------
@@ -264,3 +251,57 @@ def test_check_needs_a_run_folder(tmp_path: Path):
     (tmp_path / "out").mkdir()
     result = run("check", str(tmp_path / "out"))
     assert result.exit_code == 1 and "not a run folder" in result.output
+
+
+# --- render ---------------------------------------------------------------------------------
+
+MARKED_DM = FIXTURES / f"DMC-RTPROTO-{CODE}-520B-A_007-00_EN-US.XML"
+DELETED_TEXT = "Step marked as deleted but still present."
+
+
+def test_render_prints_a_self_contained_page_with_both_views():
+    result = run("render", str(MARKED_DM))
+    assert result.exit_code == 0, result.output
+    page = result.output
+    assert page.startswith("<!DOCTYPE html>") and "<style>" in page
+    assert 'class="rt-side"' in page and 'class="rt-xml"' in page and 'class="rt-doc"' in page
+    assert "rt-line rt-add" in page and "rt-step rt-add" in page
+    assert "<script" not in page.lower() and DELETED_TEXT in page
+
+
+def test_render_one_view_at_a_time():
+    xml = run("render", str(MARKED_DM), "--view", "xml").output
+    assert 'class="rt-xml"' in xml and 'class="rt-doc"' not in xml
+    published = run("render", str(MARKED_DM), "--view", "published").output
+    assert 'class="rt-doc"' in published and 'class="rt-xml"' not in published
+
+
+def test_render_hides_deleted_elements_on_request():
+    shown = run("render", str(MARKED_DM), "--view", "published", "--show-deleted").output
+    hidden = run("render", str(MARKED_DM), "--view", "published", "--hide-deleted").output
+    assert DELETED_TEXT in shown and DELETED_TEXT not in hidden
+
+
+def test_render_writes_a_file_with_out(tmp_path: Path):
+    target = tmp_path / "pages" / "dm.html"
+    result = run("render", str(MARKED_DM), "--out", str(target))
+    assert result.exit_code == 0 and f"written {target}" in result.output
+    assert "<!DOCTYPE html>" not in result.output  # the page went to the file
+    assert target.read_text(encoding="utf-8").startswith("<!DOCTYPE html>")
+
+
+def test_render_refuses_a_bad_view_a_missing_file_and_bad_xml(tmp_path: Path):
+    bad_view = run("render", str(MARKED_DM), "--view", "pdf")
+    assert bad_view.exit_code == 1 and "unknown view" in bad_view.output
+    missing = run("render", str(tmp_path / "absent.xml"))
+    assert missing.exit_code == 1 and "no document" in missing.output
+    broken = tmp_path / "broken.xml"
+    broken.write_text("<dmodule><unclosed></dmodule>", encoding="utf-8")
+    result = run("render", str(broken))
+    assert result.exit_code == 1 and "cannot render" in result.output
+
+
+def test_render_leaves_the_document_untouched():
+    before = MARKED_DM.read_bytes()
+    run("render", str(MARKED_DM))
+    assert MARKED_DM.read_bytes() == before
