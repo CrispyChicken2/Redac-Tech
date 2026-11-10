@@ -6,9 +6,11 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## À faire
 
+- [ ] 025 Prototype UI (skill prototype) : 3 variantes radicalement différentes de l'écran mode Document via ?variant= + barre flottante, branche jetable prototype/025-ui-variants
 
 ## En cours
 
+- [~] 024 Prototype logique (skill prototype) : fichier HTML unique pilotant le cycle de vie d'une demande (propositions, décisions, alternative, blocked_by_rule, delete, versioning), branche jetable prototype/024-review-logic
 
 ## Fait
 
