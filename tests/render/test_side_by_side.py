@@ -128,3 +128,8 @@ def test_hiding_deleted_elements_applies_to_the_published_pane(fixtures_dir: Pat
 def test_an_unknown_page_view_is_refused(fixtures_dir: Path):
     with pytest.raises(ValueError, match="unknown view"):
         sbs.render_page(xio.load(fixtures_dir / MARKED), "pdf")
+
+
+def test_an_excerpt_without_a_title_has_no_empty_heading():
+    html = sbs.render_before_after(proposal(STEP, STEP), "published")
+    assert "<h1" not in html

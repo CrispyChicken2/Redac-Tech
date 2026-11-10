@@ -61,6 +61,7 @@ class RunRequest(BaseModel):
     form: dict[str, Any] | list[dict[str, Any]] | None = None  # one form or several
     version_policy: Mode | None = None
     auto_accept: bool = False  # tests and the hidden CLI option only
+    brex_swaps: list[str] = []  # BREX files swapped in (the UI's "change BREX")
 
     @model_validator(mode="after")
     def _one_source(self) -> RunRequest:
@@ -114,7 +115,10 @@ class Run:
             operations = a2_mapping.from_form(request.form)
         run_dir.mkdir(parents=True, exist_ok=False)
         workspace_file = Path(workspace_path).resolve()
-        index, baseline = a1_indexer.run(wsmod.load_workspace(workspace_file))
+        workspace = wsmod.load_workspace(workspace_file)
+        index, baseline = a1_indexer.run(workspace)
+        for swapped in request.brex_swaps:  # chains resolved again, baseline recomputed
+            baseline = a1_indexer.swap_brex(workspace, index, swapped)
         if request.mapping is not None:
             request = request.model_copy(update={"mapping": str(Path(request.mapping).resolve())})
         state = RunState(
@@ -165,7 +169,15 @@ class Run:
     def index(self) -> CorpusIndex:
         if self._index is None:
             self._index = build_index(wsmod.load_workspace(self.state.workspace))
+            for swapped in self.request.brex_swaps:
+                a1_indexer.apply_swap(self._index, swapped)
         return self._index
+
+    def pending_ids(self) -> list[str]:
+        """Proposals still to decide (flag-only illustration proposals do not count)."""
+        return [
+            p.id for p in self.state.proposals if p.status == "proposed" and not self._is_flag(p)
+        ]
 
     def _need(self, *stages: str) -> None:
         if self.state.stage not in stages:

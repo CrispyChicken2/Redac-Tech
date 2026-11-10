@@ -48,12 +48,14 @@
 
   <xsl:template match="dmodule">
     <xsl:variable name="title" select="identAndStatusSection/dmAddress/dmAddressItems/dmTitle"/>
-    <h1 class="rt-title">
-      <xsl:value-of select="$title/techName"/>
-      <xsl:if test="$title/techName and $title/infoName"><xsl:text> - </xsl:text></xsl:if>
-      <xsl:value-of select="$title/infoName"/>
-      <xsl:if test="$title/infoNameVariant"><xsl:text> - </xsl:text><xsl:value-of select="$title/infoNameVariant"/></xsl:if>
-    </h1>
+    <xsl:if test="$title/techName or $title/infoName or $title/infoNameVariant">
+      <h1 class="rt-title">
+        <xsl:value-of select="$title/techName"/>
+        <xsl:if test="$title/techName and $title/infoName"><xsl:text> - </xsl:text></xsl:if>
+        <xsl:value-of select="$title/infoName"/>
+        <xsl:if test="$title/infoNameVariant"><xsl:text> - </xsl:text><xsl:value-of select="$title/infoNameVariant"/></xsl:if>
+      </h1>
+    </xsl:if>
     <xsl:apply-templates select="identAndStatusSection/dmStatus/applic"/>
     <xsl:apply-templates select="content"/>
   </xsl:template>
