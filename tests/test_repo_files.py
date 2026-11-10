@@ -113,21 +113,24 @@ def test_the_commands_of_the_readme_exist(repo_root: Path):
 
 
 def test_the_cli_quick_start_uses_real_commands_and_options(repo_root: Path):
-    from typer.testing import CliRunner
+    import typer.main
 
     from redactech.cli import app
 
-    runner = CliRunner()
+    # inspect the click command objects: the text of --help depends on colours and on rich
+    root = typer.main.get_command(app)
     text = _readme(repo_root)
     quick = re.findall(r"^redactech (\S+)", text, flags=re.MULTILINE)
     assert {"workspace", "request", "review", "write", "check"} <= set(quick)
     for command in dict.fromkeys(quick):
-        args = [command, "--help"] if command != "workspace" else ["workspace", "init", "--help"]
-        result = runner.invoke(app, args)
-        assert result.exit_code == 0, command
-    for option in ("--mapping", "--version-policy", "--out"):
-        assert option in runner.invoke(app, ["request", "--help"]).output
-    assert "--accept-all" in runner.invoke(app, ["review", "--help"]).output
+        assert command in root.commands, command
+    assert "init" in root.commands["workspace"].commands
+
+    def options(name: str) -> set[str]:
+        return {opt for param in root.commands[name].params for opt in param.opts}
+
+    assert {"--mapping", "--version-policy", "--out"} <= options("request")
+    assert "--accept-all" in options("review")
 
 
 def test_the_readme_has_the_pipeline_diagram_and_the_doc_links(repo_root: Path):
