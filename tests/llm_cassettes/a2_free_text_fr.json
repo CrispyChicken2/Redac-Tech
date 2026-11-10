@@ -1,0 +1,19 @@
+{
+  "schema": "OpsResponse",
+  "prompt_contains": "Remplacer la pièce LRU1010 par LRU2020",
+  "responses": [
+    {
+      "operations": [
+        {
+          "kind": "replace_part",
+          "params": {"old": "LRU1010", "new": "LRU2020"},
+          "target_doc": null,
+          "target_id": null,
+          "reason": "Remplacement de la pièce",
+          "quotes": ["LRU1010 par LRU2020"]
+        }
+      ],
+      "questions": []
+    }
+  ]
+}

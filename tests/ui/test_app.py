@@ -480,3 +480,71 @@ def test_a_forbidden_request_is_listed_in_the_blocked_panel(tmp_path: Path, monk
     assert status_of(run_of(at), blocked.id) == "pending_client"
     (entry,) = decisions(run_of(at), blocked.id)
     assert entry["status"] == "pending_client" and "business rule" in entry["comment"]
+
+
+# --- free text ------------------------------------------------------------------------------------
+
+FREE_TEXT_FR = "Remplacer la pièce LRU1010 par LRU2020 dans toute la documentation."
+FREE_TEXT_TRAP = "Replace the part LRU1010 by its successor."
+
+
+def with_recorded_model(tmp_path: Path) -> None:
+    """A configuration with the recorded model, and its answers, next to the working directory."""
+    (tmp_path / "config.toml").write_text('[llm]\nprovider = "fake"\n', encoding="utf-8")
+    shutil.copytree(REPO_ROOT / "tests" / "llm_cassettes", tmp_path / "tests" / "llm_cassettes")
+
+
+def ask_in_free_text(at: AppTest, text: str) -> None:
+    widget(at, "text_area", "free_text").set_value(text)
+    at.run()
+    widget(at, "button", "prepare_free_text").click()
+    at.run()
+    assert not at.exception
+
+
+def test_free_text_says_it_needs_the_local_model_when_none_is_configured(
+    tmp_path: Path, monkeypatch
+):
+    at = open_project(tmp_path, monkeypatch, LRU)  # no config.toml: [llm] provider = "none"
+    assert any("modèle local" in i.value for i in at.info)
+    assert not has(at, "text_area", "free_text")
+    assert not has(at, "button", "prepare_free_text")
+
+
+def test_free_text_prepares_a_run_when_a_model_is_configured(tmp_path: Path, monkeypatch):
+    with_recorded_model(tmp_path)
+    at = open_project(tmp_path, monkeypatch, LRU)
+    assert not any("modèle local" in i.value for i in at.info)
+    assert widget(at, "button", "prepare_free_text").disabled is True  # nothing typed yet
+    ask_in_free_text(at, FREE_TEXT_FR)
+    run = run_of(at)
+    assert run.state.stage == "ops_proposed" and run.state.proposals == []
+    (operation,) = run.state.operations
+    assert operation.params == {"old": "LRU1010", "new": "LRU2020"}
+    assert operation.source[0].doc == "free_text"
+    assert run.request.auto_accept is False
+    confirm_policy(at, "in_work")  # the same versioning choice, then the same proposals
+    assert run_of(at).state.stage == "proposals_ready" and len(run_of(at).state.proposals) >= 3
+
+
+def test_an_invented_value_is_shown_as_a_question_and_no_operation_exists(
+    tmp_path: Path, monkeypatch
+):
+    with_recorded_model(tmp_path)
+    at = open_project(tmp_path, monkeypatch, LRU)
+    ask_in_free_text(at, FREE_TEXT_TRAP)
+    run = run_of(at)
+    assert run.state.operations == []
+    assert any("LRU9999" in w.value and "Question" in w.value for w in at.warning)
+    confirm_policy(at, "none")
+    assert run_of(at).state.proposals == []  # nothing invented reaches a proposal
+
+
+def test_free_text_is_refused_with_a_message_when_the_model_does_not_know_the_request(
+    tmp_path: Path, monkeypatch
+):
+    with_recorded_model(tmp_path)
+    at = open_project(tmp_path, monkeypatch, LRU)
+    ask_in_free_text(at, "A request nobody recorded")
+    assert RUN not in at.session_state
+    assert any("Demande refusée" in e.value for e in at.error)

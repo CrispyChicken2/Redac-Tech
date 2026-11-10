@@ -223,3 +223,45 @@ def test_prompt_hash_is_stable_and_order_independent_of_keys():
     a = [{"role": "user", "content": "x"}]
     b = [{"content": "x", "role": "user"}]
     assert base.prompt_hash(a) == base.prompt_hash(b) != base.prompt_hash([])
+
+
+# --- the conversation stays within the budget while retrying -------------------------------------
+
+
+def test_a_long_invalid_answer_is_capped_when_it_is_put_back():
+    llm = Scripted(["x" * 10_000, GOOD])
+    llm.complete_json("p", Plan)
+    answer = llm.requests[1].messages[-2]
+    assert answer["role"] == "assistant"
+    assert len(answer["content"]) == base.MAX_REINJECTED + 1 and answer["content"].endswith("…")
+    short = Scripted(["short", GOOD])
+    short.complete_json("p", Plan)
+    assert short.requests[1].messages[-2]["content"] == "short"  # untouched below the cap
+
+
+def test_the_size_is_checked_again_before_each_retry():
+    llm = Scripted(["y" * 10_000, GOOD])
+    with pytest.raises(PromptTooLarge):
+        llm.complete_json("x" * 21_900, Plan)  # fits alone, not with the answer and the error
+    assert len(llm.requests) == 1  # no second call
+
+
+def test_the_last_attempt_does_not_grow_the_conversation(tmp_path: Path):
+    llm = Scripted(["bad"] * 3, LLMConfig(max_retries=2))
+    with pytest.raises(LLMOutputError):
+        llm.complete_json("p", Plan)
+    sizes = [len(r.messages) for r in llm.requests]
+    assert sizes == [2, 4, 6]  # system + prompt, then two messages per retry
+
+
+def test_a_provider_is_a_context_manager_that_closes():
+    closed = []
+
+    class Closing(Scripted):
+        def close(self) -> None:
+            closed.append(True)
+
+    with Closing([GOOD]) as llm:
+        assert llm.complete_json("p", Plan).kind == "replace_part"
+    assert closed == [True]
+    Scripted([GOOD]).close()  # the default does nothing

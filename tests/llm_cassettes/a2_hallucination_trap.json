@@ -1,0 +1,19 @@
+{
+  "schema": "OpsResponse",
+  "prompt_contains": "Replace the part LRU1010 by its successor",
+  "responses": [
+    {
+      "operations": [
+        {
+          "kind": "replace_part",
+          "params": {"old": "LRU1010", "new": "LRU9999"},
+          "target_doc": null,
+          "target_id": null,
+          "reason": "Replace by the successor",
+          "quotes": ["Replace the part LRU1010"]
+        }
+      ],
+      "questions": []
+    }
+  ]
+}

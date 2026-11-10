@@ -1,0 +1,20 @@
+# The request never says which part replaces LRU1010. The recorded model answer (the trap) invents
+# one: LRU9999. The code must reject that operation (the value is not in the request), ask a
+# question, and write nothing: no invented value reaches a document.
+description: A model that invents a value is stopped by the veracity check.
+markers: []
+source:
+  kind: fixtures
+  files:
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-040A-A_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-0A3A-D_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-941A-D_001-00_EN-US.XML
+    - DMC-RTPROTO-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+    - DMC-RTDEFLT-AAA-D00-00-00-00AA-022A-D_001-00_EN-US.XML
+request:
+  free_text: "Replace the part LRU1010 by its successor."
+version_policy: in_work
+decisions:
+  auto_accept: true
+  accept_certainty: [probable]
+max_seconds: 60

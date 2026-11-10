@@ -17,7 +17,10 @@ def _skip_reason(item: pytest.Item) -> str | None:
     if item.get_closest_marker("data42") and not (REPO_ROOT / "data/s1000d-4.2/bike").is_dir():
         return "data/s1000d-4.2/bike is missing (see data/README.md)"
     if item.get_closest_marker("ollama") and os.environ.get("REDACTECH_OLLAMA") != "1":
-        return "Ollama tests need REDACTECH_OLLAMA=1 and a local Ollama server"
+        return (
+            "Ollama tests need REDACTECH_OLLAMA=1 and a local Ollama server "
+            "(ensure_model() may download the model)"
+        )
     if item.get_closest_marker("ui") and importlib.util.find_spec("streamlit") is None:
         return "streamlit is not importable"
     return None

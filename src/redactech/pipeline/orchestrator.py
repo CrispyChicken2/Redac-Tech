@@ -33,9 +33,17 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, model_validator
 
-from redactech.agents import a1_indexer, a2_mapping, a4_locator, a5_preparer, a7_checker
+from redactech.agents import (
+    a1_indexer,
+    a2_freetext,
+    a2_mapping,
+    a4_locator,
+    a5_preparer,
+    a7_checker,
+)
 from redactech.agents.a11_writer import WriteRefused, WriteResult, write
 from redactech.config import load_config
+from redactech.llm import LLMError, LLMProvider, get_provider
 from redactech.models import CheckResult, Operation, Proposal, RunState, VersionPolicy, Zone
 from redactech.report.build import build_report
 from redactech.report.export import export_decisions, export_questions, write_report
@@ -47,6 +55,7 @@ Mode = Literal["none", "in_work", "new_issue"]
 STAGES_FOR_REVIEW = ("proposals_ready", "reviewed")
 DECISIONS = ("accepted", "edited", "rejected", "pending_client")
 STATE_FILE = "state.json"
+LLM_LOG_FILE = "llm_calls.jsonl"
 REQUEST_FILE = "request.json"
 
 
@@ -59,14 +68,16 @@ class RunRequest(BaseModel):
 
     mapping: str | None = None
     form: dict[str, Any] | list[dict[str, Any]] | None = None  # one form or several
+    free_text: str | None = None  # a request in French or English, read by the local model
     version_policy: Mode | None = None
     auto_accept: bool = False  # tests and the hidden CLI option only
     brex_swaps: list[str] = []  # BREX files swapped in (the UI's "change BREX")
 
     @model_validator(mode="after")
     def _one_source(self) -> RunRequest:
-        if (self.mapping is None) == (self.form is None):
-            raise ValueError("give exactly one of mapping and form")
+        given = [v for v in (self.mapping, self.form, self.free_text) if v is not None]
+        if len(given) != 1:
+            raise ValueError("give exactly one of mapping, form and free_text")
         return self
 
 
@@ -103,20 +114,38 @@ class Run:
         runs_dir: Path | str,
         clock: Callable[[], datetime.datetime] | None = None,
         token: str | None = None,
+        provider: LLMProvider | None = None,
     ) -> Run:
-        """New run: index + baseline (A1), operations (A2); stops at ``ops_proposed``."""
+        """New run: index + baseline (A1), operations (A2); stops at ``ops_proposed``.
+
+        A free-text request is read by the language model (``provider``, else the one of
+        ``config.toml``); with no model configured it is refused with a ``PipelineError``. The
+        questions of the interpretation are logged (``free_text_question``).
+        """
         now = (clock or datetime.datetime.now)()
         run_id = f"{now:%Y%m%d-%H%M%S}-{token or secrets.token_hex(2)}"
         run_dir = Path(runs_dir) / run_id
-        # read the request first: a bad mapping or form must not leave a half-created run
-        if request.mapping is not None:
-            operations = a2_mapping.mapping_operations(request.mapping)
-        else:
-            operations = a2_mapping.from_form(request.form)
-        run_dir.mkdir(parents=True, exist_ok=False)
+        # the model calls are logged here while the run folder does not exist yet
+        log_file = Path(runs_dir) / f"{run_id}.{LLM_LOG_FILE}"
         workspace_file = Path(workspace_path).resolve()
         workspace = wsmod.load_workspace(workspace_file)
-        index, baseline = a1_indexer.run(workspace)
+        indexed = None
+        questions: list[str] = []
+        # read the request first: a bad request must not leave a half-created run
+        if request.mapping is not None:
+            operations = a2_mapping.mapping_operations(request.mapping)
+        elif request.form is not None:
+            operations = a2_mapping.from_form(request.form)
+        else:  # free text: the prompt needs the index
+            # the stored text is the stripped one, so the offsets of the quotes fit it
+            request = request.model_copy(update={"free_text": (request.free_text or "").strip()})
+            indexed = a1_indexer.run(workspace)
+            found = cls._interpret(request.free_text or "", indexed[0], provider, log_file)
+            operations, questions = found.operations, found.questions
+        run_dir.mkdir(parents=True, exist_ok=False)
+        if log_file.is_file():  # the log of the model calls moves into the run folder
+            log_file.replace(run_dir / LLM_LOG_FILE)
+        index, baseline = indexed or a1_indexer.run(workspace)
         for swapped in request.brex_swaps:  # chains resolved again, baseline recomputed
             baseline = a1_indexer.swap_brex(workspace, index, swapped)
         if request.mapping is not None:
@@ -140,9 +169,37 @@ class Run:
         if request.version_policy is not None:
             suggestion = versioning.suggest_policy(operations)
             state.version_policy = suggestion.model_copy(update={"mode": request.version_policy})
+        for question in questions:
+            run._log(event="free_text_question", text=question)
         run._log(event="ops_proposed", operations=[o.id for o in operations])
         run._save()
         return run
+
+    @staticmethod
+    def _interpret(
+        text: str, index: CorpusIndex, provider: LLMProvider | None, log_file: Path
+    ) -> a2_freetext.Interpretation:
+        """Read a free-text request with the model; every call is logged to ``log_file``.
+
+        A provider made here is closed afterwards; one that is handed in is left open and gets
+        its own log path back. A failed call keeps its log next to the runs
+        (``<run id>.llm_calls.jsonl``): the refusal is explained, the attempt is not lost.
+        """
+        owned = provider is None
+        model = None
+        previous = None
+        try:
+            model = provider or get_provider(load_config())
+            previous = model.log_path
+            model.log_path = log_file
+            return a2_freetext.interpret_full(text, index, model)
+        except (LLMError, ValueError) as exc:
+            raise PipelineError(f"free text needs the local model: {exc}") from exc
+        finally:
+            if model is not None:
+                model.log_path = previous
+                if owned:
+                    model.close()
 
     @classmethod
     def load(
@@ -172,6 +229,11 @@ class Run:
             for swapped in self.request.brex_swaps:
                 a1_indexer.apply_swap(self._index, swapped)
         return self._index
+
+    def free_text_questions(self) -> list[str]:
+        """The questions raised when the free-text request was read (nothing was guessed)."""
+        log = self.state.decisions_log
+        return [str(e["text"]) for e in log if e.get("event") == "free_text_question"]
 
     def pending_ids(self) -> list[str]:
         """Proposals still to decide (flag-only illustration proposals do not count)."""
@@ -522,9 +584,10 @@ def start(
     runs_dir: Path | str,
     clock: Callable[[], datetime.datetime] | None = None,
     token: str | None = None,
+    provider: LLMProvider | None = None,
 ) -> Run:
     """``Run.start``: the new run (its ``state`` is the ``RunState``)."""
-    return Run.start(request, workspace_path, runs_dir, clock, token)
+    return Run.start(request, workspace_path, runs_dir, clock, token, provider)
 
 
 def load(run_dir: Path | str) -> Run:

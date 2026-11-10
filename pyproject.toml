@@ -34,7 +34,7 @@ addopts = "-p no:cacheprovider"
 markers = [
     "data41: needs the S1000D 4.1 Bike data in data/s1000d-4.1/bike",
     "data42: needs the S1000D 4.2 Bike data in data/s1000d-4.2/bike",
-    "ollama: needs a local Ollama server (set REDACTECH_OLLAMA=1)",
+    "ollama: needs a local Ollama server (set REDACTECH_OLLAMA=1); ensure_model() may download the model",
     "slow: slow test",
     "ui: needs streamlit (UI tests)",
 ]

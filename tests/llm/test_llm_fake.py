@@ -11,7 +11,14 @@ import pytest
 from pydantic import BaseModel
 
 from redactech.config import LLMConfig
-from redactech.llm import CassetteMissing, FakeLLM, LLMOutputError, LLMUnavailable, NoLLM
+from redactech.llm import (
+    CassetteError,
+    CassetteMissing,
+    FakeLLM,
+    LLMOutputError,
+    LLMUnavailable,
+    NoLLM,
+)
 from redactech.llm.fake import cassette_key
 
 CASSETTES = Path(__file__).resolve().parents[1] / "llm_cassettes"
@@ -132,3 +139,61 @@ def test_nollm_is_unavailable_and_does_nothing(tmp_path: Path):
 def test_nollm_refuses_even_a_huge_prompt_as_unavailable():
     with pytest.raises(LLMUnavailable):
         NoLLM().complete_json("x" * 100_000, Plan)
+
+
+# --- cassette files: duplicates, loose matching ------------------------------------------
+
+
+def write_cassette(folder: Path, name: str, **data) -> None:
+    (folder / name).write_text(json.dumps(data), encoding="utf-8")
+
+
+def test_two_cassettes_with_the_same_key_are_an_error(tmp_path: Path):
+    answer = {"kind": "a", "old": "", "new": ""}
+    same = {"system": "s", "prompt": "p", "schema": "Plan", "response": answer}
+    write_cassette(tmp_path, "one.json", **same)
+    write_cassette(tmp_path, "two.json", **same)
+    with pytest.raises(CassetteError, match="duplicate cassette key.*one.json and two.json"):
+        FakeLLM(tmp_path).complete_json("p", Plan, system="s")
+
+
+def test_a_cassette_can_match_a_piece_of_the_prompt(tmp_path: Path):
+    answer = {"kind": "k", "old": "o", "new": "n"}
+    write_cassette(tmp_path, "loose.json", schema="Plan", prompt_contains="needle", response=answer)
+    llm = FakeLLM(tmp_path)
+    assert llm.complete_json("a long prompt with a needle inside", Plan).new == "n"
+    with pytest.raises(CassetteMissing):
+        llm.complete_json("a prompt without it", Plan)
+
+    class Other(BaseModel):
+        kind: str
+
+    with pytest.raises(CassetteMissing):  # the schema must match too
+        llm.complete_json("needle", Other)
+
+
+def test_a_loose_cassette_with_a_system_text_needs_that_system(tmp_path: Path):
+    answer = {"kind": "k", "old": "o", "new": "n"}
+    write_cassette(tmp_path, "l.json", schema="Plan", prompt_contains="needle", system="S",
+                   response=answer)
+    assert FakeLLM(tmp_path).complete_json("needle", Plan, system="S").kind == "k"
+    with pytest.raises(CassetteMissing):
+        FakeLLM(tmp_path).complete_json("needle", Plan, system="another")
+
+
+def test_an_exact_cassette_wins_over_a_loose_one_and_two_loose_ones_are_an_error(tmp_path: Path):
+    exact = {"kind": "exact", "old": "", "new": ""}
+    loose = {"kind": "loose", "old": "", "new": ""}
+    write_cassette(tmp_path, "a.json", system="", prompt="needle", schema="Plan", response=exact)
+    write_cassette(tmp_path, "b.json", schema="Plan", prompt_contains="needle", response=loose)
+    assert FakeLLM(tmp_path).complete_json("needle", Plan).kind == "exact"
+    write_cassette(tmp_path, "c.json", schema="Plan", prompt_contains="need", response=loose)
+    with pytest.raises(CassetteError, match="several cassettes match"):
+        FakeLLM(tmp_path).complete_json("a needle in it", Plan)
+
+
+def test_the_cassettes_of_the_repository_have_distinct_keys():
+    llm = FakeLLM(CASSETTES)
+    exact, loose = llm._load()
+    assert len(exact) >= 3 and len(loose) >= 3
+    assert all(c["schema"] == "OpsResponse" for c in loose)

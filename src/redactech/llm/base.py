@@ -34,6 +34,7 @@ from pydantic import BaseModel, ValidationError
 from redactech.config import LLMConfig
 
 MAX_PROMPT_TOKENS = 6000
+MAX_REINJECTED = 2000  # characters of an invalid answer put back in the conversation
 RETRY_REQUEST = (
     "Your previous answer was not valid: {error}\n"
     "Answer again with one JSON object that follows the schema, and nothing else."
@@ -81,6 +82,14 @@ def estimate_tokens(*texts: str) -> int:
     return -(-sum(len(t) for t in texts) // 4)
 
 
+def check_size(messages: Sequence[dict[str, str]], schema_json: dict[str, Any]) -> int:
+    """The estimated tokens of a call; ``PromptTooLarge`` at 6,000 or more."""
+    used = estimate_tokens(json.dumps(list(messages), ensure_ascii=False), json.dumps(schema_json))
+    if used >= MAX_PROMPT_TOKENS:
+        raise PromptTooLarge(f"the prompt is about {used} tokens, the limit is {MAX_PROMPT_TOKENS}")
+    return used
+
+
 def prompt_hash(messages: Sequence[dict[str, str]]) -> str:
     """Hash of a conversation, for the log: it identifies a prompt without storing it."""
     data = json.dumps(list(messages), ensure_ascii=False, sort_keys=True).encode("utf-8")
@@ -118,6 +127,15 @@ class LLMProvider(abc.ABC):
     def max_retries(self) -> int:
         return int(self.config.max_retries)
 
+    def close(self) -> None:
+        """Release what the provider holds (a connection pool, ...). Nothing by default."""
+
+    def __enter__(self) -> LLMProvider:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
+
     # --- the contract ------------------------------------------------------------------------
 
     @abc.abstractmethod
@@ -146,11 +164,7 @@ class LLMProvider(abc.ABC):
         """A validated ``schema`` instance for ``prompt`` (see the module docstring)."""
         schema_json = schema.model_json_schema()
         messages = self.build_messages(prompt, system, examples)
-        used = estimate_tokens(json.dumps(messages, ensure_ascii=False), json.dumps(schema_json))
-        if used >= MAX_PROMPT_TOKENS:
-            raise PromptTooLarge(
-                f"the prompt is about {used} tokens, the limit is {MAX_PROMPT_TOKENS}"
-            )
+        check_size(messages, schema_json)
         error = ""
         for attempt in range(self.max_retries + 1):
             request = Request(
@@ -177,8 +191,11 @@ class LLMProvider(abc.ABC):
                 self._log(request, started, None)
                 return result
             self._log(request, started, error)
-            messages.append({"role": "assistant", "content": raw})
-            messages.append({"role": "user", "content": RETRY_REQUEST.format(error=error)})
+            if attempt < self.max_retries:  # the conversation grows: it must still fit
+                shown = raw if len(raw) <= MAX_REINJECTED else raw[:MAX_REINJECTED] + "…"
+                messages.append({"role": "assistant", "content": shown})
+                messages.append({"role": "user", "content": RETRY_REQUEST.format(error=error)})
+                check_size(messages, schema_json)
         raise LLMOutputError(
             f"no valid answer after {self.max_retries + 1} attempt(s): {error}"
         )

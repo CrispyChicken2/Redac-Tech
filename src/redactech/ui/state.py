@@ -229,9 +229,14 @@ def start_run(
     *,
     mapping: tuple[str, bytes] | None = None,
     forms: list[dict[str, Any]] | None = None,
+    free_text: str | None = None,
     runs_dir: Path | str = "runs",
+    provider: Any = None,
 ) -> orch.Run:
-    """Create a run from a mapping file or from forms; it stops at ``ops_proposed``.
+    """Create a run from a mapping file, forms or a free-text request; it stops at ``ops_proposed``.
+
+    A free-text request is read by the local model (``provider``, else the one of
+    ``config.toml``); with no model the pipeline refuses it (``PipelineError``).
 
     ``auto_accept`` is never set from the UI. The versioning policy is chosen afterwards
     (``confirm_policy``), before any proposal is prepared.
@@ -247,9 +252,11 @@ def start_run(
         request = orch.RunRequest(mapping=str(path), brex_swaps=swaps, auto_accept=False)
     elif forms:
         request = orch.RunRequest(form=forms, brex_swaps=swaps, auto_accept=False)
+    elif free_text and free_text.strip():
+        request = orch.RunRequest(free_text=free_text.strip(), brex_swaps=swaps, auto_accept=False)
     else:
-        raise ValueError("give a mapping file or at least one operation")
-    return orch.start(request, project.workspace_file, runs_dir)
+        raise ValueError("give a mapping file, at least one operation, or a free-text request")
+    return orch.start(request, project.workspace_file, runs_dir, provider=provider)
 
 
 def confirm_policy(run: orch.Run, mode: str) -> None:

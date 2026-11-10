@@ -271,3 +271,19 @@ def test_the_real_local_model_answers_a_tiny_schema():
     assert llm.ensure_model()
     result = llm.complete_json("Give the number 3 as value.", Number, system="Answer in JSON.")
     assert isinstance(result, Number) and result.value == 3
+
+
+# --- closing -------------------------------------------------------------------------------------
+
+
+def test_close_closes_the_http_client_and_the_provider_is_a_context_manager():
+    client = httpx.Client(transport=httpx.MockTransport(lambda request: answer(GOOD)))
+    with OllamaProvider(client=client) as llm:
+        assert llm.complete_json("p", Plan).kind == "replace_part"
+        assert not client.is_closed
+    assert client.is_closed
+    llm.close()  # closing twice is harmless
+
+
+def test_a_provider_that_made_no_request_closes_without_error():
+    OllamaProvider().close()

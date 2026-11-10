@@ -156,3 +156,8 @@ def test_the_roadmap_lists_every_out_of_scope_item_and_the_known_gaps(repo_root:
     for item in ROADMAP_ITEMS + KNOWN_GAPS:
         assert item in text, item
     assert "http" not in text
+
+
+def test_the_ollama_marker_says_that_the_model_may_be_downloaded(repo_root: Path):
+    text = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
+    assert "ensure_model() may download the model" in text
