@@ -128,6 +128,18 @@ La commande refuse tant qu'une proposition est encore `proposed` (hors illustrat
 
 Si la politique n'a pas été choisie à la demande, l'option `--version-policy none|in_work|new_issue` est obligatoire ici. Elle n'est enregistrée que si l'écriture réussit.
 
+Une écriture réussie produit les fichiers suivants :
+
+| Emplacement | Contenu |
+|---|---|
+| `runs/<id>/out/` | les documents écrits, sous leur nouveau nom de fichier (après versioning) |
+| `runs/<id>/report.json` | le rapport complet : documents, changements, contrôles, demandes bloquées, figures à vérifier, questions, compteurs |
+| `runs/<id>/report.html` | le même rapport, lisible dans un navigateur (page autonome, sans script) |
+| `runs/<id>/questions.csv` | les questions ouvertes (colonnes `id`, `document`, `element`, `question/comment`, `status`, `rule`), séparateur `;` |
+| `runs/<id>/decisions.jsonl` | les décisions prises, une par ligne |
+
+La commande affiche une ligne `delivery <chemin>` pour chacun des quatre fichiers de rapport et d'exports. Détail de chaque fichier : `docs/ARCHITECTURE.md`, section « Livrables d'un run ».
+
 ## 7. Contrôler le résultat
 
 ```bash

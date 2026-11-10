@@ -1,5 +1,28 @@
 # Journal des modifications
 
+## 014 — Rapport et exports
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `src/redactech/report/build.py` : rapport de livraison (`Report`) : documents avec anciens et nouveaux noms, politique, changements, contrôles séparés en préexistants et introduits, demandes bloquées, figures à vérifier, questions ouvertes, documents ignorés, compteurs.
+- `src/redactech/report/html.py` : page HTML autonome (styles intégrés, aucun script, aucune ressource externe, valeurs échappées).
+- `src/redactech/report/export.py` : `report.json`, `report.html`, `questions.csv` (séparateur `;`, UTF-8 avec BOM), `decisions.jsonl` (une décision par ligne).
+- `redactech write` produit désormais ces quatre fichiers à la racine du run (`runs/<id>/`) et affiche une ligne `delivery` pour chacun. Rien n'est produit si l'écriture est refusée.
+- Tests : `tests/report/` (construction, export, HTML) et ajout dans `tests/pipeline/test_orchestrator.py` et `tests/test_cli.py`.
+- `docs/ARCHITECTURE.md` : section « Livrables d'un run » ; tableau des modules mis à jour (`report/` implémenté).
+- `docs/DEMO.md` : liste des fichiers produits après l'étape d'écriture.
+
+### Tests écrits, non exécutés
+
+Les tests ci-dessus ont été écrits et relus, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- L'export `.xlsx` des questions existe dans `export_questions`, mais la commande `write` ne produit que le CSV.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 023 — Clôture M1
 
 **Statut :** jalon M1 clos. **Tests : résultat de CI rapporté, non vérifié sur ce poste.**

@@ -22,7 +22,7 @@ Racine : `src/redactech/`. Chaque sous-paquet porte un rôle défini par la sect
 | `agents/` | A1 indexation et baseline, A2 correspondances, A4 localisation, A5 propositions, A7 vérification, A11 écriture | implémenté (A10 assistant de discussion non commencé) |
 | `pipeline/` | orchestrateur A0 : machine à états, points d'arrêt, reprise, journal des décisions | implémenté |
 | `render/` | rendu : vue XML, vue publiée (XSLT), vue côte à côte | squelette |
-| `report/` | rapports de run | squelette |
+| `report/` | rapport de livraison (`build`), page HTML (`html`), exports (`export`) | implémenté |
 | `ui/` | interface Streamlit | squelette |
 | `llm/` | accès au LLM local (Ollama) ; tous les appels LLM passent ici (M3) | squelette |
 
@@ -459,6 +459,50 @@ Chaque événement porte un horodatage (`time`, au format ISO à la seconde, dep
 
 - La configuration `[trace]` est lue au moment où le run est ouvert (`config.toml` du dossier courant).
 - Le module n'importe jamais Streamlit : l'interface pourra s'appuyer sur le même orchestrateur.
+
+## Livrables d'un run
+
+Modules : `report/build.py`, `report/html.py`, `report/export.py`. Ils sont produits par `write`, après l'écriture des documents, et rangés **à la racine du run** (`runs/<id>/`), pas dans `out/`. Si l'écriture est refusée, aucun de ces fichiers n'est produit.
+
+| Fichier | Contenu |
+|---|---|
+| `report.json` | le rapport complet, sérialisé tel quel (modèle `Report`) |
+| `report.html` | la même information, lisible dans un navigateur |
+| `questions.csv` | les questions ouvertes, une par ligne |
+| `decisions.jsonl` | les décisions prises, une par ligne |
+
+### `report.json`
+
+Champs du modèle `Report` :
+
+- `run_id`, `workspace`, `version_policy` : identifiant du run, fichier workspace, politique de versioning appliquée ;
+- `documents` : par document écrit, le nom ancien et le nouveau (`new_name`, vide si rien n'a été écrit), la politique appliquée, les changements (`changes`, avec statut, avant et après tronqués à 600 caractères, commentaire du rédacteur, nombre de tentatives, indicateur `written`), et les contrôles séparés en `pre_existing` et `introduced` ;
+- `blocked` : les demandes bloquées (`blocked_by_rule`), avec le nombre de tentatives, la règle et la question pré-remplie ;
+- `illustrations` : les figures à vérifier, avec leur identifiant et la raison ;
+- `questions` : les questions ouvertes (voir `questions.csv`) ;
+- `skipped` : les documents en lecture seule qui n'ont pas été écrits, avec la raison ;
+- `counts` : totaux par statut (`accepted`, `edited`, `rejected`, `pending_client`, `blocked`, `proposed`) et par origine de contrôle (`pre_existing`, `introduced`).
+
+Dans un même document, un échec identique (même contrôle, même message, même chemin, même règle) n'est listé qu'une fois, même si plusieurs propositions le produisent. Les avertissements d'illustration n'apparaissent pas parmi les contrôles : ils sont dans `illustrations`.
+
+### `report.html`
+
+Une page autonome : styles intégrés, aucun script, aucune ressource externe, aucun lien. Toutes les valeurs venant du run (noms de fichiers, commentaires, extraits XML, textes de règles) sont échappées. Sections, dans l'ordre : Summary, Versioning, Changes per document, Pre-existing and introduced issues, Blocked requests, Illustrations to check, Pending questions.
+
+### `questions.csv`
+
+- Séparateur `;`, encodage UTF-8 avec marque d'ordre (BOM), pour que les tableurs détectent l'encodage.
+- Colonnes : `id`, `document`, `element`, `question/comment`, `status`, `rule`.
+- Statuts :
+  - `pending_client` : proposition mise en attente, avec le commentaire du rédacteur comme texte ;
+  - `blocked_by_rule` : demande bloquée, avec la question pré-remplie et la règle ;
+  - `open` : question attachée à une opération, sans proposition bloquée.
+
+La fonction `export_questions` accepte aussi `.xlsx` ; la commande `write` produit le CSV.
+
+### `decisions.jsonl`
+
+Une ligne JSON par événement `decision` du journal, clés triées, UTF-8 sans échappement des caractères accentués. Chaque ligne porte `event`, `proposal`, `status`, `comment`, `actor` et `time`. Les autres événements du journal (alternatives, politique, écriture) ne figurent pas dans ce fichier : ils restent dans `state.json`.
 
 ## Configuration (`config.toml`)
 
