@@ -1,5 +1,35 @@
 # Journal des modifications
 
+## 018 — README et feuille de route
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- `README.md` : installation en trois commandes, démarrage de l'interface, aperçu de la ligne de commande, architecture et liens vers la documentation.
+- `docs/ROADMAP_NEXT.md` : ce qui reste hors du prototype, et les lacunes connues.
+
+### Corrigé
+
+- `docs/DEMO.md`, vérifié contre `src/redactech/ui/app.py` et `components.py` :
+  - le fichier XLSX des questions est écrit une fois, à l'écriture des DM ; la page ne le régénère que s'il manque ;
+  - le formulaire construit une liste d'opérations (**Ajouter l'opération**, **Retirer**) ;
+  - importer des fichiers ou remplacer le BREX remet à zéro le run en cours, et chaque import réindexe le workspace ;
+  - le dossier `runs/_ui/` est créé au chargement du projet ;
+  - les messages affichés après un rejet sont donnés en entier ;
+  - l'exemple `--reject` sur des occurrences UPF, trompeur, a été remplacé en 013 ; les identifiants de propositions sont à copier depuis le tableau.
+- `README.md` : `--out runs/` retiré de l'exemple (c'est la valeur par défaut).
+- `docs/DEMO.md` : `--out runs/` retiré de l'exemple `request`, pour la même raison.
+
+### Tests : résultat de CI rapporté
+
+- Run `42790955399` (tests UI verts en CI, 834 tests réussis), rapporté par le responsable du projet ; non consultable depuis ce poste.
+
+### Non couvert
+
+- Le test d'installation en trois commandes par un membre qui n'a pas écrit le code (REQ-9).
+- Pas de remote distant sur ce poste.
+
 ## 017 — Tests de l'interface
 
 **Statut :** fusionnée. **Résultat de CI rapporté, non vérifié sur ce poste.**

@@ -85,7 +85,7 @@ Ils décrivent la qualité attendue : **exhaustivité, intégrité, homogénéit
 | REQ-6 | Test automatique : diff XML canonique ancien / nouveau limité aux éléments attendus + validation XSD de chaque DM produit | 0 différence hors liste ; 100 % valides | À chaque commit (CI) + en direct à la démo | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/lru1010`), à confirmer sur le Bike réel (tests data41 non exécutés) |
 | REQ-7 | Test utilisateur : l'évaluateur déroule le scénario seul, puis note l'utilité ; tests d'interface automatiques | Scénario terminé sans aide ; note ≥ 3/5 ; journal des décisions complet | Démo | ✏️ | ⚠️ | 0 changement écrit sans décision : prouvé par tests UI et pipeline en CI (run 42790955399, rapporté, non vérifié sur ce poste) ; test utilisateur avec l'évaluateur à faire |
 | REQ-8 | Revue de code (recherche de tous les appels à l'IA) + test : le même scénario tourne avec le modèle changé dans la configuration | Tous les appels dans `src/redactech/llm/` ; changer de modèle = 1 ligne de configuration | Chaque étape | ✏️ | ⏳ | |
-| REQ-9 | Test interne : un membre qui n'a pas écrit le code suit le README sur une machine propre | ≤ 3 commandes, sans aide | Avant la démo | ✏️ | ⏳ | |
+| REQ-9 | Test interne : un membre qui n'a pas écrit le code suit le README sur une machine propre | ≤ 3 commandes, sans aide | Avant la démo | ✏️ | ⚠️ | installation en 3 commandes documentée (README) ; test par un membre qui n'a pas écrit le code à faire |
 | REQ-10 | Test automatique : relecture de chaque DM modifié (`issueInfo`, `@changeMark`, `@changeType`, `reasonForUpdate`) | 100 % des DM modifiés conformes | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénarios `tests/scenarios/delete_mark`, `tests/scenarios/versioning`), à confirmer sur le Bike réel (tests data41 non exécutés) |
 | REQ-11 | Test automatique : contrôle des DM produits contre la chaîne BREX (validateur BREX externe ou vérificateur XPath interne) | 0 violation introduite | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénarios `tests/scenarios/preexisting_brex`, `tests/scenarios/lru1010`), à confirmer sur le Bike réel (tests data41 non exécutés) |
 | OBJ-21 | Test automatique : 3 politiques de versioning, renommage de fichier, journal | 100 % conformes | À chaque commit (CI) | ✏️ | ⚠️ | vert sur fixtures en CI (scénario `tests/scenarios/versioning`), à confirmer sur le Bike réel (tests data41 non exécutés) |
@@ -123,6 +123,13 @@ Ils décrivent la qualité attendue : **exhaustivité, intégrité, homogénéit
 - Non vérifié : tests `data41` et `data42`, et scénarios `lru1010_bike41` et `batch20_bike41` (données Bike absentes de ce poste) ; la partie « avec LLM » de OBJ-10 (aucun LLM branché) ; la revue humaine avant / après de OBJ-19.
 - Seuils inchangés. Cellules ✏️ non remplies.
 - Suite : confirmer les ⚠️ sur le Bike réel (tests `data41`), puis remplir les cellules ✏️.
+
+### Étape M2 : interface, rapport et vues
+- Ajouté : interface Streamlit en mode Document (projet, demande, propositions, livraison) ; vues XML, publiée (IETP) et côte à côte ; rapport de livraison (JSON, HTML), questions (CSV, XLSX), journal des décisions ; installation en trois commandes documentée dans le README ; feuille de route de la suite (`docs/ROADMAP_NEXT.md`).
+- Vérifié (rapporté, non vérifié sur ce poste) : tests UI verts en CI (run 42790955399, 834 tests réussis), rapporté par le responsable du projet. Ce poste n'a pas de dépôt distant.
+- Vérifié sur ce poste : `docs/DEMO.md` relu contre le code de l'interface (libellés, options, comportements). Corrigés : export XLSX à l'écriture, liste d'opérations du formulaire, remise à zéro du run après import ou remplacement de BREX, création du dossier de session au chargement.
+- Non vérifié : le parcours de l'interface à l'écran ; le test d'installation par un membre (REQ-9) et le test utilisateur avec l'évaluateur (REQ-7).
+- Suite : faire le test d'installation (REQ-9) et le test utilisateur (REQ-7) ; confirmer les résultats de CI sur le Bike réel.
 
 ## 4. Règles sur les données et la confidentialité
 

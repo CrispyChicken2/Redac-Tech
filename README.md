@@ -36,7 +36,7 @@ The same pipeline is available without the interface (`redactech --help` lists e
 
 ```bash
 redactech workspace init                                                    # workspace.toml from the example
-redactech request --mapping lots.csv --version-policy in_work --out runs/   # prepare the proposals
+redactech request --mapping lots.csv --version-policy in_work   # prepare the proposals (runs go to runs/)
 redactech review runs/<id> --accept-all                                     # decide (or --accept / --reject ID ...)
 redactech write runs/<id>                                                   # write the data modules into runs/<id>/out
 redactech check runs/<id>/out                                               # introduced vs pre-existing problems
