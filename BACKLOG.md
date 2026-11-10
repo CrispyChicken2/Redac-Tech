@@ -9,10 +9,10 @@ Légende : `[~]` en cours, `[x]` fait, `[!]` bloqué (raison indiquée).
 
 ## En cours
 
-- [~] 025 Prototype UI (skill prototype) : 3 variantes radicalement différentes de l'écran mode Document via ?variant= + barre flottante, branche jetable prototype/025-ui-variants
 
 ## Fait
 
+- [x] 025 Prototype UI : 3 écrans de revue (A Document d'abord, B File de revue, C Tableau de bord) via ?variant= (branche jetable prototype/025-ui-variants, non fusionnée) — choix de variante à faire par l'utilisateur
 - [x] 026 Correctif issu du prototype 024 : décisions définitives sauf « Rouvrir », plus de double application, avertissement questions ouvertes (7291747)
 - [x] 024 Prototype logique du cycle de revue (branche jetable prototype/024-review-logic, aa36955, non fusionnée) — a révélé 2 bugs produit → tâche 026
 - [x] 021 M3 Assistant de chat A10 (récap calculé par le code), panneau, docs/MODELS.md (a6e0765) — jalon M3 clos (tag m3)
