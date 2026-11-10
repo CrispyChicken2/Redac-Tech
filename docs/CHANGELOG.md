@@ -1,5 +1,37 @@
 # Journal des modifications
 
+## 013 — Scénarios part 2
+
+**Statut :** fusionnée. **Tests non exécutés sur ce poste.**
+
+### Ajouté
+
+- Scénarios dans `tests/scenarios/` :
+  - `batch20` : 20 remplacements de numéros de pièce fictifs dans 5 répertoires communs, moins de 10 s (OBJ-10) ;
+  - `batch20_bike41` : 20 vrais numéros de pièce du jeu Bike 4.1 remplacés par des numéros fictifs, 34 changements attendus, sauté sans les données (OBJ-10) ;
+  - `ops_steps` : six opérations sur étapes et exigences et un remplacement de pièce dans une seule demande ; figure signalée « à vérifier » (OBJ-1, OBJ-19) ;
+  - `forbidden_request` : une demande que le BREX interdit finit `blocked_by_rule` après 3 tentatives, la deuxième opération est écrite (OBJ-23) ;
+  - `brex_swap` : le même changement, avec le BREX du projet puis avec une copie modifiée ; le changement est livré dans les deux cas (échange de BREX, lié à OBJ-22 et REQ-11 à confirmer).
+- Le lanceur de scénarios (`pipeline/scenarios.py`) accepte désormais `brex_patch`, `blocked_details`, `baseline_brex`, `illustrations`, `also_allowed` avec `exact`, et une `form` en liste d'opérations ; les fichiers de fixtures peuvent être dans un sous-dossier.
+- `docs/SCENARIOS.md` : nouvelles clés, les cinq scénarios et leurs exigences.
+
+### Corrigé
+
+- `docs/DEMO.md` :
+  - le rejet de l'exemple porte désormais sur la mention en texte libre (`content/probable`) ; les occurrences UPF ne donnent jamais de proposition ;
+  - les identifiants de propositions sont à copier depuis le tableau affiché par `review`, l'ordre de `<n>` n'est pas garanti ;
+  - la colonne du tableau est `genre/certitude` (par exemple `content/probable`).
+
+### Tests écrits, non exécutés
+
+Les scénarios et les tests du lanceur ont été écrits, mais **ils n'ont pas été exécutés sur ce poste** : la règle machine interdit `pytest` et tout téléchargement de paquets. Ils tournent sur la CI GitHub uniquement.
+
+### Non couvert
+
+- `batch20_bike41` dépend des données Bike 4.1, absentes de ce poste.
+- Le rattachement de `brex_swap` à OBJ-22 et REQ-11 est une proposition, non validée par `QUALITY.md`.
+- Pas de remote distant sur ce poste : statut de la CI non vérifié.
+
 ## 012 — Scénarios et eval
 
 **Statut :** fusionnée. **Tests non exécutés sur ce poste.**

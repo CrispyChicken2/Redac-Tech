@@ -64,7 +64,7 @@ redactech request --mapping lots.csv --version-policy in_work --out runs/
 La commande crée `runs/<AAAAMMJJ-HHMMSS>-<jeton>/`, lit les propositions et affiche :
 
 - le dossier du run ;
-- une ligne par proposition : identifiant, statut, genre et certitude de la zone, document, nombre de problèmes introduits ;
+- une ligne par proposition, en colonnes séparées par des tabulations : identifiant, statut, `genre/certitude` de la zone (par exemple `content/certain` ou `content/probable`), document, nombre de problèmes introduits ;
 - la politique suggérée (avec ses motifs), et la politique choisie ;
 - le nombre de propositions à décider, avec la commande `review` à lancer.
 
@@ -80,28 +80,30 @@ Relister les propositions sans rien changer :
 redactech review runs/<id>
 ```
 
-Les identifiants exacts sont ceux affichés à l'étape précédente. Ils suivent le modèle `prop-op-0001-<n>` pour la première ligne de la table.
+Les identifiants ont la forme `prop-op-0001-<n>`, mais l'ordre de `<n>` n'est pas garanti. **Copiez les identifiants depuis le tableau affiché par `review`**, jamais depuis les exemples de ce guide. Les exemples ci-dessous utilisent les marqueurs `<id-certain>` (une proposition de colonne `content/certain`) et `<id-probable>` (une proposition de colonne `content/probable`) : remplacez-les par les identifiants réels.
 
-**Accepter** une proposition :
+**Accepter** une proposition certaine :
 
 ```bash
-redactech review runs/<id> --accept prop-op-0001-1
+redactech review runs/<id> --accept <id-certain>
 ```
 
 Refusé si la proposition introduit une erreur : il faut alors la modifier ou la rejeter.
 
-**Rejeter** avec un motif :
+**Rejeter** avec un motif, ici la mention en texte libre (colonne `content/probable`) :
 
 ```bash
-redactech review runs/<id> --reject prop-op-0001-2 --reason "Trace historique à laisser intacte"
+redactech review runs/<id> --reject <id-probable> --reason "Mention de description, à traiter à part"
 ```
+
+Les occurrences du fichier UPF ne donnent jamais de proposition : elles sont seulement journalisées comme lues en lecture seule (`skipped_readonly`). Il n'y a donc rien à rejeter pour elles.
 
 Le système cherche une alternative calculée par le code (autre occurrence, par exemple). Il affiche `alternative <id>` si elle existe, sinon `no alternative: needs manual edit`.
 
 **Laisser en attente** une question au client, avec un commentaire :
 
 ```bash
-redactech review runs/<id> --pending prop-op-0001-2 --comment "Faut-il modifier la référence de l'IPD ?"
+redactech review runs/<id> --pending <id-probable> --comment "Faut-il traiter cette mention ?"
 ```
 
 **Accepter en lot** les propositions certaines et sans problème :

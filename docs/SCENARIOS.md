@@ -24,16 +24,17 @@ Le dossier `tests/scenarios/_schemas/` contient `dmodule.xsd`, un schéma minima
 | `description` | non | texte libre |
 | `markers` | non | liste de marqueurs de données (`data41`, `data42`). Si les données manquent, le scénario est **sauté**, pas échoué. |
 | `source` | oui | d'où viennent les documents (voir ci-dessous) |
-| `request` | oui | la demande : `mapping` (liste de lignes `old`, `new`, `reason`, écrite en CSV) ou `form` (`kind`, `target`, `params`, `reason`) |
+| `request` | oui | la demande : `mapping` (liste de lignes `old`, `new`, `reason`, écrite en CSV) ou `form` (`kind`, `target`, `params`, `reason`). `form` peut être une **liste** d'opérations, toutes traitées dans une même demande. |
 | `version_policy` | non | `none`, `in_work` ou `new_issue`. Défaut : `none`. |
 | `decisions` | non | `auto_accept: true` accepte les propositions certaines et sans problème ; `accept_certainty: [probable]` accepte aussi les niveaux listés pour les zones de contenu |
 | `max_seconds` | non | durée maximale du run ; dépassée, le scénario échoue |
 | `pending` | non | texte : le scénario est sauté, en attendant son attendu |
 | `variants` | non | liste de `{id: …, <clé>: <valeur>}` : chaque variante remplace les clés du haut du scénario et est exécutée séparément |
+| `brex_patch` | non | `{doc, old, new}` (fichiers `fixtures` seulement) : remplace un texte dans une **copie de travail** d'un fichier, typiquement un BREX. L'original n'est jamais touché. Se place en général dans une variante. |
 
 **`source`** :
 
-- `kind: fixtures` et `files: [...]` : les fichiers listés sont **copiés** depuis `tests/fixtures/s1000d/` dans un dossier temporaire. Les sources d'origine ne sont jamais touchées.
+- `kind: fixtures` et `files: [...]` : les fichiers listés sont **copiés** depuis `tests/fixtures/s1000d/` dans un dossier temporaire. Les sources d'origine ne sont jamais touchées. Un chemin peut contenir un sous-dossier (`batch/…`, `scenarios/…`) ; seul le nom de base est copié.
 - Tout autre `kind` (par exemple `bike41`) : `path` (dossier des données, relatif à la racine du dépôt), `brex_dirs` (liste), `schemas_dir` (facultatif), `issue`. Les données sont lues **sur place** ; leur empreinte SHA-256 est vérifiée après le run.
 
 ## Format de `attendu.yaml`
@@ -43,11 +44,15 @@ Le dossier `tests/scenarios/_schemas/` contient `dmodule.xsd`, un schéma minima
 | `outputs` | liste exacte des noms de fichiers produits (noms après versioning) |
 | `unchanged` | motifs (`*` autorisé) de **noms de fichiers source** qui doivent rester intacts : ni fichier produit, ni modification de la source |
 | `changes` | liste des changements attendus (voir ci-dessous) |
-| `also_allowed` | par document, des XPath d'éléments où un changement est permis en plus (`side: before` ou `after`) |
+| `also_allowed` | par document, des XPath d'éléments où un changement est permis en plus (`side: before` ou `after`). Avec `exact: true`, seul l'élément lui-même peut différer (mise en page, ordre des enfants), pas ses descendants. |
 | `output_counts` | par fichier produit, des XPath avec le nombre attendu d'éléments dans la sortie |
 | `checks` | `introduced_errors` (nombre exact d'erreurs introduites, en général `0`) ; `pre_existing_min` (minimum de problèmes préexistants signalés) |
 | `blocked` | nombre exact de propositions `blocked_by_rule` attendues |
+| `blocked_details` | par opération bloquée : `operation` (identifiant), `attempts` (nombre exact de tentatives), `rule_xpath` (règle attendue dans les contrôles), `question_contains` (textes attendus dans la question client pré-remplie) |
+| `baseline_brex` | nombre de défaillances BREX de la baseline, avant tout changement : `min` et / ou `max` |
+| `illustrations` | par figure (`figure_id`, `doc`) : la figure doit être signalée « à vérifier » (zone `to_check`, avertissement) et rester identique dans la sortie |
 | `xsd` | `minimal` (défaut : `_schemas/dmodule.xsd`) ou `real` (schémas de la source ; échoue si le dossier manque) |
+| `variants` (dans `attendu.yaml`) | par variante, des clés qui remplacent celles du haut. Peut aussi porter `baseline_brex` ou `checks` (voir `brex_swap`). |
 | `variants` | par identifiant de variante, des clés qui remplacent celles du haut (typiquement `outputs` et `output_counts`) |
 
 **Un changement attendu** (entrée de `changes`) :
@@ -88,6 +93,12 @@ Un scénario **réussit** si tous ses contrôles passent. Les mesures ne remplac
 | `delete_mark` | `delete_step` sur l'étape `stp-0003` : l'étape reste dans le document, marquée `changeType="delete"`, et rien d'autre ne change. | **REQ-10** (traçabilité : marque `delete`, aucune suppression avant nouvelle issue) |
 | `versioning` | le même changement de texte sous les trois politiques (`none`, `in_work`, `new_issue`), sur un document en issue 007-00 portant trois marques d'un cycle précédent. Une seule consolidation, lors d'une nouvelle issue. | **OBJ-21** (trois politiques, renommage, journal) |
 | `preexisting_brex` | un changement de libellé sur un document qui viole déjà sa règle BREX et contient un élément inconnu du schéma. Les problèmes sont classés préexistants, rien n'est introduit, et la sortie est livrée. | **OBJ-22** (erreurs préexistantes jamais imputées à l'outil) ; **REQ-11** (aucune erreur introduite) |
+
+| `batch20` | 20 remplacements de numéros de pièce fictifs (`FAKE-PN-101..120` → `FAKE-PN-201..220`), répartis dans 5 répertoires communs, acceptés automatiquement. Le run complet, de l'index à l'écriture, doit tenir en moins de 10 s. | **OBJ-10** (performance : 20 modifications en moins de 10 s, sans LLM) |
+| `batch20_bike41` | 20 vrais numéros de pièce du jeu Bike 4.1 remplacés par des numéros fictifs (`FAKE-PN-301..320`) : 34 changements attendus dans 3 DM, validité contre les schémas réels. Marqueur `data41` : sauté sans les données. | **OBJ-10** sur données réelles ; exhaustivité |
+| `ops_steps` | Une seule demande combinant les six opérations sur étapes et exigences (insertion, déplacement et suppression d'étape ; ajout et retrait d'exigence ; mise à jour d'une référence) et un remplacement de pièce. La figure liée à une étape modifiée est signalée « à vérifier » et laissée intacte. | **OBJ-1** (exhaustivité) ; **OBJ-19** (illustrations signalées) |
+| `forbidden_request` | La première opération demande une note dans une étape, que le BREX du projet interdit. Elle doit finir `blocked_by_rule` après 3 tentatives, avec la règle citée et la question client pré-remplie. La deuxième opération de la même demande est écrite. | **OBJ-23** (demande interdite : blocage en 3 essais au plus, sans boucle) |
+| `brex_swap` | Le même changement anodin est exécuté deux fois : avec le BREX du projet tel quel (variante `project`), puis avec une copie modifiée de ce BREX qui interdit un élément déjà présent dans la procédure (variante `swapped`, via `brex_patch`). Le changement de BREX modifie la baseline, pas le verdict sur le changement : la violation devient préexistante, et le changement est livré. | Échange de BREX : la chaîne est résolue à nouveau à chaque run. Relié à **OBJ-22** et **REQ-11** : à confirmer, `QUALITY.md` n'a pas d'exigence dédiée à l'échange de BREX. |
 
 Le scénario `lru1010` reprend le remplacement de `docs/DEMO.md`, mais avec décisions automatiques. Il attend **trois** changements, car il compte aussi la mention en texte libre (niveau `probable`), que `docs/DEMO.md` ne mentionne pas et que le rédacteur doit décider à la main. `QUALITY.md` (REQ-5) parle de « 2/2 modifications » : ce chiffre ne couvre que les deux occurrences structurées. Les deux documents ne comptent donc pas la même chose.
 
