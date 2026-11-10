@@ -15,7 +15,7 @@ dependencies = [
     "pyyaml",
     "openpyxl",
     "httpx",
-    "streamlit",
+    "streamlit>=1.40",
 ]
 
 [project.optional-dependencies]

@@ -6,9 +6,10 @@
   "errors", "pending", "blocked", "changed parts") is answered ONLY from queries on the run state:
   the parts changed per document, the pre-existing and introduced problems, the items put on hold
   for the customer with their comment, the requests blocked by a rule. The reply is a list of
-  bullets built by code. The language model may be asked to rephrase it, but its text is accepted
-  only if it holds exactly the same facts (every figure, identifier and file name of the list, none
-  more); otherwise, and when no model is configured, the code list is returned as it is;
+  bullets built by code. That list is ALWAYS the answer. A configured language model may be asked
+  to rephrase it; its wording is shown below the list, labelled "Reformulation du modèle (non
+  vérifiée)", never instead of it, so no statement of the model replaces what the code computed.
+  A message that mixes a recap and a change gets the recap and a note: send the change separately;
 * anything else is a change request: it goes through A2 free text (the same checks, the same
   veracity rules) and the operations are ADDED to the run through A0: located, prepared and
   checked like the first ones. They still need the writer's decisions. Nothing is applied here.
@@ -37,8 +38,11 @@ TOPICS = {
                 "modifiées", "what changed", "changements"),
 }
 ORDER = ("changes", "errors", "pending", "blocked")  # the order of the sections in a reply
-EDIT_VERBS = ("remplac", "replace", "insér", "inser", "supprim", "delete", "déplac", "deplac",
-              "move", "ajout", "add ", "retir", "remove", "modifier", "update", "change the")
+EDIT_VERBS = re.compile(
+    r"\b(remplace|remplacer|remplacez|replace|insère|insérer|insérez|insert|supprime|supprimer|"
+    r"supprimez|delete|remove|retire|retirer|retirez|déplace|déplacer|déplacez|move|ajoute|"
+    r"ajouter|ajoutez|add|modifie|modifier|modifiez|update)\b"
+)
 FRENCH = ("récap", "résumé", "erreur", "attente", "bloqu", "fais", "points", "pièce", "quels",
           "quelles", "donne", "liste", "modifi", "où", " les ", " des ", " et ")
 MAX_REPHRASED = 4000
@@ -54,6 +58,10 @@ LABELS = {
         "nothing": "Aucune opération n'a pu être retenue.",
         "question": "Question",
         "failed": "Le modèle n'a pas pu lire la demande : {error}",
+        "model_note": "Reformulation du modèle (non vérifiée)",
+        "mixed": (
+            "La modification demandée n'a pas été traitée : envoyez-la en message séparé."
+        ),
     },
     "en": {
         "changes": "Changed parts", "introduced": "Introduced errors",
@@ -66,6 +74,8 @@ LABELS = {
         "nothing": "No operation could be kept.",
         "question": "Question",
         "failed": "The model could not read the request: {error}",
+        "model_note": "Model rephrasing (not verified)",
+        "mixed": "The requested change was not processed: send it as a separate message.",
     },
 }
 
@@ -81,6 +91,15 @@ class ChatReply:
     text: str
     operations_added: list[Operation] = field(default_factory=list)
     sources: list[str] = field(default_factory=list)  # ids of the proposals / operations used
+    rephrased: str = ""  # the model's wording of ``text``, if any: shown below it, NOT verified
+    note: str = ""  # the label put above ``rephrased`` when it is shown
+
+    @property
+    def display(self) -> str:
+        """What the writer reads: the code-computed reply, then the model's wording labelled."""
+        if not self.rephrased:
+            return self.text
+        return f"{self.text}\n\n{self.note}:\n{self.rephrased}"
 
 
 # --- classification -----------------------------------------------------------------------------
@@ -92,13 +111,17 @@ def language(message: str) -> str:
     return "fr" if any(word in low for word in FRENCH) else "en"
 
 
+def has_edit(message: str) -> bool:
+    """Does the message ask for a change (an imperative or infinitive verb, as a whole word)?"""
+    return EDIT_VERBS.search(message.casefold()) is not None
+
+
 def classify(message: str) -> tuple[str, list[str]]:
     """(``status`` | ``request``, the sections asked for, in reply order)."""
     low = message.casefold()
     recap = any(word in low for word in RECAP)
     topics = [name for name in ORDER if any(word in low for word in TOPICS[name])]
-    edits = any(verb in f"{low} " for verb in EDIT_VERBS)
-    if recap or (topics and not edits):
+    if recap or (topics and not has_edit(message)):
         return "status", topics or list(ORDER)
     return "request", []
 
@@ -161,48 +184,32 @@ def status_lines(run: Run, sections: list[str], lang: str) -> tuple[list[str], l
     return lines, used
 
 
-# --- the model may rephrase, never add -----------------------------------------------
-
-
-FACT = re.compile(r"[^\s()\[\],;:!?]*[0-9_/][^\s()\[\],;:!?]*|[^\s()\[\],;:!?]*-[^\s()\[\],;:!?]+")
-
-
-NUMBER_WORDS = {
-    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-    "eleven", "twelve", "zéro", "un", "une", "deux", "trois", "quatre", "cinq", "sept", "huit",
-    "neuf", "dix", "onze", "douze",
-}
-
-
-def facts(text: str) -> set[str]:
-    """Figures (also spelled out), identifiers, file names: what a rephrasing must not change."""
-    found = {token.strip(".") for token in FACT.findall(text) if token.strip(".")}
-    words = {w.strip(".,;:!?()").casefold() for w in text.split()}
-    return found | {w for w in words if w in NUMBER_WORDS}
+# --- the model may rephrase, in addition, never instead ------------------------------
 
 
 def rephrase(text: str, provider: LLMProvider | None, log_path: Path | None) -> str:
-    """The model's rephrasing if it holds exactly the facts of ``text``, else ``text`` itself."""
+    """The model's wording of the code list, or "" (no model, a failure, nothing usable).
+
+    It is NOT checked: the reply of the assistant is always the code list, and this wording is
+    shown below it, labelled as the model's (see ``ChatReply.display``).
+    """
     if provider is None or provider.name == "none":
-        return text
+        return ""
     previous = provider.log_path
     provider.log_path = log_path or previous
     try:
         reply = provider.complete_json(
-            "Rephrase this list in the same language as its titles. Keep every item, every "
-            "figure, every identifier and every file name exactly as written, and add nothing.\n\n"
-            + text,
+            "Rephrase this list in the same language as its titles. Keep every item and add "
+            "nothing.\n\n" + text,
             Rephrased,
             system="You rewrite a status list for a technical writer. You never add information.",
         )
     except LLMError:
-        return text
+        return ""
     finally:
         provider.log_path = previous
     candidate = getattr(reply, "text", "").strip()
-    if not candidate or len(candidate) > MAX_REPHRASED or facts(candidate) != facts(text):
-        return text
-    return candidate
+    return candidate if 0 < len(candidate) <= MAX_REPHRASED else ""
 
 
 # --- the replies --------------------------------------------------------------------
@@ -220,8 +227,10 @@ def answer(message: str, run: Run | None, provider: LLMProvider | None = None) -
     if kind == "status":
         lines, used = status_lines(run, sections, lang)
         text = "\n".join(lines)
-        text = rephrase(text, provider, run.run_dir / "llm_calls.jsonl")
-        return ChatReply(text, sources=used)
+        wording = rephrase(text, provider, run.run_dir / "llm_calls.jsonl")
+        if has_edit(message):  # a recap and a change in one message: only the recap is answered
+            text += "\n\n" + labels["mixed"]
+        return ChatReply(text, sources=used, rephrased=wording, note=labels["model_note"])
     return _request_reply(message.strip(), run, provider, lang)
 
 

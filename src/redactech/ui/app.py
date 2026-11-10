@@ -498,7 +498,7 @@ def send_message() -> None:
     with get_provider(load_config()) as provider:
         reply = answer(message, current_run(), provider)
     history.append(("Vous", message))
-    history.append(("Assistant", reply.text))
+    history.append(("Assistant", reply.display))
     st.session_state["chat_message"] = ""
 
 

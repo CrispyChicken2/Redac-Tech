@@ -170,3 +170,8 @@ def test_the_models_page_covers_the_model_the_install_and_the_tests(repo_root: P
     assert "pytest -m ollama" in text and "not measured" in text.lower()
     assert "http://localhost:11434" in text and "REDACTECH_ALLOW_REMOTE_LLM" in text
     assert "llm_calls.jsonl" in text
+
+
+def test_streamlit_is_pinned_to_a_version_that_allows_the_nested_columns(repo_root: Path):
+    text = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
+    assert '"streamlit>=1.40"' in text

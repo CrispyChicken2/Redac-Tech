@@ -14,6 +14,7 @@ from redactech.llm.base import LLMProvider, LLMUnavailable, Request
 
 A = "DMC-A-520A-A_001-00_EN-US.XML"
 B = "DMC-B-0A3A-D_001-00_EN-US.XML"
+NL = chr(10)
 QUESTION = "The request 'add a note' conflicts with business rule R-1: No <note> here. Proceed?"
 
 
@@ -162,41 +163,58 @@ def test_without_a_run_or_a_message_the_reply_says_so(run):
     assert chat.answer("   ", run).text == "Ask a question or describe a change."
 
 
-# --- the model may rephrase, never add --------------------------------------
+# --- the model may rephrase, in addition, never instead ----------------------------------------
 
 
-def test_without_a_model_the_code_list_is_returned_as_it_is(run):
-    plain = chat.answer("Show me the errors", run).text
+FALSE_CLAIM = (
+    "Erreurs introduites (0) : des erreurs graves ont été détectées. "
+    "Erreurs préexistantes (0). "
+    "En attente du client (1) : tout a été validé par le client."
+)
+
+
+def test_without_a_model_the_reply_is_the_code_list_alone(run):
+    plain = chat.answer("Show me the errors", run)
     for provider in (None, NoLLM()):
-        assert chat.answer("Show me the errors", run, provider).text == plain
+        reply = chat.answer("Show me the errors", run, provider)
+        assert reply.text == plain.text and reply.rephrased == "" and reply.display == plain.text
 
 
-def test_a_rephrasing_with_the_same_facts_is_used(run):
+def test_a_rephrasing_is_shown_below_the_code_list_and_labelled(run):
     code = chat.answer("What is pending?", run).text
-    llm = Scripted(lambda text: "Here is where we stand.\n" + text.replace("Pending", "On hold"))
+    llm = Scripted(lambda text: "Here is where we stand." + NL + text.replace("Pending", "On hold"))
     reply = chat.answer("What is pending?", run, llm)
-    assert reply.text.startswith("Here is where we stand.") and reply.text != code
-    assert chat.facts(reply.text) == chat.facts(code)
-    assert llm.requests[0].schema_name == "Rephrased"
-    assert code in llm.requests[0].prompt  # the model is given the code list
+    assert reply.text == code  # the answer is the code list, unchanged
+    assert reply.rephrased.startswith("Here is where we stand.")
+    label = "Model rephrasing (not verified):"
+    assert reply.display == code + NL + NL + label + NL + reply.rephrased
+    assert reply.display.startswith(code)
+    assert llm.requests[0].schema_name == "Rephrased" and code in llm.requests[0].prompt
 
 
-def test_a_rephrasing_that_adds_a_fact_is_refused(run):
-    code = chat.answer("What is pending?", run).text
-    extras = ["\n- 2 more items in DMC-C-999.XML", "\nSee LRU9999.", "\nThree items.",
-              "\nDeux points."]
-    for extra in extras:
-        llm = Scripted(lambda listing, extra=extra: listing + extra)
-        assert chat.answer("What is pending?", run, llm).text == code, extra
+def test_the_label_is_french_for_a_french_message(run):
+    llm = Scripted(lambda text: "Voici où nous en sommes.")
+    reply = chat.answer("Quelles demandes sont bloquées ?", run, llm)
+    assert reply.display.startswith(reply.text)
+    label = "Reformulation du modèle (non vérifiée):"
+    assert reply.display.endswith(label + NL + "Voici où nous en sommes.")
 
 
-def test_a_rephrasing_that_loses_a_fact_is_refused(run):
-    code = chat.answer("What is blocked?", run).text
-    llm = Scripted(lambda listing: "Something is blocked by a rule.")
-    assert chat.answer("What is blocked?", run, llm).text == code
+def test_a_false_claim_in_plain_words_never_replaces_the_code_list(run):
+    """The model's wording is only an addition: a claim with no figure cannot change the answer."""
+    run.state.proposals = []
+    code = chat.answer("Fais-moi un récap des erreurs et des points en attente", run).text
+    assert "- aucune" in code and "graves" not in code
+    llm = Scripted(lambda text: FALSE_CLAIM)
+    reply = chat.answer("Fais-moi un récap des erreurs et des points en attente", run, llm)
+    assert reply.text == code  # unchanged, and it still says "aucune"
+    assert reply.display.startswith(code)
+    shown_after = reply.display[len(code):]
+    assert "Reformulation du modèle (non vérifiée)" in shown_after and "graves" in shown_after
+    assert "graves" not in reply.text and "validé" not in reply.text
 
 
-def test_a_model_that_fails_leaves_the_code_list(run):
+def test_a_model_that_fails_leaves_only_the_code_list(run):
     class Down(LLMProvider):
         name = "down"
 
@@ -204,7 +222,14 @@ def test_a_model_that_fails_leaves_the_code_list(run):
             raise LLMUnavailable("down")
 
     code = chat.answer("What is pending?", run).text
-    assert chat.answer("What is pending?", run, Down()).text == code
+    reply = chat.answer("What is pending?", run, Down())
+    assert reply.text == code and reply.rephrased == "" and reply.display == code
+
+
+def test_an_empty_or_huge_rephrasing_is_ignored(run):
+    for wording in ("   ", "x" * (chat.MAX_REPHRASED + 1)):
+        reply = chat.answer("What is pending?", run, Scripted(lambda text, w=wording: w))
+        assert reply.rephrased == "" and reply.display == reply.text
 
 
 def test_the_rephrasing_is_logged_in_the_run_folder_and_the_log_path_is_given_back(run):
@@ -213,11 +238,37 @@ def test_the_rephrasing_is_logged_in_the_run_folder_and_the_log_path_is_given_ba
     assert (run.run_dir / "llm_calls.jsonl").is_file() and llm.log_path is None
 
 
-def test_spelled_out_numbers_count_as_facts():
-    assert chat.facts("Three items and deux points.") == {"three", "deux"}
+# --- a recap and a change in one message -----------------------------------
 
 
-def test_the_facts_of_a_text_are_its_figures_identifiers_and_file_names():
-    text = "Pending (1):\n- DMC-B-0A3A-D_001-00_EN-US.XML: Ask about LRU2020, step stp-0003."
-    assert chat.facts(text) == {"1", "DMC-B-0A3A-D_001-00_EN-US.XML", "LRU2020", "stp-0003"}
-    assert chat.facts("Nothing to say here.") == set()
+def test_the_recap_is_answered_and_the_change_is_sent_back(run):
+    reply = chat.answer("Remplace LRU1010 par LRU2020 et fais un récap des erreurs", run)
+    code = chat.answer("Fais un récap des erreurs", run).text
+    assert reply.text == code + NL + NL + (
+        "La modification demandée n'a pas été traitée : envoyez-la en message séparé.")
+    assert reply.operations_added == []
+    english = chat.answer("Replace LRU1010 with LRU2020 and give me a recap of the errors", run)
+    note = "The requested change was not processed: send it as a separate message."
+    assert english.text.endswith(note)
+    assert english.text.startswith("Introduced errors (1):")
+
+
+def test_the_model_is_not_asked_to_read_the_change_of_a_mixed_message(run):
+    llm = Scripted(lambda text: "reworded")
+    chat.answer("Replace LRU1010 with LRU2020 and give me a recap of the errors", run, llm)
+    assert {request.schema_name for request in llm.requests} == {"Rephrased"}
+    assert "LRU2020" not in llm.requests[0].prompt  # the request text is not sent along
+
+
+def test_a_recap_that_only_mentions_a_past_change_has_no_note(run):
+    for message in ("Récap des pièces remplacées", "Recap of the replaced parts"):
+        reply = chat.answer(message, run)
+        assert "envoyez-la" not in reply.text and "send it as" not in reply.text
+
+
+def test_the_edit_verbs_are_whole_words():
+    assert chat.has_edit("Remplace LRU1010 par LRU2020") and chat.has_edit("please REPLACE it")
+    assert chat.has_edit("Supprimer l'étape") and chat.has_edit("add a spare")
+    assert not chat.has_edit("Récap des pièces remplacées")
+    assert not chat.has_edit("Recap of the replaced and added parts")
+    assert not chat.has_edit("the address of the manual")
