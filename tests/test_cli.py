@@ -363,3 +363,34 @@ def test_the_text_option_exists(project: dict):
 
     params = {p.name: p for p in typer.main.get_command(app).commands["request"].params}
     assert params["text"].opts == ["--text"] and not params["text"].hidden
+
+
+def test_write_warns_about_the_open_customer_questions(project: dict):
+    assert run(*request_args(project)).exit_code == 0
+    folder = str(the_run_dir(project))
+    accepted = run("review", folder, "--accept-all")
+    (free,) = [
+        line.split("\t")[0] for line in accepted.output.splitlines()
+        if "content/probable" in line and "\tproposed\t" in line
+    ]
+    held = run("review", folder, "--pending", free, "--comment", "Ask the customer")
+    assert held.exit_code == 0, held.output
+    written = run("write", folder, "--version-policy", "in_work")
+    assert written.exit_code == 0, written.output
+    assert "warning: 1 question client ouverte (en attente)" in written.output
+    assert "Ask the customer" in written.output
+
+
+def test_review_can_take_a_decision_back(project: dict):
+    assert run(*request_args(project)).exit_code == 0
+    folder = str(the_run_dir(project))
+    accepted = run("review", folder, "--accept-all")
+    (line,) = [x for x in accepted.output.splitlines() if x.startswith("accepted: ")]
+    target = line.removeprefix("accepted: ").split(", ")[0]
+    again = run("review", folder, "--reject", target, "--reason", "no")
+    assert again.exit_code == 1 and "reopen" in again.output  # a decision is final
+    reopened = run("review", folder, "--reopen", target)
+    assert reopened.exit_code == 0, reopened.output
+    assert f"reopened {target}: proposed" in reopened.output
+    missing = run("review", folder, "--reopen", target)
+    assert missing.exit_code == 1 and "not decided" in missing.output

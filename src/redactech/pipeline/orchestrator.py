@@ -45,7 +45,7 @@ from redactech.agents.a11_writer import WriteRefused, WriteResult, write
 from redactech.config import load_config
 from redactech.llm import LLMError, LLMProvider, get_provider
 from redactech.models import CheckResult, Operation, Proposal, RunState, VersionPolicy, Zone
-from redactech.report.build import build_report
+from redactech.report.build import build_report, question_entries
 from redactech.report.export import export_decisions, export_questions, write_report
 from redactech.s1000d import versioning
 from redactech.s1000d.index import CorpusIndex, build_index, ref_key
@@ -53,6 +53,7 @@ from redactech.sources import workspace as wsmod
 
 Mode = Literal["none", "in_work", "new_issue"]
 STAGES_FOR_REVIEW = ("proposals_ready", "reviewed")
+SUPERSEDED = "superseded by reopened proposal"
 DECISIONS = ("accepted", "edited", "rejected", "pending_client")
 STATE_FILE = "state.json"
 LLM_LOG_FILE = "llm_calls.jsonl"
@@ -371,6 +372,10 @@ class Run:
             proposal if p.id == proposal.id else p for p in self.state.proposals
         ]
 
+    def _taken_ids(self) -> frozenset[str]:
+        ids = [p.id for p in self.state.proposals] + [o.id for o in self.state.operations]
+        return frozenset(ids)
+
     def _is_flag(self, proposal: Proposal) -> bool:
         zone = self._zone_of(proposal)
         return zone is not None and zone.kind == "illustration"
@@ -418,6 +423,10 @@ class Run:
         proposal = self._proposal(proposal_id)
         if proposal.status == "blocked_by_rule" and status != "pending_client":
             raise PipelineError(f"{proposal_id} is blocked by a business rule: ask the customer")
+        if proposal.status not in ("proposed", "blocked_by_rule"):
+            raise PipelineError(
+                f"{proposal_id} is already decided ({proposal.status}): reopen it to change it"
+            )
         update: dict[str, Any] = {"status": status, "reviewer_comment": comment}
         if status == "accepted" and self._introduced(proposal.checks, True):
             raise PipelineError(f"{proposal_id} introduces errors: edit it or reject it")
@@ -443,16 +452,92 @@ class Run:
             update.update({"edited_xml": edited_xml, "checks": checks})
         updated = proposal.model_copy(update=update)
         self._replace(updated)
+        extra = {"was": "blocked_by_rule"} if proposal.status == "blocked_by_rule" else {}
         self._log(
             event="decision",
             proposal=proposal_id,
             status=status,
             comment=comment,
             actor=actor,
+            **extra,
         )
         self._refresh_stage()
         self._save()
         return updated
+
+    def _descendants(self, proposal_id: str) -> list[Proposal]:
+        """Every proposal whose ``replaces`` chain reaches ``proposal_id``."""
+        family = {proposal_id}
+        found: list[Proposal] = []
+        grew = True
+        while grew:
+            grew = False
+            for other in self.state.proposals:
+                if other.replaces in family and other.id not in family:
+                    family.add(other.id)
+                    found.append(other)
+                    grew = True
+        return found
+
+    def _was_blocked(self, proposal_id: str) -> bool:
+        """Was this proposal blocked by a rule before the writer put it to the customer?"""
+        return any(
+            e.get("event") == "decision"
+            and e.get("proposal") == proposal_id
+            and e.get("was") == "blocked_by_rule"
+            for e in self.state.decisions_log
+        )
+
+    def reopen(self, proposal_id: str, actor: str = "user") -> Proposal:
+        """Take a decision back: the proposal is open again (refused after the write).
+
+        It returns to ``proposed``, except a request blocked by a rule and then put to the
+        customer, which returns to ``blocked_by_rule`` (it never gets another attempt). The
+        whole chain of alternatives that replaced it and is still open is rejected as superseded,
+        so that a proposal and its replacement are never both live; the reopening is refused
+        while one of them is accepted or edited.
+        """
+        self._need(*STAGES_FOR_REVIEW)
+        proposal = self._proposal(proposal_id)
+        if proposal.status == "proposed":
+            raise PipelineError(f"{proposal_id} is not decided yet")
+        if proposal.status == "blocked_by_rule":
+            raise PipelineError(f"{proposal_id} is blocked by a business rule: ask the customer")
+        descendants = self._descendants(proposal_id)
+        for other in descendants:
+            if other.status in ("accepted", "edited"):
+                raise PipelineError(
+                    f"{proposal_id} has an alternative already {other.status} ({other.id}): "
+                    "reopen that one first"
+                )
+        for other in descendants:
+            if other.status == "proposed":
+                self._replace(
+                    other.model_copy(
+                        update={"status": "rejected", "reviewer_comment": SUPERSEDED}
+                    )
+                )
+                self._log(
+                    event="decision",
+                    proposal=other.id,
+                    status="rejected",
+                    comment=SUPERSEDED,
+                    actor=actor,
+                )
+        target = "blocked_by_rule" if self._was_blocked(proposal_id) else "proposed"
+        reopened = proposal.model_copy(
+            update={"status": target, "reviewer_comment": None, "edited_xml": None}
+        )
+        self._replace(reopened)
+        self._log(event="reopen", proposal=proposal_id, was=proposal.status, actor=actor)
+        self._refresh_stage()
+        self._save()
+        return reopened
+
+    def open_questions(self) -> list[str]:
+        """The customer questions still open (proposals put on hold), one line each."""
+        rows = [q for q in question_entries(self.state) if q.status == "pending_client"]
+        return [f"{q.id} ({q.document}): {q.text}" for q in rows]
 
     def accept_all(self, actor: str = "user") -> list[str]:
         """Accept the proposals that are certain and clean; the others stay ``proposed``.
@@ -511,6 +596,7 @@ class Run:
             self.index,
             a5_preparer.Rejection(rejected, reason),
             max_alternatives=self._trace.max_alternatives,
+            taken=self._taken_ids(),
         )
         if not report.proposals:
             self._log(event="needs_manual_edit", proposal=proposal_id)
@@ -521,6 +607,8 @@ class Run:
             alternative, self.index, self.state.baseline, operation=derived, zone=zone
         )
         alternative = alternative.model_copy(update={"checks": checks})
+        if alternative.id in self._taken_ids():  # never a duplicate id in the run
+            raise PipelineError(f"{alternative.id} already exists in the run")
         self.state.operations.append(derived)
         self.state.proposals.append(alternative)
         self._log(event="alternative", proposal=proposal_id, alternative=alternative.id)
@@ -610,6 +698,7 @@ class Run:
             raise PipelineError(str(exc)) from exc
         if policy is not None:
             self.set_policy(policy)
+        result.open_questions = self.open_questions()
         self.state.stage = "written"
         self._log(
             event="written",

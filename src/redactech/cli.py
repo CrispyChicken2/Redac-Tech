@@ -7,7 +7,7 @@ Implemented: ``workspace``, ``index``, ``baseline``, ``request``, ``review``, ``
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
@@ -252,6 +252,7 @@ def request(
         except orchestrator.PipelineError as exc:
             _fail(f"cannot write: {exc}")
         typer.echo(f"written: {', '.join(p.name for p in result.written) or 'nothing'}")
+        _echo_open_questions(result)
         for path in run.delivery_files:
             typer.echo(f"delivery {path}")
     elif left:
@@ -271,12 +272,18 @@ def review(
     accept_all: Annotated[
         bool, typer.Option("--accept-all", help="Accept the certain and clean proposals.")
     ] = False,
+    reopen: Annotated[
+        list[str] | None, typer.Option("--reopen", help="Take a decision back: proposal id.")
+    ] = None,
 ) -> None:
     """List the proposals of a run, or record decisions."""
     from redactech.pipeline import orchestrator
 
     run = _open_run(run_dir)
     try:
+        for proposal_id in reopen or []:
+            reopened = run.reopen(proposal_id)
+            typer.echo(f"reopened {proposal_id}: {reopened.status}")
         for proposal_id in accept or []:
             run.decide(proposal_id, "accepted")
             typer.echo(f"accepted {proposal_id}")
@@ -327,8 +334,17 @@ def write(
     for entry in result.skipped:
         typer.echo(f"skipped {entry['proposal']}: {entry['reason']}")
     typer.echo(f"{len(result.written)} file(s) written to {run.run_dir / 'out'}")
+    _echo_open_questions(result)
     for path in run.delivery_files:
         typer.echo(f"delivery {path}")
+
+
+def _echo_open_questions(result: Any) -> None:
+    """The warning about the customer questions still open (the write itself is allowed)."""
+    if result.warning:
+        typer.echo(f"warning: {result.warning}")
+        for line in result.open_questions:
+            typer.echo(f"  - {line}")
 
 
 @app.command()

@@ -149,6 +149,7 @@ def _alternative(
     zone: Zone,
     rejection: Rejection,
     cache: dict[str, Any],
+    taken: frozenset[str] = frozenset(),
 ) -> tuple[Proposal, Operation] | None:
     rejected = rejection.proposal
     original_tree = _original(index, zone.ref, cache).tree
@@ -176,8 +177,14 @@ def _alternative(
     if rejection.feedback:
         feedback.append(rejection.feedback)
     result, params = found[position]
-    derived = op.model_copy(update={"id": f"{op.id}-a{attempt}-{zone.id}", "params": params})
-    proposal = _proposal(derived, zone, f"{rejected.id}-a{attempt}", result)
+    derived_id, proposal_id = f"{op.id}-a{attempt}-{zone.id}", f"{rejected.id}-a{attempt}"
+    number = 1
+    while derived_id in taken or proposal_id in taken:  # never reuse an id of the run
+        number += 1
+        derived_id = f"{op.id}-a{attempt}-{zone.id}-r{number}"
+        proposal_id = f"{rejected.id}-a{attempt}-r{number}"
+    derived = op.model_copy(update={"id": derived_id, "params": params})
+    proposal = _proposal(derived, zone, proposal_id, result)
     proposal = proposal.model_copy(
         update={"attempt": attempt, "replaces": rejected.id, "rejection_feedback": feedback}
     )
@@ -190,6 +197,7 @@ def prepare_report(
     index: CorpusIndex,
     rejection: Rejection | None = None,
     max_alternatives: int = DEFAULT_MAX_ALTERNATIVES,
+    taken: frozenset[str] = frozenset(),
 ) -> PrepareReport:
     """Proposals for ``zones`` (or the alternative to ``rejection``) and the zones that failed."""
     report = PrepareReport()
@@ -200,7 +208,7 @@ def prepare_report(
         if zone is None or zone.kind != "content" or rejected.attempt > max_alternatives:
             return report
         try:
-            alternative = _alternative(index, op, zone, rejection, cache)
+            alternative = _alternative(index, op, zone, rejection, cache, taken)
         except OpError as exc:
             report.errors.append(f"{zone.id}: {exc}")
             return report

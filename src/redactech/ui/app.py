@@ -16,6 +16,7 @@ import streamlit as st
 from lxml import etree
 
 from redactech.agents.a10_chat import answer
+from redactech.agents.a11_writer import open_questions_warning
 from redactech.config import load_config
 from redactech.llm import get_provider
 from redactech.pipeline import orchestrator as orch
@@ -377,7 +378,17 @@ def proposal_card(run: orch.Run, proposal: Any, zone: Any, view: str) -> None:
         if proposal.reviewer_comment:
             st.caption(f"Commentaire : {proposal.reviewer_comment}")
         if comp.can_decide(run):
-            decision_controls(run, proposal, flag_only=run.is_flag(proposal))
+            if proposal.status == "proposed":
+                decision_controls(run, proposal, flag_only=run.is_flag(proposal))
+            elif proposal.status != "blocked_by_rule":
+                reopen_control(run, proposal)
+
+
+def reopen_control(run: orch.Run, proposal: Any) -> None:
+    """A decided proposal can only be changed by taking the decision back first."""
+    pid = proposal.id
+    if st.button("Rouvrir", key=f"reopen_{pid}"):
+        apply_decision(run, lambda: run.reopen(pid))
 
 
 def decision_controls(run: orch.Run, proposal: Any, flag_only: bool = False) -> None:
@@ -446,6 +457,10 @@ def delivery_tab(current: ui_state.Project) -> None:
     pending = run.pending_ids()
     if pending:
         st.warning(f"{len(pending)} proposition(s) restent à décider.")
+    questions = run.open_questions()
+    if questions:
+        lines = [open_questions_warning(questions), *(f"- {q}" for q in questions)]
+        st.warning(chr(10).join(lines))
     if run.state.stage == "written":
         st.success("Les DM sont écrits.")
     elif st.button("Écrire les DM", key="write", disabled=not comp.can_write(run)):
