@@ -2,11 +2,11 @@
 
 | Grid | What it asks | Where to find it in this file |
 |---|---|---|
-| **Q1** | You questioned and specified the quality expectations of your product | §1 Objectives and requirement |
+| **Q1** | You questioned and specified the quality expectations of your product | §1 Objectives and requirements |
 | **Q2** | You defined how you will know each one is met | §2 Verification |
 | **Q3** | You actually ran those checks | §2 *Result* and *Evidence* columns, and §3 Log |
 
-Planning and milestones: [PLANNING.md](PLANNING.md), [ROADMAP.md](ROADMAP.md). This file is updated every project week, and every earlier version stays reachable (§5).
+Planning and milestones: [PLANNING.md](PLANNING.md), [docs/ROADMAP_NEXT.md](https://github.com/CrispyChicken2/Redac-Tech/blob/prototype1/docs/ROADMAP_NEXT.md) (branch `prototype1`). This file is updated every project week, and every earlier version stays reachable (§5).
 
 ## Product in brief
 
@@ -21,14 +21,14 @@ RedacTech is a **local** assistant that prepares the update of an existing S1000
 **Guiding principle**: the AI proposes, the code applies, the checks verify, the writer decides.
 **Approach**: hybrid. Code searches, compares and applies changes; the LLM only interprets a request and drafts new text.
 
-**Current status (mid-term, 13/11)**: the deliverable is a proof of concept made of 4 illustrations: a summary of the 5-step workflow and 3 mock-ups of what the writer sees at each checkpoint (*Verify*, *Sort*, *Review*). It uses a fictitious scenario (bulletin `BM-042`, brake pads of a bike) and covers the **request mode** only (a directive in, changes out). In parallel, a code prototype on branch `prototype1` runs automatic tests on small test files (fixtures) in CI; its results are reported in §2.
+**Current status (16/11)**: the objectives are under review by the whole team (§1). The mid-term deliverable (13/11) was a proof of concept made of 4 illustrations: a summary of the 5-step workflow and 3 mock-ups of what the writer sees at each checkpoint (*Verify*, *Sort*, *Review*). It uses a fictitious scenario (bulletin `BM-042`, brake pads of a bike) and covers the **request mode** only (a directive in, changes out). In parallel, a code prototype on branch `prototype1` runs automatic tests on small test files (fixtures) in CI; its results are reported in §2.
 
 **Client and evaluator**: the client contact (business analyst, LGM).
 **Test data**: the public S1000D Bike data set and fictitious examples only. No client data.
 
 ---
 
-## 1. Objectives and requirement (Q1)
+## 1. Objectives and requirements (Q1)
 
 ### How to read this section
 
@@ -37,11 +37,12 @@ RedacTech is a **local** assistant that prepares the update of an existing S1000
 - Thresholds are set **before** results are known, then submitted to the evaluator for validation.
 - The test result of each item (Not run, Partial, Pass, Fail) is in §2.
 
-### Requirement
+### Requirements
 
 | ID | Requirement | Metric and threshold | Why it matters | Validated by client? |
 |---|---|---|---|---|
-| REQ-1 | **Works with a local AI only** (formerly OBJ-9) | The reference scenarios pass with a local model (e.g. Ollama), with **no outbound network call**. All AI calls sit in a single module (`src/redactech/llm/`); switching models takes one configuration change. | LGM rule: no documentation data may go into a hosted AI, including LGM's own. | Yes, 26/10 (constraint stated in the meeting; exact threshold to confirm) |
+| REQ-1 | **Works with a local AI only** | The reference scenarios pass with a local model (e.g. Ollama), with **no outbound network call**. All AI calls sit in a single module (`src/redactech/llm/`); switching models takes one configuration change. | LGM rule: no documentation data may go into a hosted AI, including LGM's own. | Yes, 26/10 (constraint stated in the meeting; exact threshold to confirm) |
+| REQ-2 | **No private data in the repository** | 0 private data file tracked by git (`git ls-files`, `.gitignore`, tests in `tests/security/`); only public S1000D data and fictitious examples. | Real technical documents are confidential. | Yes, 26/10 |
 
 ### Objectives
 
@@ -74,8 +75,8 @@ The link between these objectives and the numbering of earlier versions is in §
 ### What counts as evidence
 
 - **Code means proof of feasibility**: tests and code that actually ran and show that the approach works. A mock-up or a slide is not evidence for an objective measured by code.
-- **Reproducible runs**: the tool runs in a container that can be replicated on another machine, so anyone can rerun the checks.
-- Expected results are written **before** running the tool (for example `tests/scenarios/lru1010/expected.yaml`).
+- **Reproducible runs**: the tool must run in a container that can be replicated on another machine, so anyone can rerun the checks. The container is not set up yet.
+- Expected results are written **before** running the tool (for example `tests/scenarios/lru1010/attendu.yaml`).
 
 ### Verification plan
 
@@ -84,13 +85,14 @@ Results come from the last recorded test runs of the prototype (QUALITY.md of 10
 | ID | Verification method | Pass criterion | When | Owner | Result | Evidence |
 |---|---|---|---|---|---|---|
 | REQ-1 | Code review (search for every AI call) + network test + run the same scenario with the model changed in the configuration | All AI calls in `src/redactech/llm/`; model switch = 1 configuration line; 0 outbound call | Each sprint | TBD | Partial | All AI calls in `src/redactech/llm/` (network test: `tests/security/test_network_guard.py`); model = 1 configuration line. Still to do: a run with the local model (Ollama not installed on the build machine) |
-| OBJ-1 | Automatic tests (pytest): changes compared with the expected list written before the code (2 changes + 2 occurrences to leave untouched); canonical XML diff old / new; XSD and BREX validation of every produced data module | Expected changes 2/2, 0 outside the list, 2/2 historical traces unchanged; 0 unexpected difference; 100 % valid; 0 BREX violation introduced | Every commit (CI) + live at the demo | TBD | Partial | Green on fixtures in CI (scenarios `lru1010`, `ops_steps`, `preexisting_brex`). Still to do: confirm on the real Bike (`data41` tests not run); no recorded result yet for the truthfulness part |
+| REQ-2 | Audit: `git ls-files` + check of the `.gitignore` + `py tools/privacy.py scan --tracked` | 0 private data file | Every sprint + CI | TBD | Pass | `git ls-files` = code and docs only; `.gitignore` in place; tests in `tests/security/` (2 files); `pre-commit`, `commit-msg` and `pre-push` hooks installed; `py -3 tools/privacy.py scan --tracked`: exit 0 on the development machine, 10/11 |
+| OBJ-1 | Automatic tests (pytest): changes compared with the expected list written before the code (2 changes + 2 occurrences to leave untouched); canonical XML diff old / new; XSD and BREX validation of every produced data module; truthfulness: trap scenario `hallucination_trap` (a value absent from the source must be rejected) | Expected changes 2/2, 0 outside the list, 2/2 historical traces unchanged; 0 unexpected difference; 100 % valid; 0 BREX violation introduced | Every commit (CI) + live at the demo | TBD | Partial | Green on fixtures in CI (scenarios `lru1010`, `ops_steps`, `preexisting_brex`). Still to do: confirm on the real Bike (`data41` tests not run); truthfulness: scenario `hallucination_trap` exists on `prototype1`, no recorded result yet |
 | OBJ-2 | Automatic test: check each modified data module (`issueInfo`, `@changeMark`, `@changeType`, `reasonForUpdate`) | 100 % of modified data modules compliant | Every commit (CI) | TBD | Partial | Green on fixtures in CI (scenarios `delete_mark`, `versioning`). Still to do: confirm on the real Bike (`data41` tests not run) |
 | OBJ-3 | User test: the evaluator runs the scenario alone; automatic interface tests | Scenario completed without help; decision log complete; 0 change applied without a decision | Demo | TBD | Partial | 0 change written without a decision: shown by interface and pipeline tests in CI (run 42790955399, reported, not checked on this machine). Still to do: user test with the evaluator |
 | OBJ-4 | Set of ≥ 20 natural-language requests with their expected operations, written in advance; run with the local model | ≥ 90 % correct | From the first LLM integration | TBD | Not run | |
 | OBJ-5 | Blind rating of passages (tool-written and writer-written mixed) by the evaluator and the writers | ≥ 80 % of tool passages judged "in the style of the manual" | Final evaluation | TBD | Not run | |
 | OBJ-6 | Benchmark of propagation and request handling; timed run of the same scenario by a writer, manually then with the tool | < 10 s without LLM; < 2 min per request with LLM; time with tool ≤ 50 % of manual time | Benchmark every commit (CI); timed comparison at final evaluation | TBD | Partial | Speed without LLM: green on fixtures in CI (scenario `batch20`). Still to do: real Bike (scenario `batch20_bike41`, `data41` tests not run); speed with the LLM and time saved not covered |
-| OBJ-8 | Automatic tests on old / up-to-date pairs whose differences are known (S1000D Bike Issue 4.1 / 4.2), including pairs with injected conflicts and contradictions | Thresholds of OBJ-14 met | Every commit (CI), once comparison mode exists | TBD | Not run | |
+| OBJ-8 | Automatic tests on old / up-to-date pairs whose differences are known (S1000D Bike Issue 4.1 / 4.2), including pairs with injected conflicts and contradictions | Thresholds of OBJ-8 met | Every commit (CI), once comparison mode exists | TBD | Not run | |
 | OBJ-10 | Automatic test on a scenario that touches an illustrated element; before / after review; review of the LLM descriptions (method to be defined) | 100 % of linked illustrations flagged; description criterion to be defined | Every commit (CI) | TBD | Partial | Flagging: green on fixtures in CI (scenario `ops_steps`, figure `fig-0001`). Still to do: real Bike (`data41` tests not run); human before / after review; LLM description not covered |
 | OBJ-11 | Automatic test with a data module that already contains errors | Errors classified `pre_existing`, 0 `introduced` | Every commit (CI) | TBD | Partial | Green on fixtures in CI (scenario `preexisting_brex`). Still to do: confirm on the real Bike (`data41` tests not run) |
 | OBJ-12 | Automatic test with a forbidden request | `blocked_by_rule` within ≤ 3 attempts, no loop | Every commit (CI) | TBD | Partial | Green on fixtures in CI (scenario `forbidden_request`). Still to do: confirm on the real Bike (`data41` tests not run) |
@@ -132,18 +134,18 @@ OBJ-7 (generalisation) and OBJ-9 (applicability) have no verification plan yet.
 - **Next**: user test with the evaluator and ≥ 2 writers; fix the inconsistencies above.
 
 ### Week of 16/11: objective review
-- **Changed**: objectives reviewed, restructured and renumbered (OBJ-1 to OBJ-12); all previous requirements removed; former OBJ-9 (local AI) turned into the single requirement REQ-1 (details in §5).
+- **Changed**: objectives reviewed, restructured and renumbered (OBJ-1 to OBJ-12); previous requirements removed, two requirements remain: REQ-1 (local AI only, former OBJ-9) and REQ-2 (no private data in the repository, former REQ-3) (details in §5).
 - **Added**: evidence rules (code means tests and code that ran; replicable container).
-- **Checked**: test results of the prototype (branch `prototype1`, last recorded on 10/11) carried over to the new objectives in §2: REQ-1, OBJ-1, 2, 3, 6, 10, 11 and 12 are Partial (green on fixtures in CI, real Bike data set still to run).
+- **Checked**: test results of the prototype (branch `prototype1`, last recorded on 10/11) carried over to the new objectives in §2: REQ-2 is Pass; REQ-1, OBJ-1, 2, 3, 6, 10, 11 and 12 are Partial (green on fixtures in CI, real Bike data set still to run).
 - **Next**: review and set the status of every objective with the whole team; define the description-quality metric of OBJ-10; get the new thresholds validated by the evaluator.
 
 ## 4. Data and confidentiality rules
 
 - **Never committed**: any private or real-use data; downloaded archives (`*.zip`) and the `data/` folder (can be downloaded again from the public S1000D site); generated outputs (`output/`, `*.docx`, `*.pdf`); recordings (`*.mp4`); secrets (`.env`, API keys).
 - **Where the data lives**: on each member's machine, downloaded from the public S1000D site. Only public data is used (S1000D Bike data set Issue 4.1 for development; Issue 4.2 for the 4.2 XSDs and as old / up-to-date pairs for comparison mode; default BREX) and fictitious examples (`BM-042`, `BR-PAD-xx`). No real documentation, past project or internal BREX enters the project.
-- **Tools and services not allowed by the client**: in the end, no client data may go into any hosted AI, including LGM's own. The solution must work with a local AI or without AI (REQ-1). During the project any tool may be used, but only on public or fictitious data. Confirmed by LGM on 26/10.
+- **Tools and services not allowed by the client**: in the end, no client data may go into any hosted AI, including LGM's own. The solution must work with a local AI or without AI (REQ-1). No private data enters the repository (REQ-2). During the project any tool may be used, but only on public or fictitious data. Confirmed by LGM on 26/10.
 - **Personal data (GDPR)**: none in the data (documentation of a fictitious bike). Recordings are not committed.
-- **Matching `.gitignore` entries**: in place (see `.gitignore`, `CLAUDE.md` §3 and `docs/PRIVACY.md`).
+- **Matching `.gitignore` entries**: in place (see [`.gitignore`](.gitignore), and on branch `prototype1`: [`CLAUDE.md`](https://github.com/CrispyChicken2/Redac-Tech/blob/prototype1/CLAUDE.md) §3 and [`docs/PRIVACY.md`](https://github.com/CrispyChicken2/Redac-Tech/blob/prototype1/docs/PRIVACY.md)).
 
 ## 5. Traceability with previous versions
 
@@ -153,7 +155,7 @@ OBJ-7 (generalisation) and OBJ-9 (applicability) have no verification plan yet.
 |---|---|---|
 | School template | `a2e9e5ab-QUALITY.md` (empty grid) | Structure and terms reused here |
 | 30/10, PR #1 | [Pull request #1](https://github.com/CrispyChicken2/Redac-Tech/pull/1) | REQ-1 to REQ-11, OBJ-1 to OBJ-20 |
-| 09/11, `main` | [QUALITY.md at commit 9f3c3ae](https://github.com/CrispyChicken2/redac-tech/blob/9f3c3ae/QUALITY.md) | "Update QUALITY.md" |
+| 09/11, `main` | [QUALITY.md at commit 9f3c3ae](https://github.com/CrispyChicken2/redac-tech/blob/9f3c3ae/QUALITY.md) | Requirements grouped by sprint (REQ-1 to REQ-11), OBJ-1 to OBJ-20, client name removed |
 | 10/11 | [QUALITY.md at commit fd06a3c](https://github.com/CrispyChicken2/redac-tech/blob/fd06a3c/QUALITY.md) | Adds OBJ-21 to OBJ-23 and milestones M1 to M3 |
 | 13/11, `main` | [QUALITY.md at commit e4a353e](https://github.com/CrispyChicken2/redac-tech/blob/e4a353e/QUALITY.md) | Proof of concept block, REQ-1 to REQ-19, OBJ-1 to OBJ-23 |
 
@@ -161,11 +163,11 @@ OBJ-7 (generalisation) and OBJ-9 (applicability) have no verification plan yet.
 
 - **Language and readability**: the whole file is now in English, with shorter sentences and multi-part indicators split into labelled lines. The section structure is unchanged.
 - **Numbering**: objectives are renumbered OBJ-1 to OBJ-12; the table below gives the former IDs.
-- **Requirements**: all previous requirements (REQ-1 to REQ-19) are removed, together with their verification rows. They remain readable in the 13/11 version above.
+- **Requirements**: previous requirements REQ-1 to REQ-19 are removed, together with their verification rows, except former REQ-3 (no private data in the repository), now REQ-2. Former OBJ-9 (local AI) becomes REQ-1. The removed requirements remain readable in the 13/11 version above.
 - **Evidence rules** added at the top of §2.
 - **Test results**: the results of the prototype tests recorded on 10/11 (commit fd06a3c) are restored and mapped onto the new objectives; the 13/11 version had reset them to Not run.
 
-| Former objective(s) | Change | Now |
+| Former item(s) | Change | Now |
 |---|---|---|
 | OBJ-1, 2, 3 (completeness, integrity, truthfulness) | Merged | OBJ-1 |
 | OBJ-4 (S1000D traceability) | Kept | OBJ-2 |
@@ -174,6 +176,7 @@ OBJ-7 (generalisation) and OBJ-9 (applicability) have no verification plan yet.
 | OBJ-7 (writing style) | Kept | OBJ-5 |
 | OBJ-8, 10 (time saved, performance) | Merged | OBJ-6 |
 | OBJ-9 (local AI) | Turned into a requirement | REQ-1 |
+| REQ-3 (no private data in the repository) | Kept as a requirement | REQ-2 |
 | OBJ-11 (generalisation) | Kept | OBJ-7 |
 | OBJ-12 (maintainability), OBJ-13 (usefulness) | Deleted | — |
 | OBJ-14, 15, 16, 17 (contradictions, comparison mode) | Merged | OBJ-8 |
