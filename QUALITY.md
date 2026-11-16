@@ -35,7 +35,6 @@ RedacTech is a **local** assistant that prepares the update of an existing S1000
 - An **objective** is a quality target with a provisional threshold. The three quality themes are **completeness**, **integrity** and **consistency**.
 - A **requirement** is a constraint the product must meet in all cases. It is not a target to approach.
 - Thresholds are set **before** results are known, then submitted to the evaluator for validation.
-- The **Status** column of the objectives is currently **Inactive** for all of them.
 - The test result of each item (Not run, Partial, Pass, Fail) is in §2.
 
 ### Requirement
@@ -46,20 +45,20 @@ RedacTech is a **local** assistant that prepares the update of an existing S1000
 
 ### Objectives
 
-| ID | Objective | Indicator and provisional threshold | Measured on | Status |
-|---|---|---|---|---|
-| OBJ-1 | **Correct and complete changes**: every needed change is made, nothing else changes, nothing is invented, and the manual stays valid | **Completeness**: 100 % of expected changes made, 0 change outside the expected list.<br>**Integrity**: 0 difference outside accepted changes; 100 % of data modules valid against the XSD and the default BREX.<br>**Truthfulness**: 0 value (reference, quantity, torque, tool) that is absent from the change request or the old manual. | Scenario `LRU1010`, then varied scenarios | Inactive |
-| OBJ-2 | **S1000D traceability** | 100 % of modified data modules have `issueInfo` updated, `changeMark` / `changeType` on each modified element, and a `reasonForUpdate`. | Scenario `LRU1010` | Inactive |
-| OBJ-3 | **The writer stays in control** (git-style review) | The evaluator runs a scenario alone: accept, refuse or put on hold, with a comment. 0 change applied without a decision from the writer. | Before / after review screen | Inactive |
-| OBJ-4 | **The request is understood** | ≥ 90 % of natural-language requests turned into correct operations, over ≥ 20 requests. | Local AI | Inactive |
-| OBJ-5 | **Consistent writing style** | ≥ 80 % of passages written by the tool judged "in the style of the manual" by the evaluator and the writers, in a blind rating. | Text drafted by the LLM | Inactive |
-| OBJ-6 | **Efficiency: time saved and speed** | **Time saved**: time with the tool, review included, ≤ 50 % of the time of a manual update on the same scenario (reference time measured by a writer).<br>**Speed**: 20 changes propagated over the full manual in < 10 s without the LLM; one request handled in < 2 min with the local LLM, on a standard laptop. | Without the LLM, then with it; final evaluation | Inactive |
-| OBJ-7 | **Generalisation** | OBJ-1 met on scenarios the development team has never seen. | Final evaluation | Inactive |
-| OBJ-8 | **Comparison mode**: update the old version of a manual from an up-to-date version supplied separately | **Detection**: 100 % of content differences between the old and the up-to-date version detected and proposed (addition, deletion, modification, move), on pairs whose differences are known.<br>**Preservation**: 100 % of elements specific to the old version kept (identifiers, applicability, local additions); the up-to-date version is never copied over the old one.<br>**Conflicts**: 100 % of contradictory changes (same element changed on both sides since the common base) shown as conflicts, 0 resolved automatically.<br>**Contradictions between documents** (if time allows): ≥ 90 % found on a set where they were injected; the option chosen by the writer is applied without manual rework. | Comparison mode | Inactive |
-| OBJ-9 | **Applicability respected** | 0 change applied to a product variant that is not concerned, on scenarios targeting a single variant (87 % of Bike data modules contain applicability statements). | Varied scenarios | Inactive |
-| OBJ-10 | **Illustrations flagged and described** | 100 % of illustrations (figures, captions) linked to a modified element are flagged to the writer as "to check" (the tool does not edit images).<br>The LLM describes the illustration and what may need updating. **Quality of this description: metric and threshold to be defined.** | Before / after review screen | Inactive |
-| OBJ-11 | **Pre-existing errors reported as such** | 100 % of XSD / BREX errors already present before processing are reported as `pre_existing` and never attributed to the tool; 0 `introduced` error delivered. | Automatic tests | Inactive |
-| OBJ-12 | **Request forbidden by the BREX** | A request that the BREX forbids ends in `blocked_by_rule` within ≤ 3 attempts, with the rule cited and no loop. | Automatic tests | Inactive |
+| ID | Objective | Indicator and provisional threshold | Measured on |
+|---|---|---|---|
+| OBJ-1 | **Correct and complete changes**: every needed change is made, nothing else changes, nothing is invented, and the manual stays valid | **Completeness**: 100 % of expected changes made, 0 change outside the expected list.<br>**Integrity**: 0 difference outside accepted changes; 100 % of data modules valid against the XSD and the default BREX.<br>**Truthfulness**: 0 value (reference, quantity, torque, tool) that is absent from the change request or the old manual. | Scenario `LRU1010`, then varied scenarios |
+| OBJ-2 | **S1000D traceability** | 100 % of modified data modules have `issueInfo` updated, `changeMark` / `changeType` on each modified element, and a `reasonForUpdate`. | Scenario `LRU1010` |
+| OBJ-3 | **The writer stays in control** (git-style review) | The evaluator runs a scenario alone: accept, refuse or put on hold, with a comment. 0 change applied without a decision from the writer. | Before / after review screen |
+| OBJ-4 | **The request is understood** | ≥ 90 % of natural-language requests turned into correct operations, over ≥ 20 requests. | Local AI |
+| OBJ-5 | **Consistent writing style** | ≥ 80 % of passages written by the tool judged "in the style of the manual" by the evaluator and the writers, in a blind rating. | Text drafted by the LLM |
+| OBJ-6 | **Efficiency: time saved and speed** | **Time saved**: time with the tool, review included, ≤ 50 % of the time of a manual update on the same scenario (reference time measured by a writer).<br>**Speed**: 20 changes propagated over the full manual in < 10 s without the LLM; one request handled in < 2 min with the local LLM, on a standard laptop. | Without the LLM, then with it; final evaluation |
+| OBJ-7 | **Generalisation** | OBJ-1 met on scenarios the development team has never seen. | Final evaluation |
+| OBJ-8 | **Comparison mode**: update the old version of a manual from an up-to-date version supplied separately | **Detection**: 100 % of content differences between the old and the up-to-date version detected and proposed (addition, deletion, modification, move), on pairs whose differences are known.<br>**Preservation**: 100 % of elements specific to the old version kept (identifiers, applicability, local additions); the up-to-date version is never copied over the old one.<br>**Conflicts**: 100 % of contradictory changes (same element changed on both sides since the common base) shown as conflicts, 0 resolved automatically.<br>**Contradictions between documents** (if time allows): ≥ 90 % found on a set where they were injected; the option chosen by the writer is applied without manual rework. | Comparison mode |
+| OBJ-9 | **Applicability respected** | 0 change applied to a product variant that is not concerned, on scenarios targeting a single variant (87 % of Bike data modules contain applicability statements). | Varied scenarios |
+| OBJ-10 | **Illustrations flagged and described** | 100 % of illustrations (figures, captions) linked to a modified element are flagged to the writer as "to check" (the tool does not edit images).<br>The LLM describes the illustration and what may need updating. **Quality of this description: metric and threshold to be defined.** | Before / after review screen |
+| OBJ-11 | **Pre-existing errors reported as such** | 100 % of XSD / BREX errors already present before processing are reported as `pre_existing` and never attributed to the tool; 0 `introduced` error delivered. | Automatic tests |
+| OBJ-12 | **Request forbidden by the BREX** | A request that the BREX forbids ends in `blocked_by_rule` within ≤ 3 attempts, with the rule cited and no loop. | Automatic tests |
 
 <ins>The status of the objectives will be reviewed and determined with every member of the team.</ins>
 
@@ -161,7 +160,7 @@ OBJ-7 (generalisation) and OBJ-9 (applicability) have no verification plan yet.
 ### What changed in this version (16/11)
 
 - **Language and readability**: the whole file is now in English, with shorter sentences and multi-part indicators split into labelled lines. The section structure is unchanged.
-- **Numbering**: objectives are renumbered OBJ-1 to OBJ-12; the table below gives the former IDs. All objectives have the status Inactive until the team reviews them.
+- **Numbering**: objectives are renumbered OBJ-1 to OBJ-12; the table below gives the former IDs.
 - **Requirements**: all previous requirements (REQ-1 to REQ-19) are removed, together with their verification rows. They remain readable in the 13/11 version above.
 - **Evidence rules** added at the top of §2.
 - **Test results**: the results of the prototype tests recorded on 10/11 (commit fd06a3c) are restored and mapped onto the new objectives; the 13/11 version had reset them to Not run.
